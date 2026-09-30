@@ -1,6 +1,8 @@
+using DoZore.Api.Data;
 using DoZore.Api.Features;
 using DoZore.Api.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Formatting.Compact;
 
@@ -16,6 +18,10 @@ builder.Services.AddSerilog((services, log) => log
     .Enrich.FromLogContext()
     .WriteTo.Console(new RenderedCompactJsonFormatter()));
 
+var connectionString = config["DB_CONNECTION_STRING"] ?? config.GetConnectionString("Default")
+    ?? throw new InvalidOperationException("Set DB_CONNECTION_STRING.");
+builder.Services.AddDbContext<AppDbContext>(o => AppDbContext.Configure(o, connectionString));
+
 builder.Services.TryAddTimeProvider();
 builder.Services.AddSingleton(AppPaths.Resolve(config));
 builder.Services.AddSingleton<ContractSchemas>();
@@ -25,6 +31,12 @@ builder.Services.AddCors(o => o.AddDefaultPolicy(p => p
     .AllowAnyHeader().AllowAnyMethod().WithExposedHeaders("ETag", "Retry-After")));
 
 var app = builder.Build();
+
+if (config.GetValue("Database:MigrateOnStartup", true))
+{
+    using var scope = app.Services.CreateScope();
+    await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
+}
 
 // Fail fast if the contract can't be loaded.
 _ = app.Services.GetRequiredService<ContractSchemas>();
