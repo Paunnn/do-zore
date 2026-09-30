@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Do Zore API
-  version: 1.0.0
+  version: 1.0.1
   description: |
     Backend API for Do Zore, a mobile idle kafana-management game.
 
@@ -253,6 +253,8 @@ paths:
         If another device has uploaded in the meantime, the server rejects the write with 409 and
         returns its copy; the client decides which to keep (e.g. ask the player, or keep the one
         with higher `total_baksis`) and retries with the server's version as `base_version`.
+        If the server has no save at all, any `base_version` is accepted and the save becomes version 1.
+        A successful upload updates the player's recorded activity (see offline-earnings claim).
       requestBody:
         required: true
         content:
@@ -295,8 +297,11 @@ paths:
         `min(claimed_amount, computed_amount)`.
 
         The away period starts at the later of (a) the server's last recorded activity for the
-        player (last save upload or claim) and (b) the client's `last_seen`, and ends at server
-        now. A successful claim records a new activity time, so each away period pays once.
+        player and (b) the client's `last_seen`, and ends at server now. Recorded activity is set
+        by a successful claim (to server now) and by a save upload (to the save's `last_seen`,
+        clamped between the previous recorded activity and server now). Uploading a save before
+        claiming therefore does not erase the away period, and the client clock can only shorten
+        the window, never extend it. Each away period pays once.
 
         The client must upload its save first so the server computes from current progress;
         if `save_version` is not the server's current version the claim is rejected with 409.
