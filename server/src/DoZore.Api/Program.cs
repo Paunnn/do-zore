@@ -108,6 +108,7 @@ app.MapAuth();
 app.MapSave();
 app.MapOffline();
 app.MapConfig();
+app.MapLeaderboard();
 
 await app.RunAsync();
 return 0;
