@@ -105,6 +105,7 @@ app.UseRateLimiter();
 
 app.MapGet("/v1/health", (TimeProvider time) => Results.Ok(new HealthResponse("ok", time.GetUtcNow()))).AllowAnonymous();
 app.MapAuth();
+app.MapSave();
 app.MapConfig();
 
 await app.RunAsync();
