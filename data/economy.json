@@ -1,0 +1,47 @@
+{
+  "$schema": "../contracts/schemas/economy.schema.json",
+  "start": {
+    "money": 1000
+  },
+  "mood": {
+    "min": 0,
+    "max": 100,
+    "neutral": 50,
+    "table_start": 60,
+    "unhappy_below": 30,
+    "happy_at_or_above": 70,
+    "song_match_delta": 8,
+    "song_mismatch_delta": -6,
+    "preferred_drink_delta": 4,
+    "decay_per_minute": 2,
+    "waiting_penalty_per_minute": 10,
+    "leave_at_or_below": 5
+  },
+  "tips": {
+    "mood_curve": [
+      { "x": 0, "y": 0 },
+      { "x": 50, "y": 1.0 },
+      { "x": 100, "y": 2.0 }
+    ],
+    "preferred_drink_bonus": 0.15
+  },
+  "arrivals": {
+    "room_mood_curve": [
+      { "x": 0, "y": 0.5 },
+      { "x": 50, "y": 1.0 },
+      { "x": 100, "y": 1.5 }
+    ]
+  },
+  "events": {
+    "roll_interval_seconds": 180,
+    "chance_per_roll": 0.35,
+    "condition_check_interval_seconds": 30,
+    "global_cooldown_seconds": 120,
+    "decision_timeout_seconds": 30,
+    "fight_chance_min_multiplier": 0.1
+  },
+  "offline": {
+    "min_away_seconds": 300,
+    "max_cap_hours": 24
+  }
+}

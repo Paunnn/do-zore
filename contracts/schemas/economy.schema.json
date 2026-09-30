@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://do-zore.example/schemas/economy.schema.json",
+  "title": "Economy rules",
+  "description": "Global balance constants and formulas (/data/economy.json). Every tuning number that is not tied to a specific guest, song, drink, upgrade, band level, venue or event lives here, so nothing is hardcoded in client or server.",
+  "type": "object",
+  "properties": {
+    "$schema": { "type": "string" },
+    "start": {
+      "type": "object",
+      "properties": {
+        "money": { "$ref": "common.schema.json#/$defs/Dinars" }
+      },
+      "required": ["money"],
+      "additionalProperties": false
+    },
+    "mood": {
+      "description": "Each seated table has a mood 0-100. The room mood meter is the average mood of occupied tables (neutral when empty). Song effect on a table = delta * genre match strength * song.mood_power * guest.mood_sensitivity * (band.mood_multiplier if positive) * song_mood_power upgrades.",
+      "type": "object",
+      "properties": {
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "neutral": { "description": "Room mood when empty; table moods decay toward this.", "type": "number" },
+        "table_start": { "type": "number" },
+        "unhappy_below": { "type": "number" },
+        "happy_at_or_above": { "type": "number" },
+        "song_match_delta": { "description": "Mood change for a full genre match (partial matches scale by genre strength).", "type": "number" },
+        "song_mismatch_delta": { "description": "Mood change for a mismatch (negative).", "type": "number" },
+        "preferred_drink_delta": { "description": "Mood change when a table is served its preferred drink.", "type": "number" },
+        "decay_per_minute": { "description": "Drift of table mood toward neutral per minute.", "type": "number", "minimum": 0 },
+        "waiting_penalty_per_minute": { "description": "Mood loss per minute once a table has waited longer than its patience.", "type": "number", "minimum": 0 },
+        "leave_at_or_below": { "description": "Table leaves without tipping at or below this mood.", "type": "number" }
+      },
+      "required": [
+        "min", "max", "neutral", "table_start", "unhappy_below", "happy_at_or_above", "song_match_delta",
+        "song_mismatch_delta", "preferred_drink_delta", "decay_per_minute", "waiting_penalty_per_minute", "leave_at_or_below"
+      ],
+      "additionalProperties": false
+    },
+    "tips": {
+      "description": "Bakšiš per table = bill * guest.tip_rate * mood_curve(table mood) * band.tip_multiplier * tip_rate upgrades * (1 + preferred_drink_bonus if served its preferred drink).",
+      "type": "object",
+      "properties": {
+        "mood_curve": { "$ref": "#/$defs/Curve" },
+        "preferred_drink_bonus": { "type": "number", "minimum": 0 }
+      },
+      "required": ["mood_curve", "preferred_drink_bonus"],
+      "additionalProperties": false
+    },
+    "arrivals": {
+      "description": "Arrival rate = venue.arrivals_per_minute * room_mood_curve(room mood) * arrival_rate upgrades. Groups only arrive while a table is free.",
+      "type": "object",
+      "properties": {
+        "room_mood_curve": { "$ref": "#/$defs/Curve" }
+      },
+      "required": ["room_mood_curve"],
+      "additionalProperties": false
+    },
+    "events": {
+      "type": "object",
+      "properties": {
+        "roll_interval_seconds": { "description": "How often a random-event roll happens.", "type": "integer", "minimum": 1 },
+        "chance_per_roll": { "$ref": "common.schema.json#/$defs/Probability" },
+        "condition_check_interval_seconds": { "description": "How often condition-triggered events (e.g. tuča) are checked.", "type": "integer", "minimum": 1 },
+        "global_cooldown_seconds": { "description": "Minimum gap between any two events.", "type": "integer", "minimum": 0 },
+        "decision_timeout_seconds": { "type": "integer", "minimum": 1 },
+        "fight_chance_min_multiplier": { "description": "Floor for the combined fight_chance multiplier from upgrades and effects.", "type": "number", "minimum": 0 }
+      },
+      "required": [
+        "roll_interval_seconds", "chance_per_roll", "condition_check_interval_seconds",
+        "global_cooldown_seconds", "decision_timeout_seconds", "fight_chance_min_multiplier"
+      ],
+      "additionalProperties": false
+    },
+    "offline": {
+      "description": "Offline earnings. rate_per_minute = venue.offline_income_per_minute * menu_price upgrades * arrival_rate upgrades * offline_income upgrades * (tables / venue.base_tables) * band.tip_multiplier - band.upkeep_per_hour / 60 (floored at 0). cap_hours = min(venue.offline_cap_hours + offline_cap_hours upgrades, max_cap_hours). granted = floor(rate_per_minute * min(away_minutes, cap_hours * 60) * live-event multipliers for income and offline_income, applied pro rata to the part of the counted period each live event overlaps), or 0 if away less than min_away_seconds. Random events do not happen offline.",
+      "type": "object",
+      "properties": {
+        "min_away_seconds": { "type": "integer", "minimum": 0 },
+        "max_cap_hours": { "type": "number", "exclusiveMinimum": 0 }
+      },
+      "required": ["min_away_seconds", "max_cap_hours"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["start", "mood", "tips", "arrivals", "events", "offline"],
+  "additionalProperties": false,
+  "$defs": {
+    "Curve": {
+      "description": "Piecewise-linear curve: points sorted by x; values between points are linearly interpolated, values outside are clamped to the end points.",
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "properties": {
+          "x": { "type": "number" },
+          "y": { "type": "number" }
+        },
+        "required": ["x", "y"],
+        "additionalProperties": false
+      }
+    }
+  }
+}

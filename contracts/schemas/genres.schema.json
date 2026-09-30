@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://do-zore.example/schemas/genres.schema.json",
+  "title": "Genres",
+  "description": "Music genres the band can play (/data/genres.json).",
+  "type": "object",
+  "properties": {
+    "$schema": { "type": "string" },
+    "genres": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/Genre" }
+    }
+  },
+  "required": ["genres"],
+  "additionalProperties": false,
+  "$defs": {
+    "Genre": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/Id" },
+        "name": { "$ref": "common.schema.json#/$defs/LocalizedText" },
+        "description": { "$ref": "common.schema.json#/$defs/LocalizedText" },
+        "related": {
+          "description": "Partial matches: playing this genre for a guest who prefers a related genre counts as a partial match with the given strength (0 = mismatch, 1 = full match). Genres not listed are mismatches.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "genre": { "$ref": "common.schema.json#/$defs/Id" },
+              "strength": { "type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1 }
+            },
+            "required": ["genre", "strength"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["id", "name"],
+      "additionalProperties": false
+    }
+  }
+}

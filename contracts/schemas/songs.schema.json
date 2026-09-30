@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://do-zore.example/schemas/songs.schema.json",
+  "title": "Songs",
+  "description": "Songs the band can play (/data/songs.json).",
+  "type": "object",
+  "properties": {
+    "$schema": { "type": "string" },
+    "songs": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/Song" }
+    }
+  },
+  "required": ["songs"],
+  "additionalProperties": false,
+  "$defs": {
+    "Song": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/Id" },
+        "title": { "$ref": "common.schema.json#/$defs/LocalizedText" },
+        "genre": { "$ref": "common.schema.json#/$defs/Id" },
+        "min_band_level": {
+          "description": "Id of the lowest band level that can play this song.",
+          "$ref": "common.schema.json#/$defs/Id"
+        },
+        "unlock_cost": {
+          "description": "Price to add the song to the repertoire. 0 = known from the start once the band level is reached.",
+          "$ref": "common.schema.json#/$defs/Dinars"
+        },
+        "duration_seconds": { "type": "integer", "minimum": 1 },
+        "mood_power": {
+          "description": "Multiplier on the mood change this song causes.",
+          "$ref": "common.schema.json#/$defs/Multiplier"
+        },
+        "is_hit": {
+          "description": "Hit songs are only playable by a band level with can_play_hits, and must be unlocked individually.",
+          "type": "boolean"
+        }
+      },
+      "required": ["id", "title", "genre", "min_band_level", "unlock_cost", "duration_seconds", "mood_power", "is_hit"],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "$schema": "../contracts/schemas/venues.schema.json",
+  "venues": [
+    {
+      "id": "birtija",
+      "order": 1,
+      "name": { "sr": "Birtija", "en": "Dive bar" },
+      "description": { "sr": "Tri klimava stola i harmonikaš koji je video bolje dane.", "en": "Three wobbly tables and an accordionist who has seen better days." },
+      "unlock_cost": 0,
+      "base_tables": 3,
+      "max_tables": 6,
+      "arrivals_per_minute": 1.0,
+      "price_multiplier": 1.0,
+      "offline_income_per_minute": 250,
+      "offline_cap_hours": 2,
+      "guest_mix": { "penzioner": 50, "studenti": 35, "ozalosceni": 15 }
+    },
+    {
+      "id": "kafana",
+      "order": 2,
+      "name": { "sr": "Kafana", "en": "Kafana" },
+      "description": { "sr": "Prava kafana, sa stolnjacima i stalnim gostima.", "en": "A proper kafana, with tablecloths and regulars." },
+      "unlock_cost": 50000,
+      "base_tables": 6,
+      "max_tables": 14,
+      "arrivals_per_minute": 2.0,
+      "price_multiplier": 1.5,
+      "offline_income_per_minute": 1100,
+      "offline_cap_hours": 4,
+      "guest_mix": { "penzioner": 25, "studenti": 25, "ozalosceni": 15, "svatovi": 20, "biznismen": 15 }
+    },
+    {
+      "id": "restoran",
+      "order": 3,
+      "name": { "sr": "Restoran", "en": "Restaurant" },
+      "description": { "sr": "Bela tehnika, beli stolnjaci, bele košulje konobara.", "en": "White tablecloths, white shirts on the waiters." },
+      "unlock_cost": 750000,
+      "base_tables": 10,
+      "max_tables": 22,
+      "arrivals_per_minute": 3.0,
+      "price_multiplier": 2.5,
+      "offline_income_per_minute": 7000,
+      "offline_cap_hours": 6,
+      "guest_mix": { "penzioner": 15, "studenti": 15, "ozalosceni": 15, "svatovi": 30, "biznismen": 25 }
+    },
+    {
+      "id": "splav",
+      "order": 4,
+      "name": { "sr": "Splav", "en": "River raft club" },
+      "description": { "sr": "Splav na reci. Ovde se ide do zore.", "en": "A club on the river. Here the night lasts till dawn." },
+      "unlock_cost": 10000000,
+      "base_tables": 14,
+      "max_tables": 30,
+      "arrivals_per_minute": 4.0,
+      "price_multiplier": 4.0,
+      "offline_income_per_minute": 40000,
+      "offline_cap_hours": 8,
+      "guest_mix": { "penzioner": 5, "studenti": 25, "ozalosceni": 5, "svatovi": 30, "biznismen": 35 }
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://do-zore.example/schemas/guest-types.schema.json",
+  "title": "Guest types",
+  "description": "Kinds of guests that visit the venue (/data/guest_types.json). Which types appear where, and how often, is set per venue in venues.json.",
+  "type": "object",
+  "properties": {
+    "$schema": { "type": "string" },
+    "guest_types": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/GuestType" }
+    }
+  },
+  "required": ["guest_types"],
+  "additionalProperties": false,
+  "$defs": {
+    "GuestType": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/Id" },
+        "name": { "$ref": "common.schema.json#/$defs/LocalizedText" },
+        "description": { "$ref": "common.schema.json#/$defs/LocalizedText" },
+        "preferred_genre": { "$ref": "common.schema.json#/$defs/Id" },
+        "preferred_drink": { "$ref": "common.schema.json#/$defs/Id" },
+        "patience_seconds": {
+          "description": "How long the table waits for service before its mood starts dropping.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "spending_power": {
+          "description": "Multiplier on menu prices for this guest's orders.",
+          "$ref": "common.schema.json#/$defs/Multiplier"
+        },
+        "tip_rate": {
+          "description": "Bakšiš as a fraction of the bill at neutral table mood (see economy.tips.mood_curve).",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "party_size": {
+          "description": "Number of guests in the group. A group always occupies exactly one table.",
+          "type": "object",
+          "properties": {
+            "min": { "type": "integer", "minimum": 1 },
+            "max": { "type": "integer", "minimum": 1 }
+          },
+          "required": ["min", "max"],
+          "additionalProperties": false
+        },
+        "stay_seconds": {
+          "description": "How long a satisfied table stays before paying and leaving.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "orders_per_visit": {
+          "description": "Rounds ordered per visit (each round = one item per guest).",
+          "type": "integer",
+          "minimum": 1
+        },
+        "song_request_interval_seconds": {
+          "description": "Average time between song requests from this table.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "mood_sensitivity": {
+          "description": "Multiplier on all mood changes for this table (song matches, mismatches, waiting).",
+          "$ref": "common.schema.json#/$defs/Multiplier"
+        }
+      },
+      "required": [
+        "id", "name", "preferred_genre", "preferred_drink", "patience_seconds", "spending_power",
+        "tip_rate", "party_size", "stay_seconds", "orders_per_visit",
+        "song_request_interval_seconds", "mood_sensitivity"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

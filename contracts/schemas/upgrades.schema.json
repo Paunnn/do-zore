@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://do-zore.example/schemas/upgrades.schema.json",
+  "title": "Upgrades",
+  "description": "Levelled venue upgrades (/data/upgrades.json). Cost of buying level n+1 when at level n = base_cost * cost_growth^n.",
+  "type": "object",
+  "properties": {
+    "$schema": { "type": "string" },
+    "upgrades": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/Upgrade" }
+    }
+  },
+  "required": ["upgrades"],
+  "additionalProperties": false,
+  "$defs": {
+    "Stat": {
+      "description": "Game stat an effect modifies. 'add' effects are summed onto the base value; 'multiply' effects are multiplied together (value^level).",
+      "enum": [
+        "table_count",
+        "service_speed",
+        "menu_price",
+        "tip_rate",
+        "arrival_rate",
+        "patience",
+        "song_mood_power",
+        "mood_decay",
+        "fight_chance",
+        "offline_cap_hours",
+        "offline_income"
+      ]
+    },
+    "Effect": {
+      "type": "object",
+      "properties": {
+        "stat": { "$ref": "#/$defs/Stat" },
+        "op": { "enum": ["add", "multiply"] },
+        "per_level": {
+          "description": "For 'add': amount added per level. For 'multiply': factor applied per level.",
+          "type": "number"
+        }
+      },
+      "required": ["stat", "op", "per_level"],
+      "additionalProperties": false
+    },
+    "Upgrade": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/Id" },
+        "name": { "$ref": "common.schema.json#/$defs/LocalizedText" },
+        "description": { "$ref": "common.schema.json#/$defs/LocalizedText" },
+        "category": { "enum": ["prostor", "osoblje", "sank", "kuhinja", "muzika", "ugled"] },
+        "unlock_venue": { "$ref": "common.schema.json#/$defs/Id" },
+        "max_level": { "type": "integer", "minimum": 1 },
+        "base_cost": { "$ref": "common.schema.json#/$defs/Dinars" },
+        "cost_growth": { "type": "number", "minimum": 1 },
+        "effects": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Effect" }
+        }
+      },
+      "required": ["id", "name", "category", "unlock_venue", "max_level", "base_cost", "cost_growth", "effects"],
+      "additionalProperties": false
+    }
+  }
+}

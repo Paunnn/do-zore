@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://do-zore.example/schemas/common.schema.json",
+  "title": "Common definitions",
+  "description": "Shared types referenced by every Do Zore data schema.",
+  "$defs": {
+    "Id": {
+      "description": "Stable machine id: lowercase ASCII snake_case, no diacritics. Never shown to players.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{1,47}$"
+    },
+    "LocalizedText": {
+      "description": "Player-facing text. Serbian (Latin script) is required; English is optional.",
+      "type": "object",
+      "properties": {
+        "sr": { "type": "string", "minLength": 1 },
+        "en": { "type": "string", "minLength": 1 }
+      },
+      "required": ["sr"],
+      "additionalProperties": false
+    },
+    "Dinars": {
+      "description": "Amount of in-game money (dinari) as a non-negative integer.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "Multiplier": {
+      "description": "Multiplicative factor; 1.0 means no change.",
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "Probability": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "Seconds": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "Weight": {
+      "description": "Relative weight for weighted random choice. 0 disables the entry.",
+      "type": "number",
+      "minimum": 0
+    },
+    "Amount": {
+      "description": "Money amount that scales with progress: fixed + income_minutes * (current income per minute), then clamped to at least min. At least one of fixed or income_minutes must be present.",
+      "type": "object",
+      "properties": {
+        "fixed": { "$ref": "#/$defs/Dinars" },
+        "income_minutes": { "type": "number", "minimum": 0 },
+        "min": { "$ref": "#/$defs/Dinars" }
+      },
+      "anyOf": [
+        { "required": ["fixed"] },
+        { "required": ["income_minutes"] }
+      ],
+      "additionalProperties": false
+    }
+  }
+}

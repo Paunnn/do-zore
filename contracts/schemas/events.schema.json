@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://do-zore.example/schemas/events.schema.json",
+  "title": "Random events",
+  "description": "In-game random events with player choices (/data/events.json). Not to be confused with server-scheduled live events (GET /v1/events/active).",
+  "type": "object",
+  "properties": {
+    "$schema": { "type": "string" },
+    "events": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/Event" }
+    }
+  },
+  "required": ["events"],
+  "additionalProperties": false,
+  "$defs": {
+    "Trigger": {
+      "description": "random: can be picked on each event roll (see economy.events), by weight among eligible events. unhappy_tables: fires when at least min_unhappy_tables tables are unhappy, checked every economy.events.condition_check_interval_seconds with probability chance multiplied by the fight_chance stat (floored at economy.events.fight_chance_min_multiplier).",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "const": "random" },
+            "weight": { "$ref": "common.schema.json#/$defs/Weight" }
+          },
+          "required": ["kind", "weight"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "const": "unhappy_tables" },
+            "min_unhappy_tables": { "type": "integer", "minimum": 1 },
+            "chance": { "$ref": "common.schema.json#/$defs/Probability" }
+          },
+          "required": ["kind", "min_unhappy_tables", "chance"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "EventEffect": {
+      "description": "One consequence of an outcome. Timed effects (duration_seconds) stack multiplicatively with other active effects on the same stat.",
+      "oneOf": [
+        {
+          "description": "Gain money.",
+          "type": "object",
+          "properties": {
+            "type": { "const": "money_gain" },
+            "amount": { "$ref": "common.schema.json#/$defs/Amount" }
+          },
+          "required": ["type", "amount"],
+          "additionalProperties": false
+        },
+        {
+          "description": "Lose money (never below 0).",
+          "type": "object",
+          "properties": {
+            "type": { "const": "money_loss" },
+            "amount": { "$ref": "common.schema.json#/$defs/Amount" }
+          },
+          "required": ["type", "amount"],
+          "additionalProperties": false
+        },
+        {
+          "description": "Add to every table's mood (negative to lower it).",
+          "type": "object",
+          "properties": {
+            "type": { "const": "mood_change" },
+            "value": { "type": "number", "minimum": -100, "maximum": 100 }
+          },
+          "required": ["type", "value"],
+          "additionalProperties": false
+        },
+        {
+          "description": "Temporarily multiply a stat.",
+          "type": "object",
+          "properties": {
+            "type": { "const": "stat_multiplier" },
+            "stat": { "enum": ["income", "tip_rate", "arrival_rate", "fight_chance", "mood_decay"] },
+            "value": { "$ref": "common.schema.json#/$defs/Multiplier" },
+            "duration_seconds": { "type": "integer", "minimum": 1 }
+          },
+          "required": ["type", "stat", "value", "duration_seconds"],
+          "additionalProperties": false
+        },
+        {
+          "description": "Venue closed: no arrivals, no orders, seated guests leave without paying.",
+          "type": "object",
+          "properties": {
+            "type": { "const": "close_venue" },
+            "duration_seconds": { "type": "integer", "minimum": 1 }
+          },
+          "required": ["type", "duration_seconds"],
+          "additionalProperties": false
+        },
+        {
+          "description": "Unhappy tables leave immediately; paid tables pay what they owe only if pay is true.",
+          "type": "object",
+          "properties": {
+            "type": { "const": "remove_unhappy_guests" },
+            "pay": { "type": "boolean" }
+          },
+          "required": ["type", "pay"],
+          "additionalProperties": false
+        },
+        {
+          "description": "Seat a group of a given guest type at a fraction of the tables (rounded up, only free tables).",
+          "type": "object",
+          "properties": {
+            "type": { "const": "spawn_guests" },
+            "guest_type": { "$ref": "common.schema.json#/$defs/Id" },
+            "table_fraction": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 }
+          },
+          "required": ["type", "guest_type", "table_fraction"],
+          "additionalProperties": false
+        },
+        {
+          "description": "Immediately start another event (ignores its trigger and cooldown).",
+          "type": "object",
+          "properties": {
+            "type": { "const": "trigger_event" },
+            "event": { "$ref": "common.schema.json#/$defs/Id" }
+          },
+          "required": ["type", "event"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "Outcome": {
+      "type": "object",
+      "properties": {
+        "weight": { "$ref": "common.schema.json#/$defs/Weight" },
+        "text": { "$ref": "common.schema.json#/$defs/LocalizedText" },
+        "effects": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/EventEffect" }
+        }
+      },
+      "required": ["weight", "text", "effects"],
+      "additionalProperties": false
+    },
+    "Choice": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/Id" },
+        "label": { "$ref": "common.schema.json#/$defs/LocalizedText" },
+        "cost": {
+          "description": "Paid up front when the choice is picked. The choice is disabled if the player cannot afford it.",
+          "$ref": "common.schema.json#/$defs/Amount"
+        },
+        "outcomes": {
+          "description": "One outcome is picked by weight.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Outcome" }
+        }
+      },
+      "required": ["id", "label", "outcomes"],
+      "additionalProperties": false
+    },
+    "Event": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/Id" },
+        "name": { "$ref": "common.schema.json#/$defs/LocalizedText" },
+        "text": { "$ref": "common.schema.json#/$defs/LocalizedText" },
+        "min_venue": { "$ref": "common.schema.json#/$defs/Id" },
+        "trigger": { "$ref": "#/$defs/Trigger" },
+        "cooldown_seconds": { "$ref": "common.schema.json#/$defs/Seconds" },
+        "timeout_choice": {
+          "description": "Choice id applied automatically if the player does not decide within economy.events.decision_timeout_seconds.",
+          "$ref": "common.schema.json#/$defs/Id"
+        },
+        "choices": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 3,
+          "items": { "$ref": "#/$defs/Choice" }
+        }
+      },
+      "required": ["id", "name", "text", "min_venue", "trigger", "cooldown_seconds", "timeout_choice", "choices"],
+      "additionalProperties": false
+    }
+  }
+}

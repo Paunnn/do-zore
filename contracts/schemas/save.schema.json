@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://do-zore.example/schemas/save.schema.json",
+  "title": "Player save",
+  "description": "Player progress as stored locally and in the cloud. The server reads the typed fields (e.g. to compute offline earnings); anything client-only goes in the free-form client object.",
+  "type": "object",
+  "properties": {
+    "schema_version": { "description": "Save format version; 1 for this contract.", "type": "integer", "minimum": 1 },
+    "money": { "$ref": "common.schema.json#/$defs/Dinars" },
+    "total_baksis": { "description": "Lifetime bakšiš earned.", "$ref": "common.schema.json#/$defs/Dinars" },
+    "venue": { "$ref": "common.schema.json#/$defs/Id" },
+    "band_level": { "$ref": "common.schema.json#/$defs/Id" },
+    "upgrades": {
+      "description": "Owned level per upgrade id. Missing = level 0.",
+      "type": "object",
+      "propertyNames": { "$ref": "common.schema.json#/$defs/Id" },
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "unlocked_songs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "common.schema.json#/$defs/Id" }
+    },
+    "last_seen": {
+      "description": "Client clock time when the game was last active.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "stats": {
+      "description": "Lifetime counters (songs_played, fights, guests_served, ...).",
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 }
+    },
+    "client": {
+      "description": "Opaque client-only state. The server stores it but never reads it.",
+      "type": "object"
+    }
+  },
+  "required": ["schema_version", "money", "total_baksis", "venue", "band_level", "upgrades", "unlocked_songs", "last_seen"],
+  "additionalProperties": false
+}

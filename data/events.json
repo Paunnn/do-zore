@@ -1,0 +1,297 @@
+{
+  "$schema": "../contracts/schemas/events.schema.json",
+  "events": [
+    {
+      "id": "tuca",
+      "name": { "sr": "Tuča!", "en": "Fight!" },
+      "text": { "sr": "Dva stola su se posvađala oko pesme. Lete čaše.", "en": "Two tables are arguing over the song. Glasses are flying." },
+      "min_venue": "birtija",
+      "trigger": { "kind": "unhappy_tables", "min_unhappy_tables": 2, "chance": 0.25 },
+      "cooldown_seconds": 300,
+      "timeout_choice": "izbaci",
+      "choices": [
+        {
+          "id": "izbaci",
+          "label": { "sr": "Izbaci ih napolje", "en": "Throw them out" },
+          "outcomes": [
+            {
+              "weight": 70,
+              "text": { "sr": "Izbačeni su bez većeg loma.", "en": "Thrown out without much damage." },
+              "effects": [
+                { "type": "remove_unhappy_guests", "pay": false },
+                { "type": "mood_change", "value": -5 }
+              ]
+            },
+            {
+              "weight": 30,
+              "text": { "sr": "Izbačeni su, ali su polomili stolice.", "en": "Thrown out, but they broke some chairs." },
+              "effects": [
+                { "type": "remove_unhappy_guests", "pay": false },
+                { "type": "money_loss", "amount": { "income_minutes": 3, "min": 300 } },
+                { "type": "mood_change", "value": -10 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "runda",
+          "label": { "sr": "Runda za sve na račun kuće", "en": "A round for everyone, on the house" },
+          "cost": { "income_minutes": 4, "min": 500 },
+          "outcomes": [
+            {
+              "weight": 80,
+              "text": { "sr": "Pomirili su se uz rakiju i zapevali zajedno.", "en": "They made up over rakija and sang together." },
+              "effects": [ { "type": "mood_change", "value": 15 } ]
+            },
+            {
+              "weight": 20,
+              "text": { "sr": "Popili su rundu i nastavili da se svađaju.", "en": "They drank the round and kept fighting." },
+              "effects": [
+                { "type": "remove_unhappy_guests", "pay": false },
+                { "type": "mood_change", "value": -5 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "policija",
+          "label": { "sr": "Zovi policiju", "en": "Call the police" },
+          "outcomes": [
+            {
+              "weight": 75,
+              "text": { "sr": "Policija je smirila situaciju. Gosti su se uplašili.", "en": "The police calmed things down. Guests got nervous." },
+              "effects": [
+                { "type": "remove_unhappy_guests", "pay": true },
+                { "type": "mood_change", "value": -15 },
+                { "type": "stat_multiplier", "stat": "arrival_rate", "value": 0.7, "duration_seconds": 600 }
+              ]
+            },
+            {
+              "weight": 25,
+              "text": { "sr": "Policija je dovela i inspekciju.", "en": "The police brought an inspector along." },
+              "effects": [
+                { "type": "remove_unhappy_guests", "pay": true },
+                { "type": "mood_change", "value": -15 },
+                { "type": "trigger_event", "event": "inspekcija" }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "inspekcija",
+      "name": { "sr": "Inspekcija", "en": "Inspection" },
+      "text": { "sr": "Na vratima su dva inspektora sa fasciklama.", "en": "Two inspectors with folders are at the door." },
+      "min_venue": "birtija",
+      "trigger": { "kind": "random", "weight": 3 },
+      "cooldown_seconds": 1800,
+      "timeout_choice": "pusti",
+      "choices": [
+        {
+          "id": "pusti",
+          "label": { "sr": "Pusti ih da pregledaju", "en": "Let them inspect" },
+          "outcomes": [
+            {
+              "weight": 60,
+              "text": { "sr": "Sve je uredno.", "en": "Everything is in order." },
+              "effects": []
+            },
+            {
+              "weight": 40,
+              "text": { "sr": "Našli su nepravilnosti. Kazna.", "en": "They found irregularities. A fine." },
+              "effects": [ { "type": "money_loss", "amount": { "income_minutes": 10, "min": 1000 } } ]
+            }
+          ]
+        },
+        {
+          "id": "casti",
+          "label": { "sr": "Ponudi kafu i rakiju", "en": "Offer coffee and rakija" },
+          "cost": { "income_minutes": 2, "min": 300 },
+          "outcomes": [
+            {
+              "weight": 50,
+              "text": { "sr": "Popili su, pohvalili rakiju i otišli.", "en": "They drank, praised the rakija and left." },
+              "effects": [ { "type": "mood_change", "value": 5 } ]
+            },
+            {
+              "weight": 50,
+              "text": { "sr": "Shvatili su to kao mito. Duplo veća kazna.", "en": "They took it as a bribe. Double fine." },
+              "effects": [ { "type": "money_loss", "amount": { "income_minutes": 20, "min": 2000 } } ]
+            }
+          ]
+        },
+        {
+          "id": "zatvori",
+          "label": { "sr": "Zatvori ranije \"zbog kvara\"", "en": "Close early \"for repairs\"" },
+          "outcomes": [
+            {
+              "weight": 100,
+              "text": { "sr": "Inspektori će doći drugi put.", "en": "The inspectors will come back another time." },
+              "effects": [ { "type": "close_venue", "duration_seconds": 180 } ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "svadba",
+      "name": { "sr": "Svadba", "en": "Wedding" },
+      "text": { "sr": "Kum pita da li mogu da proslave svadbu kod vas večeras.", "en": "The best man asks if they can hold the wedding party here tonight." },
+      "min_venue": "kafana",
+      "trigger": { "kind": "random", "weight": 2 },
+      "cooldown_seconds": 3600,
+      "timeout_choice": "odbij",
+      "choices": [
+        {
+          "id": "prihvati",
+          "label": { "sr": "Prihvati svadbu", "en": "Host the wedding" },
+          "outcomes": [
+            {
+              "weight": 100,
+              "text": { "sr": "Svatovi stižu! Biće para, a možda i loma.", "en": "The wedding party arrives! Money is coming, and maybe trouble." },
+              "effects": [
+                { "type": "spawn_guests", "guest_type": "svatovi", "table_fraction": 0.5 },
+                { "type": "stat_multiplier", "stat": "income", "value": 1.5, "duration_seconds": 600 },
+                { "type": "stat_multiplier", "stat": "fight_chance", "value": 1.5, "duration_seconds": 600 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "avans",
+          "label": { "sr": "Traži avans unapred", "en": "Ask for a deposit" },
+          "outcomes": [
+            {
+              "weight": 70,
+              "text": { "sr": "Kum je platio bez pogovora.", "en": "The best man paid without a word." },
+              "effects": [
+                { "type": "money_gain", "amount": { "income_minutes": 15, "min": 5000 } },
+                { "type": "spawn_guests", "guest_type": "svatovi", "table_fraction": 0.5 }
+              ]
+            },
+            {
+              "weight": 30,
+              "text": { "sr": "Kum se uvredio i odveo svatove drugde.", "en": "The best man took offence and went elsewhere." },
+              "effects": [ { "type": "mood_change", "value": -5 } ]
+            }
+          ]
+        },
+        {
+          "id": "odbij",
+          "label": { "sr": "Odbij, večeras nema mesta", "en": "Decline, no room tonight" },
+          "outcomes": [
+            {
+              "weight": 100,
+              "text": { "sr": "Veče ide po starom.", "en": "The evening goes on as usual." },
+              "effects": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "nestanak_struje",
+      "name": { "sr": "Nestanak struje", "en": "Power cut" },
+      "text": { "sr": "Nestalo je struje u celoj ulici.", "en": "The power is out on the whole street." },
+      "min_venue": "birtija",
+      "trigger": { "kind": "random", "weight": 2 },
+      "cooldown_seconds": 2400,
+      "timeout_choice": "svece",
+      "choices": [
+        {
+          "id": "svece",
+          "label": { "sr": "Sveće i akustika", "en": "Candles and acoustic set" },
+          "outcomes": [
+            {
+              "weight": 100,
+              "text": { "sr": "Romantično je, ali kuhinja ne radi.", "en": "It's romantic, but the kitchen is down." },
+              "effects": [
+                { "type": "mood_change", "value": 5 },
+                { "type": "stat_multiplier", "stat": "income", "value": 0.7, "duration_seconds": 300 }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "agregat",
+          "label": { "sr": "Upali agregat", "en": "Start the generator" },
+          "cost": { "income_minutes": 3, "min": 800 },
+          "outcomes": [
+            {
+              "weight": 100,
+              "text": { "sr": "Agregat bruji, sve radi.", "en": "The generator hums, everything works." },
+              "effects": []
+            }
+          ]
+        },
+        {
+          "id": "zatvori",
+          "label": { "sr": "Zatvori dok ne dođe struja", "en": "Close until power returns" },
+          "outcomes": [
+            {
+              "weight": 100,
+              "text": { "sr": "Zatvoreno do daljeg.", "en": "Closed until further notice." },
+              "effects": [ { "type": "close_venue", "duration_seconds": 240 } ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "vip_gost",
+      "name": { "sr": "VIP gost", "en": "VIP guest" },
+      "text": { "sr": "Ušao je poznati pevač sa društvom.", "en": "A famous singer walked in with friends." },
+      "min_venue": "kafana",
+      "trigger": { "kind": "random", "weight": 1.5 },
+      "cooldown_seconds": 3600,
+      "timeout_choice": "normalno",
+      "choices": [
+        {
+          "id": "sampanjac",
+          "label": { "sr": "Najbolji sto i šampanjac", "en": "Best table and champagne" },
+          "cost": { "income_minutes": 5, "min": 2000 },
+          "outcomes": [
+            {
+              "weight": 70,
+              "text": { "sr": "Oduševljen je. Ostavio je bogat bakšiš.", "en": "Delighted. He left a huge tip." },
+              "effects": [ { "type": "money_gain", "amount": { "income_minutes": 25, "min": 10000 } } ]
+            },
+            {
+              "weight": 30,
+              "text": { "sr": "Samo se ljubazno zahvalio.", "en": "He just thanked you politely." },
+              "effects": []
+            }
+          ]
+        },
+        {
+          "id": "normalno",
+          "label": { "sr": "Usluži ga kao i sve ostale", "en": "Serve him like everyone else" },
+          "outcomes": [
+            {
+              "weight": 100,
+              "text": { "sr": "Popio je piće i ostavio pristojan bakšiš.", "en": "He had a drink and left a decent tip." },
+              "effects": [ { "type": "money_gain", "amount": { "income_minutes": 3, "min": 200 } } ]
+            }
+          ]
+        },
+        {
+          "id": "slika",
+          "label": { "sr": "Zamoli ga za sliku za zid", "en": "Ask for a photo for the wall" },
+          "outcomes": [
+            {
+              "weight": 60,
+              "text": { "sr": "Slika je na zidu. Svi dolaze da je vide.", "en": "The photo is on the wall. Everyone comes to see it." },
+              "effects": [ { "type": "stat_multiplier", "stat": "arrival_rate", "value": 1.2, "duration_seconds": 3600 } ]
+            },
+            {
+              "weight": 40,
+              "text": { "sr": "Odbio je i otišao ranije.", "en": "He refused and left early." },
+              "effects": [ { "type": "mood_change", "value": -5 } ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

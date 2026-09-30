@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://do-zore.example/schemas/band-levels.schema.json",
+  "title": "Band levels",
+  "description": "Band progression, bought in order (/data/band_levels.json).",
+  "type": "object",
+  "properties": {
+    "$schema": { "type": "string" },
+    "band_levels": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/BandLevel" }
+    }
+  },
+  "required": ["band_levels"],
+  "additionalProperties": false,
+  "$defs": {
+    "BandLevel": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/Id" },
+        "order": {
+          "description": "Position in the progression, starting at 1. The level with order 1 is owned from the start.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "name": { "$ref": "common.schema.json#/$defs/LocalizedText" },
+        "description": { "$ref": "common.schema.json#/$defs/LocalizedText" },
+        "members": { "type": "integer", "minimum": 1 },
+        "unlock_cost": { "$ref": "common.schema.json#/$defs/Dinars" },
+        "required_venue": {
+          "description": "Id of the lowest venue where this band level can be hired.",
+          "$ref": "common.schema.json#/$defs/Id"
+        },
+        "genres": {
+          "description": "Genre ids this band can play.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "common.schema.json#/$defs/Id" }
+        },
+        "mood_multiplier": {
+          "description": "Multiplier on positive mood changes from songs.",
+          "$ref": "common.schema.json#/$defs/Multiplier"
+        },
+        "tip_multiplier": { "$ref": "common.schema.json#/$defs/Multiplier" },
+        "upkeep_per_hour": {
+          "description": "Wages deducted per hour of play (online and offline).",
+          "$ref": "common.schema.json#/$defs/Dinars"
+        },
+        "can_play_hits": { "type": "boolean" }
+      },
+      "required": [
+        "id", "order", "name", "members", "unlock_cost", "required_venue", "genres",
+        "mood_multiplier", "tip_multiplier", "upkeep_per_hour", "can_play_hits"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

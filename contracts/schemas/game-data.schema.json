@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://do-zore.example/schemas/game-data.schema.json",
+  "title": "Game data bundle",
+  "description": "All balance data in one document, as served by GET /v1/config. The server builds it by merging the files in /data; the client ships the same bundle built in so it works offline.",
+  "type": "object",
+  "properties": {
+    "genres": { "$ref": "genres.schema.json#/properties/genres" },
+    "guest_types": { "$ref": "guest-types.schema.json#/properties/guest_types" },
+    "songs": { "$ref": "songs.schema.json#/properties/songs" },
+    "drinks": { "$ref": "drinks.schema.json#/properties/drinks" },
+    "upgrades": { "$ref": "upgrades.schema.json#/properties/upgrades" },
+    "band_levels": { "$ref": "band-levels.schema.json#/properties/band_levels" },
+    "venues": { "$ref": "venues.schema.json#/properties/venues" },
+    "events": { "$ref": "events.schema.json#/properties/events" },
+    "economy": { "$ref": "economy.schema.json" }
+  },
+  "required": ["genres", "guest_types", "songs", "drinks", "upgrades", "band_levels", "venues", "events", "economy"],
+  "additionalProperties": false
+}

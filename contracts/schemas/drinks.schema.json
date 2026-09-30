@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://do-zore.example/schemas/drinks.schema.json",
+  "title": "Drinks",
+  "description": "Menu items guests can order (/data/drinks.json). Covers food too (kind = food), since guests order both from one menu.",
+  "type": "object",
+  "properties": {
+    "$schema": { "type": "string" },
+    "drinks": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/Drink" }
+    }
+  },
+  "required": ["drinks"],
+  "additionalProperties": false,
+  "$defs": {
+    "Drink": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/Id" },
+        "name": { "$ref": "common.schema.json#/$defs/LocalizedText" },
+        "kind": { "enum": ["drink", "food"] },
+        "category": { "enum": ["kafa", "rakija", "pivo", "vino", "zestina", "bezalkoholno", "meze", "glavno_jelo"] },
+        "price": {
+          "description": "Base menu price per serving, before venue price_multiplier and guest spending_power.",
+          "$ref": "common.schema.json#/$defs/Dinars"
+        },
+        "cost": {
+          "description": "Purchase cost per serving, deducted from the sale.",
+          "$ref": "common.schema.json#/$defs/Dinars"
+        },
+        "prep_seconds": { "type": "integer", "minimum": 0 },
+        "unlock_venue": {
+          "description": "Id of the first venue where this item is on the menu.",
+          "$ref": "common.schema.json#/$defs/Id"
+        }
+      },
+      "required": ["id", "name", "kind", "category", "price", "cost", "prep_seconds", "unlock_venue"],
+      "additionalProperties": false
+    }
+  }
+}

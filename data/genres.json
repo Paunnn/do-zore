@@ -1,0 +1,35 @@
+{
+  "$schema": "../contracts/schemas/genres.schema.json",
+  "genres": [
+    {
+      "id": "starogradske",
+      "name": { "sr": "Starogradske", "en": "Old-town songs" },
+      "description": { "sr": "Sentimentalne gradske pesme uz violinu i gitaru.", "en": "Sentimental urban ballads with violin and guitar." },
+      "related": [ { "genre": "tamburica", "strength": 0.5 } ]
+    },
+    {
+      "id": "tamburica",
+      "name": { "sr": "Tamburica", "en": "Tamburica" },
+      "description": { "sr": "Vojvođanski tamburaški zvuk, bećarci i romanse.", "en": "Vojvodina tamburica sound, bećarac and romances." },
+      "related": [
+        { "genre": "starogradske", "strength": 0.5 },
+        { "genre": "izvorna", "strength": 0.5 }
+      ]
+    },
+    {
+      "id": "izvorna",
+      "name": { "sr": "Izvorna", "en": "Folk" },
+      "description": { "sr": "Narodna kola i pesme sa sela, uz harmoniku.", "en": "Village folk dances and songs on the accordion." },
+      "related": [
+        { "genre": "tamburica", "strength": 0.5 },
+        { "genre": "narodnjaci", "strength": 0.25 }
+      ]
+    },
+    {
+      "id": "narodnjaci",
+      "name": { "sr": "Narodnjaci", "en": "Pop-folk" },
+      "description": { "sr": "Novokomponovana narodna muzika za lomljenje čaša.", "en": "Newly composed folk music for breaking glasses." },
+      "related": [ { "genre": "izvorna", "strength": 0.25 } ]
+    }
+  ]
+}

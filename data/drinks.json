@@ -1,0 +1,17 @@
+{
+  "$schema": "../contracts/schemas/drinks.schema.json",
+  "drinks": [
+    { "id": "domaca_kafa", "name": { "sr": "Domaća kafa", "en": "Turkish coffee" }, "kind": "drink", "category": "kafa", "price": 150, "cost": 40, "prep_seconds": 20, "unlock_venue": "birtija" },
+    { "id": "kisela_voda", "name": { "sr": "Kisela voda", "en": "Mineral water" }, "kind": "drink", "category": "bezalkoholno", "price": 120, "cost": 30, "prep_seconds": 3, "unlock_venue": "birtija" },
+    { "id": "pivo", "name": { "sr": "Pivo", "en": "Beer" }, "kind": "drink", "category": "pivo", "price": 250, "cost": 90, "prep_seconds": 5, "unlock_venue": "birtija" },
+    { "id": "sljivovica", "name": { "sr": "Šljivovica", "en": "Plum brandy" }, "kind": "drink", "category": "rakija", "price": 200, "cost": 60, "prep_seconds": 5, "unlock_venue": "birtija" },
+    { "id": "lozovaca", "name": { "sr": "Lozovača", "en": "Grape brandy" }, "kind": "drink", "category": "rakija", "price": 220, "cost": 70, "prep_seconds": 5, "unlock_venue": "birtija" },
+    { "id": "meze", "name": { "sr": "Meze", "en": "Meze platter" }, "kind": "food", "category": "meze", "price": 600, "cost": 250, "prep_seconds": 60, "unlock_venue": "kafana" },
+    { "id": "crno_vino", "name": { "sr": "Crno vino", "en": "Red wine" }, "kind": "drink", "category": "vino", "price": 350, "cost": 120, "prep_seconds": 5, "unlock_venue": "kafana" },
+    { "id": "vinjak", "name": { "sr": "Vinjak", "en": "Brandy" }, "kind": "drink", "category": "zestina", "price": 300, "cost": 100, "prep_seconds": 5, "unlock_venue": "kafana" },
+    { "id": "rostilj", "name": { "sr": "Mešano meso", "en": "Mixed grill" }, "kind": "food", "category": "glavno_jelo", "price": 1400, "cost": 600, "prep_seconds": 120, "unlock_venue": "restoran" },
+    { "id": "viski", "name": { "sr": "Viski", "en": "Whisky" }, "kind": "drink", "category": "zestina", "price": 900, "cost": 350, "prep_seconds": 5, "unlock_venue": "kafana" },
+    { "id": "riblja_corba", "name": { "sr": "Riblja čorba", "en": "Fish stew" }, "kind": "food", "category": "glavno_jelo", "price": 1100, "cost": 450, "prep_seconds": 90, "unlock_venue": "splav" },
+    { "id": "sampanjac", "name": { "sr": "Šampanjac", "en": "Champagne" }, "kind": "drink", "category": "vino", "price": 6000, "cost": 2500, "prep_seconds": 10, "unlock_venue": "splav" }
+  ]
+}

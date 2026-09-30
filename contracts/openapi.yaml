@@ -1,0 +1,917 @@
+openapi: 3.1.0
+info:
+  title: Do Zore API
+  version: 1.0.0
+  description: |
+    Backend API for Do Zore, a mobile idle kafana-management game.
+
+    **Offline-first.** The game is fully playable without this API. Every endpoint is an optional
+    enhancement: the client ships the game data built in, keeps its save locally, and syncs when
+    a connection is available. A failed or unreachable request must never block play.
+
+    **Conventions**
+    - All timestamps are RFC 3339 in UTC, from the server clock unless stated otherwise.
+    - Money (dinari, bakšiš) is an integer number of dinars (int64 on the server).
+    - Errors use `application/problem+json` (RFC 9457) with a machine-readable `code`.
+    - Authenticated endpoints take `Authorization: Bearer <access_token>`.
+      Access tokens live 15 minutes, refresh tokens 30 days and rotate on every use.
+    - Game-data shapes are the JSON Schemas in `./schemas/`; this file references them directly.
+
+    Changes to this file are logged in `CHANGELOG.md`.
+servers:
+  - url: http://localhost:5000
+    description: Local development
+tags:
+  - name: system
+    description: Health and diagnostics.
+  - name: auth
+    description: Anonymous device login, token refresh, account linking.
+  - name: player
+    description: Player profile.
+  - name: save
+    description: Cloud save with optimistic concurrency.
+  - name: offline
+    description: Server-verified offline earnings.
+  - name: config
+    description: Game balance data.
+  - name: leaderboard
+    description: Weekly bakšiš leaderboard.
+  - name: live-events
+    description: Server-scheduled live events (not the in-game random events).
+  - name: analytics
+    description: Batched gameplay analytics.
+  - name: iap
+    description: In-app purchase validation.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /v1/health:
+    get:
+      tags: [system]
+      operationId: getHealth
+      summary: Liveness check
+      security: []
+      responses:
+        '200':
+          description: Server is up.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+
+  # ---------------------------------------------------------------- auth
+  /v1/auth/device:
+    post:
+      tags: [auth]
+      operationId: loginWithDevice
+      summary: Anonymous device login
+      description: |
+        Logs in with a device credential the client generates on first launch and stores locally:
+        a random `device_id` (UUID) and a random `device_secret`. The first call with an unknown
+        `device_id` creates a new player bound to that secret; later calls must present the same
+        secret. The server stores only a hash of the secret.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceLoginRequest'
+      responses:
+        '200':
+          description: Logged in (existing or newly created player).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401':
+          description: Known device_id with the wrong device_secret (`code` = `invalid_device_credentials`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  /v1/auth/refresh:
+    post:
+      tags: [auth]
+      operationId: refreshTokens
+      summary: Exchange a refresh token for a new token pair
+      description: |
+        Refresh tokens are single-use. Presenting an already-used refresh token revokes every
+        token issued from the same login (reuse detection); the client must log in again.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: New token pair; the old refresh token is now invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401':
+          description: Refresh token invalid, expired or reused (`code` = `invalid_refresh_token`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /v1/auth/link/google:
+    post:
+      tags: [auth]
+      operationId: linkGoogle
+      summary: Link a Google account (planned)
+      description: Planned. Returns 501 in v1. Lets a player recover progress on a new device.
+      x-status: planned
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LinkGoogleRequest'
+      responses:
+        '200':
+          description: Account linked.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Player'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: That Google account is already linked to another player (`code` = `provider_already_linked`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+  /v1/auth/link/apple:
+    post:
+      tags: [auth]
+      operationId: linkApple
+      summary: Link an Apple ID (planned)
+      description: Planned. Returns 501 in v1. Lets a player recover progress on a new device.
+      x-status: planned
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LinkAppleRequest'
+      responses:
+        '200':
+          description: Account linked.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Player'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: That Apple ID is already linked to another player (`code` = `provider_already_linked`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+  # ---------------------------------------------------------------- player
+  /v1/me:
+    get:
+      tags: [player]
+      operationId: getMe
+      summary: Current player profile
+      responses:
+        '200':
+          description: The player.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Player'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    patch:
+      tags: [player]
+      operationId: updateMe
+      summary: Change display name (shown on leaderboards)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePlayerRequest'
+      responses:
+        '200':
+          description: Updated player.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Player'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422':
+          description: Name rejected by the profanity filter (`code` = `display_name_rejected`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  # ---------------------------------------------------------------- save
+  /v1/save:
+    get:
+      tags: [save]
+      operationId: getSave
+      summary: Download the cloud save
+      responses:
+        '200':
+          description: The current cloud save.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaveEnvelope'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: No cloud save yet (`code` = `save_not_found`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    put:
+      tags: [save]
+      operationId: putSave
+      summary: Upload the cloud save (optimistic concurrency)
+      description: |
+        `base_version` must equal the server's current version (0 when no cloud save exists yet).
+        On success the server stores the save and returns the new version (base_version + 1).
+        If another device has uploaded in the meantime, the server rejects the write with 409 and
+        returns its copy; the client decides which to keep (e.g. ask the player, or keep the one
+        with higher `total_baksis`) and retries with the server's version as `base_version`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PutSaveRequest'
+      responses:
+        '200':
+          description: Saved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaveWriteResult'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: Version conflict. The body contains the server's current save.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaveConflict'
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '422':
+          description: Save fails schema or game-data validation, e.g. unknown venue id (`code` = `invalid_save`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  # ---------------------------------------------------------------- offline earnings
+  /v1/offline-earnings/claim:
+    post:
+      tags: [offline]
+      operationId: claimOfflineEarnings
+      summary: Claim offline earnings, verified against server time
+      description: |
+        Used when the client is online at the start of a session. The client computes its own
+        amount (from `economy.offline` in the game data) and sends it as `claimed_amount`; the
+        server recomputes from its **stored cloud save** and **its own clock** and grants
+        `min(claimed_amount, computed_amount)`.
+
+        The away period starts at the later of (a) the server's last recorded activity for the
+        player (last save upload or claim) and (b) the client's `last_seen`, and ends at server
+        now. A successful claim records a new activity time, so each away period pays once.
+
+        The client must upload its save first so the server computes from current progress;
+        if `save_version` is not the server's current version the claim is rejected with 409.
+
+        If the server is unreachable, the client grants the locally computed amount itself.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OfflineClaimRequest'
+      responses:
+        '200':
+          description: Granted amount. May be 0 (e.g. away less than `economy.offline.min_away_seconds`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfflineClaimResult'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404':
+          description: No cloud save to compute from (`code` = `save_not_found`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: save_version is stale; upload the save and retry (`code` = `save_version_mismatch`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  # ---------------------------------------------------------------- config
+  /v1/config:
+    get:
+      tags: [config]
+      operationId: getConfig
+      summary: Current game data
+      description: |
+        Returns all balance data (the files in /data merged into one bundle) plus its version hash.
+        The ETag is the version hash; send it back in `If-None-Match` to get 304 when unchanged.
+        The client ships a built-in copy and only replaces it with a successfully downloaded one.
+      security:
+        - {}
+        - bearerAuth: []
+      parameters:
+        - name: If-None-Match
+          in: header
+          required: false
+          description: ETag from a previous response.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Game data.
+          headers:
+            ETag:
+              description: Quoted version hash, e.g. `"3f2a…"`.
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+                example: public, max-age=300
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigResponse'
+        '304':
+          description: Not modified; the client's copy is current.
+          headers:
+            ETag:
+              schema:
+                type: string
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  # ---------------------------------------------------------------- leaderboard
+  /v1/leaderboards/weekly:
+    get:
+      tags: [leaderboard]
+      operationId: getWeeklyLeaderboard
+      summary: Weekly bakšiš leaderboard (top N + my rank)
+      description: |
+        Ranks players by bakšiš earned during the current week. Weeks run Monday 00:00 to
+        Monday 00:00 Europe/Belgrade time (ISO week). Ties rank by who reached the score first.
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 100
+      responses:
+        '200':
+          description: Leaderboard.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WeeklyLeaderboard'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1/leaderboards/weekly/score:
+    post:
+      tags: [leaderboard]
+      operationId: submitWeeklyScore
+      summary: Report this week's bakšiš total
+      description: |
+        The client reports its running total of bakšiš earned this week. The server keeps the
+        highest value per player per week, and may clamp implausible jumps. Submissions for a week
+        other than the current one are rejected, except the previous week within 1 hour of rollover.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScoreSubmission'
+      responses:
+        '200':
+          description: Score recorded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScoreResult'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: week_id is closed (`code` = `week_closed`).
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  # ---------------------------------------------------------------- live events
+  /v1/events/active:
+    get:
+      tags: [live-events]
+      operationId: getActiveLiveEvents
+      summary: Scheduled live events (active and upcoming)
+      description: |
+        Server-scheduled live events such as a weekend income multiplier. Returns events active
+        now and those starting within the next 7 days so the client can cache and apply them on
+        schedule while offline. Unrelated to the in-game random events in the game data.
+      security:
+        - {}
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Live events.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LiveEventList'
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  # ---------------------------------------------------------------- analytics
+  /v1/analytics/batch:
+    post:
+      tags: [analytics]
+      operationId: postAnalyticsBatch
+      summary: Upload a batch of analytics events
+      description: |
+        Fire-and-forget. The client queues events locally and uploads them in batches when online.
+        `event_id` makes uploads idempotent: re-sent events are ignored.
+      security:
+        - {}
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalyticsBatch'
+      responses:
+        '202':
+          description: Accepted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsAccepted'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+  # ---------------------------------------------------------------- IAP
+  /v1/iap/validate:
+    post:
+      tags: [iap]
+      operationId: validatePurchase
+      summary: Validate an in-app purchase receipt (stub)
+      description: |
+        Stub in v1: the server returns 501. The response shape is fixed now so the client can be
+        built against it. Validation is idempotent per `transaction_id`.
+      x-status: stub
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IapValidationRequest'
+      responses:
+        '200':
+          description: Validation result.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IapValidationResult'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    BadRequest:
+      description: Malformed request (`code` = `bad_request`).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Unauthorized:
+      description: Missing, invalid or expired access token (`code` = `unauthorized`).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    PayloadTooLarge:
+      description: Body too large (`code` = `payload_too_large`). Saves are limited to 256 KiB, analytics batches to 512 KiB.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    TooManyRequests:
+      description: Rate limited (`code` = `rate_limited`).
+      headers:
+        Retry-After:
+          description: Seconds to wait before retrying.
+          schema:
+            type: integer
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    NotImplemented:
+      description: Endpoint not implemented yet (`code` = `not_implemented`).
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+
+  schemas:
+    # ------------------------------------------------------------ shared
+    Problem:
+      type: object
+      description: RFC 9457 problem details.
+      properties:
+        type: { type: string, format: uri-reference, default: about:blank }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        code:
+          type: string
+          description: Stable machine-readable error code (snake_case); clients switch on this, not on title.
+        trace_id: { type: string }
+      required: [title, status, code]
+
+    PlayerId:
+      type: string
+      format: uuid
+
+    Dinars:
+      type: integer
+      format: int64
+      minimum: 0
+
+    WeekId:
+      type: string
+      description: ISO week, e.g. 2026-W40.
+      pattern: '^\d{4}-W\d{2}$'
+
+    Health:
+      type: object
+      properties:
+        status: { const: ok }
+        server_time: { type: string, format: date-time }
+      required: [status, server_time]
+
+    # ------------------------------------------------------------ auth
+    DeviceLoginRequest:
+      type: object
+      properties:
+        device_id: { type: string, format: uuid }
+        device_secret:
+          type: string
+          minLength: 32
+          maxLength: 128
+          description: Random secret generated once per install and stored locally.
+        platform: { enum: [android, ios, editor] }
+        app_version: { type: string, maxLength: 32, examples: ['0.1.0'] }
+      required: [device_id, device_secret, platform, app_version]
+      additionalProperties: false
+
+    RefreshRequest:
+      type: object
+      properties:
+        refresh_token: { type: string }
+      required: [refresh_token]
+      additionalProperties: false
+
+    TokenPair:
+      type: object
+      properties:
+        token_type: { const: Bearer }
+        access_token: { type: string }
+        expires_in: { type: integer, description: Access token lifetime in seconds. }
+        refresh_token: { type: string }
+        refresh_expires_in: { type: integer, description: Refresh token lifetime in seconds. }
+        player_id: { $ref: '#/components/schemas/PlayerId' }
+        is_new_player: { type: boolean, description: True when this login created the player. }
+      required: [token_type, access_token, expires_in, refresh_token, refresh_expires_in, player_id, is_new_player]
+
+    LinkGoogleRequest:
+      type: object
+      properties:
+        id_token: { type: string, description: Google Sign-In ID token. }
+      required: [id_token]
+      additionalProperties: false
+
+    LinkAppleRequest:
+      type: object
+      properties:
+        identity_token: { type: string }
+        authorization_code: { type: string }
+      required: [identity_token, authorization_code]
+      additionalProperties: false
+
+    # ------------------------------------------------------------ player
+    Player:
+      type: object
+      properties:
+        player_id: { $ref: '#/components/schemas/PlayerId' }
+        display_name: { type: string, description: Generated on creation (e.g. "Gost 4821") until the player changes it. }
+        created_at: { type: string, format: date-time }
+        linked_providers:
+          type: array
+          items: { enum: [google, apple] }
+      required: [player_id, display_name, created_at, linked_providers]
+
+    UpdatePlayerRequest:
+      type: object
+      properties:
+        display_name:
+          type: string
+          minLength: 3
+          maxLength: 20
+          description: Letters (incl. č ć š đ ž), digits, spaces and `_ . -`; checked server-side.
+      required: [display_name]
+      additionalProperties: false
+
+    # ------------------------------------------------------------ save
+    PlayerSave:
+      $ref: './schemas/save.schema.json'
+
+    SaveEnvelope:
+      type: object
+      properties:
+        version: { type: integer, minimum: 1 }
+        updated_at: { type: string, format: date-time }
+        save: { $ref: '#/components/schemas/PlayerSave' }
+      required: [version, updated_at, save]
+
+    PutSaveRequest:
+      type: object
+      properties:
+        base_version:
+          type: integer
+          minimum: 0
+          description: Version this save was based on; 0 if the client has never seen a cloud save.
+        save: { $ref: '#/components/schemas/PlayerSave' }
+      required: [base_version, save]
+      additionalProperties: false
+
+    SaveWriteResult:
+      type: object
+      properties:
+        version: { type: integer, minimum: 1 }
+        updated_at: { type: string, format: date-time }
+      required: [version, updated_at]
+
+    SaveConflict:
+      type: object
+      properties:
+        code: { const: save_conflict }
+        server: { $ref: '#/components/schemas/SaveEnvelope' }
+      required: [code, server]
+
+    # ------------------------------------------------------------ offline
+    OfflineClaimRequest:
+      type: object
+      properties:
+        last_seen:
+          type: string
+          format: date-time
+          description: Client clock time when the game was last active.
+        claimed_amount: { $ref: '#/components/schemas/Dinars' }
+        save_version:
+          type: integer
+          minimum: 1
+          description: Cloud save version the client's progress matches.
+      required: [last_seen, claimed_amount, save_version]
+      additionalProperties: false
+
+    OfflineClaimResult:
+      type: object
+      properties:
+        granted_amount: { $ref: '#/components/schemas/Dinars' }
+        claimed_amount: { $ref: '#/components/schemas/Dinars' }
+        computed_amount:
+          $ref: '#/components/schemas/Dinars'
+          description: Server's own calculation.
+        away_seconds: { type: integer, minimum: 0, description: Length of the away period by server clock. }
+        counted_seconds: { type: integer, minimum: 0, description: Seconds actually paid after the cap. }
+        cap_hours: { type: number }
+        capped: { type: boolean }
+        live_event_ids:
+          type: array
+          description: Live events whose income multiplier was applied (pro rata for the overlapping time).
+          items: { type: string }
+        server_time: { type: string, format: date-time }
+        data_version_hash: { type: string, description: Game-data version the server computed with. }
+      required: [granted_amount, claimed_amount, computed_amount, away_seconds, counted_seconds, cap_hours, capped, live_event_ids, server_time, data_version_hash]
+
+    # ------------------------------------------------------------ config
+    ConfigResponse:
+      type: object
+      properties:
+        version_hash:
+          type: string
+          description: SHA-256 (hex) of the canonical JSON of `data`. Also sent as the ETag.
+          pattern: '^[0-9a-f]{64}$'
+        generated_at: { type: string, format: date-time }
+        min_client_version:
+          type: string
+          description: Oldest client version this data is compatible with. Older clients keep their built-in data.
+        data: { $ref: './schemas/game-data.schema.json' }
+      required: [version_hash, generated_at, min_client_version, data]
+
+    # ------------------------------------------------------------ leaderboard
+    LeaderboardEntry:
+      type: object
+      properties:
+        rank: { type: integer, minimum: 1 }
+        player_id: { $ref: '#/components/schemas/PlayerId' }
+        display_name: { type: string }
+        score:
+          $ref: '#/components/schemas/Dinars'
+          description: Bakšiš earned this week.
+      required: [rank, player_id, display_name, score]
+
+    WeeklyLeaderboard:
+      type: object
+      properties:
+        week_id: { $ref: '#/components/schemas/WeekId' }
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+        total_players: { type: integer, minimum: 0 }
+        entries:
+          type: array
+          maxItems: 100
+          items: { $ref: '#/components/schemas/LeaderboardEntry' }
+        me:
+          description: The requesting player's standing; rank is null if they have no score this week.
+          type: object
+          properties:
+            rank: { type: [integer, 'null'], minimum: 1 }
+            score: { $ref: '#/components/schemas/Dinars' }
+          required: [rank, score]
+      required: [week_id, starts_at, ends_at, total_players, entries, me]
+
+    ScoreSubmission:
+      type: object
+      properties:
+        week_id: { $ref: '#/components/schemas/WeekId' }
+        score:
+          $ref: '#/components/schemas/Dinars'
+          description: Total bakšiš earned this week so far.
+      required: [week_id, score]
+      additionalProperties: false
+
+    ScoreResult:
+      type: object
+      properties:
+        week_id: { $ref: '#/components/schemas/WeekId' }
+        accepted_score:
+          $ref: '#/components/schemas/Dinars'
+          description: Score now on the board (may be lower than submitted if clamped).
+        rank: { type: integer, minimum: 1 }
+      required: [week_id, accepted_score, rank]
+
+    # ------------------------------------------------------------ live events
+    LiveEvent:
+      type: object
+      properties:
+        id: { type: string }
+        name:
+          $ref: './schemas/common.schema.json#/$defs/LocalizedText'
+        description:
+          $ref: './schemas/common.schema.json#/$defs/LocalizedText'
+        starts_at: { type: string, format: date-time }
+        ends_at: { type: string, format: date-time }
+        modifiers:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/LiveEventModifier' }
+      required: [id, name, starts_at, ends_at, modifiers]
+
+    LiveEventModifier:
+      type: object
+      properties:
+        stat: { enum: [income, tip_rate, arrival_rate, offline_income] }
+        value:
+          type: number
+          exclusiveMinimum: 0
+          description: Multiplier, e.g. 2.0 for double income.
+        guest_type:
+          type: string
+          description: Optional guest-type id; if set, the modifier applies only to that guest type.
+      required: [stat, value]
+
+    LiveEventList:
+      type: object
+      properties:
+        server_time: { type: string, format: date-time }
+        events:
+          type: array
+          items: { $ref: '#/components/schemas/LiveEvent' }
+      required: [server_time, events]
+
+    # ------------------------------------------------------------ analytics
+    AnalyticsEvent:
+      type: object
+      properties:
+        event_id: { type: string, format: uuid, description: Client-generated UUID used for de-duplication. }
+        name:
+          type: string
+          pattern: '^[a-z][a-z0-9_]{1,63}$'
+          examples: [session_start, song_played, upgrade_bought, event_choice]
+        ts: { type: string, format: date-time, description: Client clock time of the event. }
+        params:
+          type: object
+          maxProperties: 32
+          additionalProperties:
+            type: [string, number, boolean]
+      required: [event_id, name, ts]
+      additionalProperties: false
+
+    AnalyticsBatch:
+      type: object
+      properties:
+        device_id: { type: string, format: uuid }
+        session_id: { type: string, format: uuid }
+        platform: { enum: [android, ios, editor] }
+        app_version: { type: string, maxLength: 32 }
+        data_version_hash: { type: string }
+        sent_at: { type: string, format: date-time, description: "Client clock at upload, used to estimate clock skew." }
+        events:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items: { $ref: '#/components/schemas/AnalyticsEvent' }
+      required: [device_id, session_id, platform, app_version, sent_at, events]
+      additionalProperties: false
+
+    AnalyticsAccepted:
+      type: object
+      properties:
+        accepted: { type: integer, minimum: 0 }
+        duplicates: { type: integer, minimum: 0 }
+      required: [accepted, duplicates]
+
+    # ------------------------------------------------------------ IAP
+    IapValidationRequest:
+      type: object
+      properties:
+        platform: { enum: [google, apple] }
+        product_id: { type: string }
+        transaction_id: { type: string, description: Google orderId or Apple transactionId. }
+        receipt:
+          type: string
+          description: Google purchaseToken or Apple signed transaction (JWS).
+      required: [platform, product_id, transaction_id, receipt]
+      additionalProperties: false
+
+    IapValidationResult:
+      type: object
+      properties:
+        status: { enum: [valid, invalid, already_redeemed] }
+        transaction_id: { type: string }
+        product_id: { type: string }
+        grants:
+          type: array
+          description: What the purchase gives. Empty unless status is valid.
+          items:
+            type: object
+            properties:
+              type: { enum: [money, remove_ads, offline_cap_hours, income_multiplier] }
+              amount: { type: number }
+              duration_seconds: { type: [integer, 'null'], description: Null for permanent grants. }
+            required: [type, amount, duration_seconds]
+      required: [status, transaction_id, product_id, grants]

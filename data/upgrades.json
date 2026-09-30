@@ -1,0 +1,135 @@
+{
+  "$schema": "../contracts/schemas/upgrades.schema.json",
+  "upgrades": [
+    {
+      "id": "dodatni_sto",
+      "name": { "sr": "Dodatni sto", "en": "Extra table" },
+      "description": { "sr": "Još jedan sto, do granice lokala.", "en": "One more table, up to the venue's limit." },
+      "category": "prostor",
+      "unlock_venue": "birtija",
+      "max_level": 24,
+      "base_cost": 400,
+      "cost_growth": 1.4,
+      "effects": [ { "stat": "table_count", "op": "add", "per_level": 1 } ]
+    },
+    {
+      "id": "konobar",
+      "name": { "sr": "Konobar", "en": "Waiter" },
+      "description": { "sr": "Brža usluga, manje čekanja.", "en": "Faster service, less waiting." },
+      "category": "osoblje",
+      "unlock_venue": "birtija",
+      "max_level": 10,
+      "base_cost": 800,
+      "cost_growth": 1.5,
+      "effects": [ { "stat": "service_speed", "op": "multiply", "per_level": 1.1 } ]
+    },
+    {
+      "id": "bolji_sank",
+      "name": { "sr": "Bolji šank", "en": "Better bar" },
+      "description": { "sr": "Bolja pića, bolje cene.", "en": "Better drinks, better prices." },
+      "category": "sank",
+      "unlock_venue": "birtija",
+      "max_level": 20,
+      "base_cost": 1000,
+      "cost_growth": 1.45,
+      "effects": [ { "stat": "menu_price", "op": "multiply", "per_level": 1.06 } ]
+    },
+    {
+      "id": "ozvucenje",
+      "name": { "sr": "Ozvučenje", "en": "Sound system" },
+      "description": { "sr": "Da se pesma čuje i u poslednjem ćošku.", "en": "So the song reaches the last corner." },
+      "category": "muzika",
+      "unlock_venue": "birtija",
+      "max_level": 10,
+      "base_cost": 2500,
+      "cost_growth": 1.55,
+      "effects": [ { "stat": "song_mood_power", "op": "multiply", "per_level": 1.05 } ]
+    },
+    {
+      "id": "dekor",
+      "name": { "sr": "Ćilimi i slike", "en": "Rugs and pictures" },
+      "description": { "sr": "Toplija atmosfera, gosti se duže dobro osećaju.", "en": "A warmer room keeps guests happy longer." },
+      "category": "ugled",
+      "unlock_venue": "birtija",
+      "max_level": 10,
+      "base_cost": 1500,
+      "cost_growth": 1.5,
+      "effects": [
+        { "stat": "mood_decay", "op": "multiply", "per_level": 0.92 },
+        { "stat": "tip_rate", "op": "multiply", "per_level": 1.03 }
+      ]
+    },
+    {
+      "id": "oglas",
+      "name": { "sr": "Oglas u novinama", "en": "Newspaper ad" },
+      "description": { "sr": "Više gostiju zna za vas.", "en": "More guests know about you." },
+      "category": "ugled",
+      "unlock_venue": "birtija",
+      "max_level": 15,
+      "base_cost": 1200,
+      "cost_growth": 1.45,
+      "effects": [ { "stat": "arrival_rate", "op": "multiply", "per_level": 1.07 } ]
+    },
+    {
+      "id": "sef",
+      "name": { "sr": "Sef", "en": "Safe" },
+      "description": { "sr": "Kasa radi i dok vas nema — duže.", "en": "The till keeps earning longer while you're away." },
+      "category": "sank",
+      "unlock_venue": "birtija",
+      "max_level": 6,
+      "base_cost": 5000,
+      "cost_growth": 1.9,
+      "effects": [ { "stat": "offline_cap_hours", "op": "add", "per_level": 1 } ]
+    },
+    {
+      "id": "kuhinja",
+      "name": { "sr": "Kuhinja", "en": "Kitchen" },
+      "description": { "sr": "Brža kuhinja, strpljiviji gosti.", "en": "A faster kitchen keeps guests patient." },
+      "category": "kuhinja",
+      "unlock_venue": "kafana",
+      "max_level": 10,
+      "base_cost": 8000,
+      "cost_growth": 1.5,
+      "effects": [
+        { "stat": "patience", "op": "multiply", "per_level": 1.06 },
+        { "stat": "menu_price", "op": "multiply", "per_level": 1.03 }
+      ]
+    },
+    {
+      "id": "izbacivac",
+      "name": { "sr": "Izbacivač", "en": "Bouncer" },
+      "description": { "sr": "Manje tuča. Mnogo manje.", "en": "Fewer fights. Many fewer." },
+      "category": "osoblje",
+      "unlock_venue": "kafana",
+      "max_level": 5,
+      "base_cost": 20000,
+      "cost_growth": 1.8,
+      "effects": [ { "stat": "fight_chance", "op": "multiply", "per_level": 0.8 } ]
+    },
+    {
+      "id": "basta",
+      "name": { "sr": "Bašta", "en": "Garden" },
+      "description": { "sr": "Stolovi napolju, pod lozom.", "en": "Tables outside, under the vines." },
+      "category": "prostor",
+      "unlock_venue": "kafana",
+      "max_level": 5,
+      "base_cost": 30000,
+      "cost_growth": 1.7,
+      "effects": [
+        { "stat": "table_count", "op": "add", "per_level": 2 },
+        { "stat": "arrival_rate", "op": "multiply", "per_level": 1.05 }
+      ]
+    },
+    {
+      "id": "knjigovodja",
+      "name": { "sr": "Knjigovođa", "en": "Bookkeeper" },
+      "description": { "sr": "Neko pazi na pare dok vas nema.", "en": "Someone minds the money while you're away." },
+      "category": "osoblje",
+      "unlock_venue": "restoran",
+      "max_level": 10,
+      "base_cost": 150000,
+      "cost_growth": 1.6,
+      "effects": [ { "stat": "offline_income", "op": "multiply", "per_level": 1.1 } ]
+    }
+  ]
+}
