@@ -3,6 +3,15 @@
 Every change to `openapi.yaml` or `schemas/` is logged here, newest first.
 Format: date, version, what changed, why, and whether it is breaking for the client.
 
+## 2026-09-30 — v1.0.1 (offline-claim clarification)
+
+**Breaking:** no (description-only; no request/response shape changed)
+
+- `POST /v1/offline-earnings/claim`: v1.0.0 said a save upload resets the player's recorded activity to the upload time, while also telling the client to upload before claiming — which would make every claim pay 0. Now a save upload records the save's `last_seen`, clamped between the previous recorded activity and server now; a claim records server now.
+- `PUT /v1/save`: documented that when the server has no save, any `base_version` is accepted (there is no server copy to conflict with), and that uploads update recorded activity.
+
+**Why:** found while implementing the server; the v1.0.0 flow could never pay offline earnings when online.
+
 ## 2026-09-30 — v1.0.0 (initial contract)
 
 **Breaking:** n/a (first version)
