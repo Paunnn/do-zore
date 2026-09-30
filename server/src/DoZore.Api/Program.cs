@@ -1,10 +1,16 @@
 using DoZore.Api.Data;
 using DoZore.Api.Features;
+using DoZore.Api.GameData;
 using DoZore.Api.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Formatting.Compact;
+
+// Commands:
+//   (none)                                      run the API
+//   seed [--data <dir>] [--live-events <file>]  load /data (and optionally live events) into the DB, then exit
+var command = args.FirstOrDefault(a => !a.StartsWith('-')) ?? "serve";
 
 var builder = WebApplication.CreateBuilder(args);
 var config = builder.Configuration;
@@ -25,12 +31,18 @@ builder.Services.AddDbContext<AppDbContext>(o => AppDbContext.Configure(o, conne
 builder.Services.TryAddTimeProvider();
 builder.Services.AddSingleton(AppPaths.Resolve(config));
 builder.Services.AddSingleton<ContractSchemas>();
+builder.Services.AddSingleton<GameDataLoader>();
+builder.Services.AddSingleton<GameDataProvider>();
+builder.Services.AddScoped<Seeder>();
 builder.Services.ConfigureHttpJsonOptions(o => JsonDefaults.Configure(o.SerializerOptions));
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p
     .WithOrigins(config.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [])
     .AllowAnyHeader().AllowAnyMethod().WithExposedHeaders("ETag", "Retry-After")));
 
 var app = builder.Build();
+
+if (command == "seed")
+    return await Seed(app);
 
 if (config.GetValue("Database:MigrateOnStartup", true))
 {
@@ -70,9 +82,35 @@ app.UseSerilogRequestLogging();
 app.UseCors();
 
 app.MapGet("/v1/health", (TimeProvider time) => Results.Ok(new HealthResponse("ok", time.GetUtcNow()))).AllowAnonymous();
+app.MapConfig();
 
 await app.RunAsync();
 return 0;
+
+static async Task<int> Seed(WebApplication app)
+{
+    var config = app.Configuration;
+    using var scope = app.Services.CreateScope();
+    var log = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    try
+    {
+        await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
+        var seeder = scope.ServiceProvider.GetRequiredService<Seeder>();
+        await seeder.SeedGameDataAsync(config["data"]);
+        if (config["live-events"] is { Length: > 0 } liveEvents)
+            await seeder.SeedLiveEventsAsync(liveEvents);
+        return 0;
+    }
+    catch (GameDataException ex)
+    {
+        log.LogError("Seed failed: {Errors}", string.Join("; ", ex.Errors));
+        return 1;
+    }
+    finally
+    {
+        await Log.CloseAndFlushAsync();
+    }
+}
 
 public partial class Program;
 
