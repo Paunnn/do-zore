@@ -1,0 +1,67 @@
+# ---------- Godot 4 ----------
+# .godot/ holds the import cache (.godot/imported/). Per-asset *.import files
+# are Godot 4 import settings and MUST be committed, so they are not ignored.
+.godot/
+.import/
+export/
+builds/
+*.apk
+*.aab
+*.ipa
+*.pck
+export_credentials.cfg
+*.keystore
+android/build/
+mono_crash.*.json
+
+# ---------- .NET ----------
+bin/
+obj/
+*.user
+*.suo
+*.userprefs
+*.rsuser
+[Dd]ebug/
+[Rr]elease/
+TestResults/
+*.nupkg
+.vs/
+appsettings.*.local.json
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+.ipynb_checkpoints/
+
+# ---------- Docker ----------
+docker-data/
+volumes/
+pgdata/
+.docker/
+docker-compose.override.yml
+
+# ---------- Environment / secrets ----------
+.env
+.env.*
+!.env.example
+
+# ---------- OS ----------
+.DS_Store
+Thumbs.db
+desktop.ini
+ehthumbs.db
+*~
+
+# ---------- IDE ----------
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*.code-workspace
