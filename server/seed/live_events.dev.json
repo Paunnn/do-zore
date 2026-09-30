@@ -1,0 +1,19 @@
+{
+  "live_events": [
+    {
+      "id": "vikend_dupla_zarada_2026_w40",
+      "name": { "sr": "Vikend dupla zarada", "en": "Double-income weekend" },
+      "description": { "sr": "Cele subote i nedelje kasa pada duplo.", "en": "All Saturday and Sunday, income is doubled." },
+      "starts_at": "2026-10-02T22:00:00Z",
+      "ends_at": "2026-10-04T22:00:00Z",
+      "modifiers": [ { "stat": "income", "value": 2.0 } ]
+    },
+    {
+      "id": "svadbena_sezona_2026_10",
+      "name": { "sr": "Svadbena sezona", "en": "Wedding season" },
+      "starts_at": "2026-10-09T22:00:00Z",
+      "ends_at": "2026-10-18T22:00:00Z",
+      "modifiers": [ { "stat": "arrival_rate", "value": 1.5, "guest_type": "svatovi" } ]
+    }
+  ]
+}
