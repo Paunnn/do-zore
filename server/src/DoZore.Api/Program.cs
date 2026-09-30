@@ -1,3 +1,4 @@
+using DoZore.Api.Auth;
 using DoZore.Api.Data;
 using DoZore.Api.Features;
 using DoZore.Api.GameData;
@@ -28,12 +29,19 @@ var connectionString = config["DB_CONNECTION_STRING"] ?? config.GetConnectionStr
     ?? throw new InvalidOperationException("Set DB_CONNECTION_STRING.");
 builder.Services.AddDbContext<AppDbContext>(o => AppDbContext.Configure(o, connectionString));
 
+var jwt = config.GetSection("Jwt").Get<JwtSettings>() ?? new JwtSettings();
+jwt.Secret = config["JWT_SECRET"] ?? jwt.Secret;
+if (command == "serve")
+    jwt.Validate(builder.Environment.IsProduction());
+
 builder.Services.TryAddTimeProvider();
 builder.Services.AddSingleton(AppPaths.Resolve(config));
 builder.Services.AddSingleton<ContractSchemas>();
 builder.Services.AddSingleton<GameDataLoader>();
 builder.Services.AddSingleton<GameDataProvider>();
 builder.Services.AddScoped<Seeder>();
+builder.Services.AddDoZoreAuth(jwt);
+builder.Services.AddDoZoreRateLimiting(config.GetSection("RateLimiting").Get<RateLimitSettings>() ?? new RateLimitSettings());
 builder.Services.ConfigureHttpJsonOptions(o => JsonDefaults.Configure(o.SerializerOptions));
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p
     .WithOrigins(config.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [])
@@ -77,11 +85,26 @@ app.UseStatusCodePages(async status =>
             ctx.Response.StatusCode == 404 ? "Not found" : "Method not allowed");
 });
 
-app.UseSerilogRequestLogging();
+app.UseSerilogRequestLogging(o =>
+{
+    o.EnrichDiagnosticContext = (diag, http) =>
+    {
+        if (http.User.PlayerIdOrNull() is { } playerId)
+            diag.Set("PlayerId", playerId);
+    };
+    // 501 is the planned-endpoint answer, not a server fault.
+    o.GetLevel = (http, _, ex) => ex is not null || (http.Response.StatusCode >= 500 && http.Response.StatusCode != 501)
+        ? Serilog.Events.LogEventLevel.Error
+        : Serilog.Events.LogEventLevel.Information;
+});
 
 app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapGet("/v1/health", (TimeProvider time) => Results.Ok(new HealthResponse("ok", time.GetUtcNow()))).AllowAnonymous();
+app.MapAuth();
 app.MapConfig();
 
 await app.RunAsync();
