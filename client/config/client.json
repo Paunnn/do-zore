@@ -1,0 +1,14 @@
+{
+  "mock_enabled": true,
+  "mock_network_available": true,
+  "mock_latency_ms": 100,
+  "api_base_url": "http://127.0.0.1:5000",
+  "app_version": "0.1.0",
+  "request_timeout_seconds": 8,
+  "autosave_interval_seconds": 20,
+  "sync_interval_seconds": 60,
+  "analytics_batch_size": 50,
+  "analytics_queue_limit": 2000,
+  "leaderboard_limit": 20,
+  "demo_tools_enabled": true
+}
