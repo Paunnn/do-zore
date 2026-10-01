@@ -1,0 +1,39 @@
+; Do Zore — placeholder-first Android client.
+config_version=5
+
+[application]
+config/name="Do Zore"
+config/version="0.1.0"
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.5", "GL Compatibility")
+config/use_custom_user_dir=true
+config/custom_user_dir_name="DoZore-client"
+
+[autoload]
+EventBus="*res://scripts/autoload/event_bus.gd"
+DataCatalog="*res://scripts/autoload/data_catalog.gd"
+Economy="*res://scripts/autoload/economy.gd"
+GameState="*res://scripts/autoload/game_state.gd"
+SaveSystem="*res://scripts/autoload/save_system.gd"
+ApiClient="*res://scripts/autoload/api_client.gd"
+
+[display]
+window/size/viewport_width=1080
+window/size/viewport_height=1920
+window/size/window_width_override=450
+window/size/window_height_override=800
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=1
+
+[rendering]
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.055, 0.073, 0.084, 1)
+textures/default_filters/use_nearest_mipmap_filter=false
+
+[input_devices]
+pointing/emulate_touch_from_mouse=true
+
+[audio]
+driver/enable_input=false
