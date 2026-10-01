@@ -1,0 +1,67 @@
+# Local stack: Postgres + one-shot seed + API + Swagger UI.
+#   cd server && docker compose up --build
+# API:        http://localhost:5000/v1/health
+# Swagger UI: http://localhost:8080  (renders /contracts/openapi.yaml)
+
+name: do-zore
+
+x-api-env: &api-env
+  DB_CONNECTION_STRING: Host=db;Port=5432;Database=dozore;Username=dozore;Password=${POSTGRES_PASSWORD:-dozore}
+  JWT_SECRET: ${JWT_SECRET:-local-dev-only-jwt-secret-0123456789abcdef}
+  ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+  PORT: "8080"
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: dozore
+      POSTGRES_USER: dozore
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dozore}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dozore -d dozore"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # Applies migrations and loads /data (+ dev live events), then exits.
+  seed:
+    image: do-zore-api # built by the api service
+    pull_policy: never
+    command: ["seed", "--live-events", "seed/live_events.dev.json"]
+    environment: *api-env
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
+    image: do-zore-api
+    environment:
+      <<: *api-env
+      Cors__AllowedOrigins__0: http://localhost:${SWAGGER_PORT:-8080}
+    ports:
+      - "${API_PORT:-5000}:8080"
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  swagger:
+    image: swaggerapi/swagger-ui:v5.29.0
+    environment:
+      URL: /contracts/openapi.yaml
+    volumes:
+      - ../contracts:/usr/share/nginx/html/contracts:ro
+    ports:
+      - "${SWAGGER_PORT:-8080}:8080"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
