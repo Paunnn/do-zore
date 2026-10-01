@@ -1,0 +1,1392 @@
+{
+  "band-levels.schema.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://do-zore.example/schemas/band-levels.schema.json",
+    "title": "Band levels",
+    "description": "Band progression, bought in order (/data/band_levels.json).",
+    "type": "object",
+    "properties": {
+      "$schema": {
+        "type": "string"
+      },
+      "band_levels": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "$ref": "#/$defs/BandLevel"
+        }
+      }
+    },
+    "required": [
+      "band_levels"
+    ],
+    "additionalProperties": false,
+    "$defs": {
+      "BandLevel": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/$defs/Id"
+          },
+          "order": {
+            "description": "Position in the progression, starting at 1. The level with order 1 is owned from the start.",
+            "type": "integer",
+            "minimum": 1
+          },
+          "name": {
+            "$ref": "common.schema.json#/$defs/LocalizedText"
+          },
+          "description": {
+            "$ref": "common.schema.json#/$defs/LocalizedText"
+          },
+          "members": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "unlock_cost": {
+            "$ref": "common.schema.json#/$defs/Dinars"
+          },
+          "required_venue": {
+            "description": "Id of the lowest venue where this band level can be hired.",
+            "$ref": "common.schema.json#/$defs/Id"
+          },
+          "genres": {
+            "description": "Genre ids this band can play.",
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "common.schema.json#/$defs/Id"
+            }
+          },
+          "mood_multiplier": {
+            "description": "Multiplier on positive mood changes from songs.",
+            "$ref": "common.schema.json#/$defs/Multiplier"
+          },
+          "tip_multiplier": {
+            "$ref": "common.schema.json#/$defs/Multiplier"
+          },
+          "upkeep_per_hour": {
+            "description": "Wages deducted per hour of play (online and offline).",
+            "$ref": "common.schema.json#/$defs/Dinars"
+          },
+          "can_play_hits": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "order",
+          "name",
+          "members",
+          "unlock_cost",
+          "required_venue",
+          "genres",
+          "mood_multiplier",
+          "tip_multiplier",
+          "upkeep_per_hour",
+          "can_play_hits"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "common.schema.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://do-zore.example/schemas/common.schema.json",
+    "title": "Common definitions",
+    "description": "Shared types referenced by every Do Zore data schema.",
+    "$defs": {
+      "Id": {
+        "description": "Stable machine id: lowercase ASCII snake_case, no diacritics. Never shown to players.",
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]{1,47}$"
+      },
+      "LocalizedText": {
+        "description": "Player-facing text. Serbian (Latin script) is required; English is optional.",
+        "type": "object",
+        "properties": {
+          "sr": {
+            "type": "string",
+            "minLength": 1
+          },
+          "en": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "sr"
+        ],
+        "additionalProperties": false
+      },
+      "Dinars": {
+        "description": "Amount of in-game money (dinari) as a non-negative integer.",
+        "type": "integer",
+        "minimum": 0
+      },
+      "Multiplier": {
+        "description": "Multiplicative factor; 1.0 means no change.",
+        "type": "number",
+        "exclusiveMinimum": 0
+      },
+      "Probability": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      },
+      "Seconds": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "Weight": {
+        "description": "Relative weight for weighted random choice. 0 disables the entry.",
+        "type": "number",
+        "minimum": 0
+      },
+      "Amount": {
+        "description": "Money amount that scales with progress: fixed + income_minutes * (current income per minute), then clamped to at least min. At least one of fixed or income_minutes must be present.",
+        "type": "object",
+        "properties": {
+          "fixed": {
+            "$ref": "#/$defs/Dinars"
+          },
+          "income_minutes": {
+            "type": "number",
+            "minimum": 0
+          },
+          "min": {
+            "$ref": "#/$defs/Dinars"
+          }
+        },
+        "anyOf": [
+          {
+            "required": [
+              "fixed"
+            ]
+          },
+          {
+            "required": [
+              "income_minutes"
+            ]
+          }
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "drinks.schema.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://do-zore.example/schemas/drinks.schema.json",
+    "title": "Drinks",
+    "description": "Menu items guests can order (/data/drinks.json). Covers food too (kind = food), since guests order both from one menu.",
+    "type": "object",
+    "properties": {
+      "$schema": {
+        "type": "string"
+      },
+      "drinks": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "$ref": "#/$defs/Drink"
+        }
+      }
+    },
+    "required": [
+      "drinks"
+    ],
+    "additionalProperties": false,
+    "$defs": {
+      "Drink": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/$defs/Id"
+          },
+          "name": {
+            "$ref": "common.schema.json#/$defs/LocalizedText"
+          },
+          "kind": {
+            "enum": [
+              "drink",
+              "food"
+            ]
+          },
+          "category": {
+            "enum": [
+              "kafa",
+              "rakija",
+              "pivo",
+              "vino",
+              "zestina",
+              "bezalkoholno",
+              "meze",
+              "glavno_jelo"
+            ]
+          },
+          "price": {
+            "description": "Base menu price per serving, before venue price_multiplier and guest spending_power.",
+            "$ref": "common.schema.json#/$defs/Dinars"
+          },
+          "cost": {
+            "description": "Purchase cost per serving, deducted from the sale.",
+            "$ref": "common.schema.json#/$defs/Dinars"
+          },
+          "prep_seconds": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unlock_venue": {
+            "description": "Id of the first venue where this item is on the menu.",
+            "$ref": "common.schema.json#/$defs/Id"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "category",
+          "price",
+          "cost",
+          "prep_seconds",
+          "unlock_venue"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "economy.schema.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://do-zore.example/schemas/economy.schema.json",
+    "title": "Economy rules",
+    "description": "Global balance constants and formulas (/data/economy.json). Every tuning number that is not tied to a specific guest, song, drink, upgrade, band level, venue or event lives here, so nothing is hardcoded in client or server.",
+    "type": "object",
+    "properties": {
+      "$schema": {
+        "type": "string"
+      },
+      "start": {
+        "type": "object",
+        "properties": {
+          "money": {
+            "$ref": "common.schema.json#/$defs/Dinars"
+          }
+        },
+        "required": [
+          "money"
+        ],
+        "additionalProperties": false
+      },
+      "mood": {
+        "description": "Each seated table has a mood 0-100. The room mood meter is the average mood of occupied tables (neutral when empty). Song effect on a table = delta * genre match strength * song.mood_power * guest.mood_sensitivity * (band.mood_multiplier if positive) * song_mood_power upgrades.",
+        "type": "object",
+        "properties": {
+          "min": {
+            "type": "number"
+          },
+          "max": {
+            "type": "number"
+          },
+          "neutral": {
+            "description": "Room mood when empty; table moods decay toward this.",
+            "type": "number"
+          },
+          "table_start": {
+            "type": "number"
+          },
+          "unhappy_below": {
+            "type": "number"
+          },
+          "happy_at_or_above": {
+            "type": "number"
+          },
+          "song_match_delta": {
+            "description": "Mood change for a full genre match (partial matches scale by genre strength).",
+            "type": "number"
+          },
+          "song_mismatch_delta": {
+            "description": "Mood change for a mismatch (negative).",
+            "type": "number"
+          },
+          "preferred_drink_delta": {
+            "description": "Mood change when a table is served its preferred drink.",
+            "type": "number"
+          },
+          "decay_per_minute": {
+            "description": "Drift of table mood toward neutral per minute.",
+            "type": "number",
+            "minimum": 0
+          },
+          "waiting_penalty_per_minute": {
+            "description": "Mood loss per minute once a table has waited longer than its patience.",
+            "type": "number",
+            "minimum": 0
+          },
+          "leave_at_or_below": {
+            "description": "Table leaves without tipping at or below this mood.",
+            "type": "number"
+          }
+        },
+        "required": [
+          "min",
+          "max",
+          "neutral",
+          "table_start",
+          "unhappy_below",
+          "happy_at_or_above",
+          "song_match_delta",
+          "song_mismatch_delta",
+          "preferred_drink_delta",
+          "decay_per_minute",
+          "waiting_penalty_per_minute",
+          "leave_at_or_below"
+        ],
+        "additionalProperties": false
+      },
+      "tips": {
+        "description": "Bakšiš per table = bill * guest.tip_rate * mood_curve(table mood) * band.tip_multiplier * tip_rate upgrades * (1 + preferred_drink_bonus if served its preferred drink).",
+        "type": "object",
+        "properties": {
+          "mood_curve": {
+            "$ref": "#/$defs/Curve"
+          },
+          "preferred_drink_bonus": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "mood_curve",
+          "preferred_drink_bonus"
+        ],
+        "additionalProperties": false
+      },
+      "arrivals": {
+        "description": "Arrival rate = venue.arrivals_per_minute * room_mood_curve(room mood) * arrival_rate upgrades. Groups only arrive while a table is free.",
+        "type": "object",
+        "properties": {
+          "room_mood_curve": {
+            "$ref": "#/$defs/Curve"
+          }
+        },
+        "required": [
+          "room_mood_curve"
+        ],
+        "additionalProperties": false
+      },
+      "events": {
+        "type": "object",
+        "properties": {
+          "roll_interval_seconds": {
+            "description": "How often a random-event roll happens.",
+            "type": "integer",
+            "minimum": 1
+          },
+          "chance_per_roll": {
+            "$ref": "common.schema.json#/$defs/Probability"
+          },
+          "condition_check_interval_seconds": {
+            "description": "How often condition-triggered events (e.g. tuča) are checked.",
+            "type": "integer",
+            "minimum": 1
+          },
+          "global_cooldown_seconds": {
+            "description": "Minimum gap between any two events.",
+            "type": "integer",
+            "minimum": 0
+          },
+          "decision_timeout_seconds": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "fight_chance_min_multiplier": {
+            "description": "Floor for the combined fight_chance multiplier from upgrades and effects.",
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "roll_interval_seconds",
+          "chance_per_roll",
+          "condition_check_interval_seconds",
+          "global_cooldown_seconds",
+          "decision_timeout_seconds",
+          "fight_chance_min_multiplier"
+        ],
+        "additionalProperties": false
+      },
+      "offline": {
+        "description": "Offline earnings. rate_per_minute = venue.offline_income_per_minute * menu_price upgrades * arrival_rate upgrades * offline_income upgrades * (tables / venue.base_tables) * band.tip_multiplier - band.upkeep_per_hour / 60 (floored at 0). cap_hours = min(venue.offline_cap_hours + offline_cap_hours upgrades, max_cap_hours). granted = floor(rate_per_minute * min(away_minutes, cap_hours * 60) * live-event multipliers for income and offline_income, applied pro rata to the part of the counted period each live event overlaps), or 0 if away less than min_away_seconds. Random events do not happen offline.",
+        "type": "object",
+        "properties": {
+          "min_away_seconds": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "max_cap_hours": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        },
+        "required": [
+          "min_away_seconds",
+          "max_cap_hours"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "start",
+      "mood",
+      "tips",
+      "arrivals",
+      "events",
+      "offline"
+    ],
+    "additionalProperties": false,
+    "$defs": {
+      "Curve": {
+        "description": "Piecewise-linear curve: points sorted by x; values between points are linearly interpolated, values outside are clamped to the end points.",
+        "type": "array",
+        "minItems": 2,
+        "items": {
+          "type": "object",
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "y": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "x",
+            "y"
+          ],
+          "additionalProperties": false
+        }
+      }
+    }
+  },
+  "events.schema.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://do-zore.example/schemas/events.schema.json",
+    "title": "Random events",
+    "description": "In-game random events with player choices (/data/events.json). Not to be confused with server-scheduled live events (GET /v1/events/active).",
+    "type": "object",
+    "properties": {
+      "$schema": {
+        "type": "string"
+      },
+      "events": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "$ref": "#/$defs/Event"
+        }
+      }
+    },
+    "required": [
+      "events"
+    ],
+    "additionalProperties": false,
+    "$defs": {
+      "Trigger": {
+        "description": "random: can be picked on each event roll (see economy.events), by weight among eligible events. unhappy_tables: fires when at least min_unhappy_tables tables are unhappy, checked every economy.events.condition_check_interval_seconds with probability chance multiplied by the fight_chance stat (floored at economy.events.fight_chance_min_multiplier).",
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "random"
+              },
+              "weight": {
+                "$ref": "common.schema.json#/$defs/Weight"
+              }
+            },
+            "required": [
+              "kind",
+              "weight"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "unhappy_tables"
+              },
+              "min_unhappy_tables": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "chance": {
+                "$ref": "common.schema.json#/$defs/Probability"
+              }
+            },
+            "required": [
+              "kind",
+              "min_unhappy_tables",
+              "chance"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "EventEffect": {
+        "description": "One consequence of an outcome. Timed effects (duration_seconds) stack multiplicatively with other active effects on the same stat.",
+        "oneOf": [
+          {
+            "description": "Gain money.",
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "money_gain"
+              },
+              "amount": {
+                "$ref": "common.schema.json#/$defs/Amount"
+              }
+            },
+            "required": [
+              "type",
+              "amount"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "description": "Lose money (never below 0).",
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "money_loss"
+              },
+              "amount": {
+                "$ref": "common.schema.json#/$defs/Amount"
+              }
+            },
+            "required": [
+              "type",
+              "amount"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "description": "Add to every table's mood (negative to lower it).",
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "mood_change"
+              },
+              "value": {
+                "type": "number",
+                "minimum": -100,
+                "maximum": 100
+              }
+            },
+            "required": [
+              "type",
+              "value"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "description": "Temporarily multiply a stat.",
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "stat_multiplier"
+              },
+              "stat": {
+                "enum": [
+                  "income",
+                  "tip_rate",
+                  "arrival_rate",
+                  "fight_chance",
+                  "mood_decay"
+                ]
+              },
+              "value": {
+                "$ref": "common.schema.json#/$defs/Multiplier"
+              },
+              "duration_seconds": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "type",
+              "stat",
+              "value",
+              "duration_seconds"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "description": "Venue closed: no arrivals, no orders, seated guests leave without paying.",
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "close_venue"
+              },
+              "duration_seconds": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "type",
+              "duration_seconds"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "description": "Unhappy tables leave immediately; paid tables pay what they owe only if pay is true.",
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "remove_unhappy_guests"
+              },
+              "pay": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "type",
+              "pay"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "description": "Seat a group of a given guest type at a fraction of the tables (rounded up, only free tables).",
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "spawn_guests"
+              },
+              "guest_type": {
+                "$ref": "common.schema.json#/$defs/Id"
+              },
+              "table_fraction": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "type",
+              "guest_type",
+              "table_fraction"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "description": "Immediately start another event (ignores its trigger and cooldown).",
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "trigger_event"
+              },
+              "event": {
+                "$ref": "common.schema.json#/$defs/Id"
+              }
+            },
+            "required": [
+              "type",
+              "event"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "Outcome": {
+        "type": "object",
+        "properties": {
+          "weight": {
+            "$ref": "common.schema.json#/$defs/Weight"
+          },
+          "text": {
+            "$ref": "common.schema.json#/$defs/LocalizedText"
+          },
+          "effects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/EventEffect"
+            }
+          }
+        },
+        "required": [
+          "weight",
+          "text",
+          "effects"
+        ],
+        "additionalProperties": false
+      },
+      "Choice": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/$defs/Id"
+          },
+          "label": {
+            "$ref": "common.schema.json#/$defs/LocalizedText"
+          },
+          "cost": {
+            "description": "Paid up front when the choice is picked. The choice is disabled if the player cannot afford it.",
+            "$ref": "common.schema.json#/$defs/Amount"
+          },
+          "outcomes": {
+            "description": "One outcome is picked by weight.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/$defs/Outcome"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "outcomes"
+        ],
+        "additionalProperties": false
+      },
+      "Event": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/$defs/Id"
+          },
+          "name": {
+            "$ref": "common.schema.json#/$defs/LocalizedText"
+          },
+          "text": {
+            "$ref": "common.schema.json#/$defs/LocalizedText"
+          },
+          "min_venue": {
+            "$ref": "common.schema.json#/$defs/Id"
+          },
+          "trigger": {
+            "$ref": "#/$defs/Trigger"
+          },
+          "cooldown_seconds": {
+            "$ref": "common.schema.json#/$defs/Seconds"
+          },
+          "timeout_choice": {
+            "description": "Choice id applied automatically if the player does not decide within economy.events.decision_timeout_seconds.",
+            "$ref": "common.schema.json#/$defs/Id"
+          },
+          "choices": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 3,
+            "items": {
+              "$ref": "#/$defs/Choice"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "text",
+          "min_venue",
+          "trigger",
+          "cooldown_seconds",
+          "timeout_choice",
+          "choices"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "game-data.schema.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://do-zore.example/schemas/game-data.schema.json",
+    "title": "Game data bundle",
+    "description": "All balance data in one document, as served by GET /v1/config. The server builds it by merging the files in /data; the client ships the same bundle built in so it works offline.",
+    "type": "object",
+    "properties": {
+      "genres": {
+        "$ref": "genres.schema.json#/properties/genres"
+      },
+      "guest_types": {
+        "$ref": "guest-types.schema.json#/properties/guest_types"
+      },
+      "songs": {
+        "$ref": "songs.schema.json#/properties/songs"
+      },
+      "drinks": {
+        "$ref": "drinks.schema.json#/properties/drinks"
+      },
+      "upgrades": {
+        "$ref": "upgrades.schema.json#/properties/upgrades"
+      },
+      "band_levels": {
+        "$ref": "band-levels.schema.json#/properties/band_levels"
+      },
+      "venues": {
+        "$ref": "venues.schema.json#/properties/venues"
+      },
+      "events": {
+        "$ref": "events.schema.json#/properties/events"
+      },
+      "economy": {
+        "$ref": "economy.schema.json"
+      }
+    },
+    "required": [
+      "genres",
+      "guest_types",
+      "songs",
+      "drinks",
+      "upgrades",
+      "band_levels",
+      "venues",
+      "events",
+      "economy"
+    ],
+    "additionalProperties": false
+  },
+  "genres.schema.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://do-zore.example/schemas/genres.schema.json",
+    "title": "Genres",
+    "description": "Music genres the band can play (/data/genres.json).",
+    "type": "object",
+    "properties": {
+      "$schema": {
+        "type": "string"
+      },
+      "genres": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "$ref": "#/$defs/Genre"
+        }
+      }
+    },
+    "required": [
+      "genres"
+    ],
+    "additionalProperties": false,
+    "$defs": {
+      "Genre": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/$defs/Id"
+          },
+          "name": {
+            "$ref": "common.schema.json#/$defs/LocalizedText"
+          },
+          "description": {
+            "$ref": "common.schema.json#/$defs/LocalizedText"
+          },
+          "related": {
+            "description": "Partial matches: playing this genre for a guest who prefers a related genre counts as a partial match with the given strength (0 = mismatch, 1 = full match). Genres not listed are mismatches.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "genre": {
+                  "$ref": "common.schema.json#/$defs/Id"
+                },
+                "strength": {
+                  "type": "number",
+                  "exclusiveMinimum": 0,
+                  "exclusiveMaximum": 1
+                }
+              },
+              "required": [
+                "genre",
+                "strength"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "guest-types.schema.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://do-zore.example/schemas/guest-types.schema.json",
+    "title": "Guest types",
+    "description": "Kinds of guests that visit the venue (/data/guest_types.json). Which types appear where, and how often, is set per venue in venues.json.",
+    "type": "object",
+    "properties": {
+      "$schema": {
+        "type": "string"
+      },
+      "guest_types": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "$ref": "#/$defs/GuestType"
+        }
+      }
+    },
+    "required": [
+      "guest_types"
+    ],
+    "additionalProperties": false,
+    "$defs": {
+      "GuestType": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/$defs/Id"
+          },
+          "name": {
+            "$ref": "common.schema.json#/$defs/LocalizedText"
+          },
+          "description": {
+            "$ref": "common.schema.json#/$defs/LocalizedText"
+          },
+          "preferred_genre": {
+            "$ref": "common.schema.json#/$defs/Id"
+          },
+          "preferred_drink": {
+            "$ref": "common.schema.json#/$defs/Id"
+          },
+          "patience_seconds": {
+            "description": "How long the table waits for service before its mood starts dropping.",
+            "type": "integer",
+            "minimum": 1
+          },
+          "spending_power": {
+            "description": "Multiplier on menu prices for this guest's orders.",
+            "$ref": "common.schema.json#/$defs/Multiplier"
+          },
+          "tip_rate": {
+            "description": "Bakšiš as a fraction of the bill at neutral table mood (see economy.tips.mood_curve).",
+            "type": "number",
+            "minimum": 0,
+            "maximum": 2
+          },
+          "party_size": {
+            "description": "Number of guests in the group. A group always occupies exactly one table.",
+            "type": "object",
+            "properties": {
+              "min": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "max": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "min",
+              "max"
+            ],
+            "additionalProperties": false
+          },
+          "stay_seconds": {
+            "description": "How long a satisfied table stays before paying and leaving.",
+            "type": "integer",
+            "minimum": 1
+          },
+          "orders_per_visit": {
+            "description": "Rounds ordered per visit (each round = one item per guest).",
+            "type": "integer",
+            "minimum": 1
+          },
+          "song_request_interval_seconds": {
+            "description": "Average time between song requests from this table.",
+            "type": "integer",
+            "minimum": 1
+          },
+          "mood_sensitivity": {
+            "description": "Multiplier on all mood changes for this table (song matches, mismatches, waiting).",
+            "$ref": "common.schema.json#/$defs/Multiplier"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "preferred_genre",
+          "preferred_drink",
+          "patience_seconds",
+          "spending_power",
+          "tip_rate",
+          "party_size",
+          "stay_seconds",
+          "orders_per_visit",
+          "song_request_interval_seconds",
+          "mood_sensitivity"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "save.schema.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://do-zore.example/schemas/save.schema.json",
+    "title": "Player save",
+    "description": "Player progress as stored locally and in the cloud. The server reads the typed fields (e.g. to compute offline earnings); anything client-only goes in the free-form client object.",
+    "type": "object",
+    "properties": {
+      "schema_version": {
+        "description": "Save format version; 1 for this contract.",
+        "type": "integer",
+        "minimum": 1
+      },
+      "money": {
+        "$ref": "common.schema.json#/$defs/Dinars"
+      },
+      "total_baksis": {
+        "description": "Lifetime bakšiš earned.",
+        "$ref": "common.schema.json#/$defs/Dinars"
+      },
+      "venue": {
+        "$ref": "common.schema.json#/$defs/Id"
+      },
+      "band_level": {
+        "$ref": "common.schema.json#/$defs/Id"
+      },
+      "upgrades": {
+        "description": "Owned level per upgrade id. Missing = level 0.",
+        "type": "object",
+        "propertyNames": {
+          "$ref": "common.schema.json#/$defs/Id"
+        },
+        "additionalProperties": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "unlocked_songs": {
+        "type": "array",
+        "uniqueItems": true,
+        "items": {
+          "$ref": "common.schema.json#/$defs/Id"
+        }
+      },
+      "last_seen": {
+        "description": "Client clock time when the game was last active.",
+        "type": "string",
+        "format": "date-time"
+      },
+      "stats": {
+        "description": "Lifetime counters (songs_played, fights, guests_served, ...).",
+        "type": "object",
+        "additionalProperties": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "client": {
+        "description": "Opaque client-only state. The server stores it but never reads it.",
+        "type": "object"
+      }
+    },
+    "required": [
+      "schema_version",
+      "money",
+      "total_baksis",
+      "venue",
+      "band_level",
+      "upgrades",
+      "unlocked_songs",
+      "last_seen"
+    ],
+    "additionalProperties": false
+  },
+  "songs.schema.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://do-zore.example/schemas/songs.schema.json",
+    "title": "Songs",
+    "description": "Songs the band can play (/data/songs.json).",
+    "type": "object",
+    "properties": {
+      "$schema": {
+        "type": "string"
+      },
+      "songs": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "$ref": "#/$defs/Song"
+        }
+      }
+    },
+    "required": [
+      "songs"
+    ],
+    "additionalProperties": false,
+    "$defs": {
+      "Song": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/$defs/Id"
+          },
+          "title": {
+            "$ref": "common.schema.json#/$defs/LocalizedText"
+          },
+          "genre": {
+            "$ref": "common.schema.json#/$defs/Id"
+          },
+          "min_band_level": {
+            "description": "Id of the lowest band level that can play this song.",
+            "$ref": "common.schema.json#/$defs/Id"
+          },
+          "unlock_cost": {
+            "description": "Price to add the song to the repertoire. 0 = known from the start once the band level is reached.",
+            "$ref": "common.schema.json#/$defs/Dinars"
+          },
+          "duration_seconds": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "mood_power": {
+            "description": "Multiplier on the mood change this song causes.",
+            "$ref": "common.schema.json#/$defs/Multiplier"
+          },
+          "is_hit": {
+            "description": "Hit songs are only playable by a band level with can_play_hits, and must be unlocked individually.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "genre",
+          "min_band_level",
+          "unlock_cost",
+          "duration_seconds",
+          "mood_power",
+          "is_hit"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "upgrades.schema.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://do-zore.example/schemas/upgrades.schema.json",
+    "title": "Upgrades",
+    "description": "Levelled venue upgrades (/data/upgrades.json). Cost of buying level n+1 when at level n = base_cost * cost_growth^n.",
+    "type": "object",
+    "properties": {
+      "$schema": {
+        "type": "string"
+      },
+      "upgrades": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "$ref": "#/$defs/Upgrade"
+        }
+      }
+    },
+    "required": [
+      "upgrades"
+    ],
+    "additionalProperties": false,
+    "$defs": {
+      "Stat": {
+        "description": "Game stat an effect modifies. 'add' effects are summed onto the base value; 'multiply' effects are multiplied together (value^level).",
+        "enum": [
+          "table_count",
+          "service_speed",
+          "menu_price",
+          "tip_rate",
+          "arrival_rate",
+          "patience",
+          "song_mood_power",
+          "mood_decay",
+          "fight_chance",
+          "offline_cap_hours",
+          "offline_income"
+        ]
+      },
+      "Effect": {
+        "type": "object",
+        "properties": {
+          "stat": {
+            "$ref": "#/$defs/Stat"
+          },
+          "op": {
+            "enum": [
+              "add",
+              "multiply"
+            ]
+          },
+          "per_level": {
+            "description": "For 'add': amount added per level. For 'multiply': factor applied per level.",
+            "type": "number"
+          }
+        },
+        "required": [
+          "stat",
+          "op",
+          "per_level"
+        ],
+        "additionalProperties": false
+      },
+      "Upgrade": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/$defs/Id"
+          },
+          "name": {
+            "$ref": "common.schema.json#/$defs/LocalizedText"
+          },
+          "description": {
+            "$ref": "common.schema.json#/$defs/LocalizedText"
+          },
+          "category": {
+            "enum": [
+              "prostor",
+              "osoblje",
+              "sank",
+              "kuhinja",
+              "muzika",
+              "ugled"
+            ]
+          },
+          "unlock_venue": {
+            "$ref": "common.schema.json#/$defs/Id"
+          },
+          "max_level": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "base_cost": {
+            "$ref": "common.schema.json#/$defs/Dinars"
+          },
+          "cost_growth": {
+            "type": "number",
+            "minimum": 1
+          },
+          "effects": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/$defs/Effect"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "category",
+          "unlock_venue",
+          "max_level",
+          "base_cost",
+          "cost_growth",
+          "effects"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "venues.schema.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://do-zore.example/schemas/venues.schema.json",
+    "title": "Venues",
+    "description": "Venue tiers the player grows through: birtija -> kafana -> restoran -> splav (/data/venues.json).",
+    "type": "object",
+    "properties": {
+      "$schema": {
+        "type": "string"
+      },
+      "venues": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "$ref": "#/$defs/Venue"
+        }
+      }
+    },
+    "required": [
+      "venues"
+    ],
+    "additionalProperties": false,
+    "$defs": {
+      "Venue": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/$defs/Id"
+          },
+          "order": {
+            "description": "Position in the progression, starting at 1. The venue with order 1 is the starting venue.",
+            "type": "integer",
+            "minimum": 1
+          },
+          "name": {
+            "$ref": "common.schema.json#/$defs/LocalizedText"
+          },
+          "description": {
+            "$ref": "common.schema.json#/$defs/LocalizedText"
+          },
+          "unlock_cost": {
+            "$ref": "common.schema.json#/$defs/Dinars"
+          },
+          "base_tables": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "max_tables": {
+            "description": "Upper bound on tables after table_count upgrades.",
+            "type": "integer",
+            "minimum": 1
+          },
+          "arrivals_per_minute": {
+            "description": "Base rate at which new guest groups arrive (before room-mood and upgrade multipliers).",
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "price_multiplier": {
+            "description": "Multiplier on all menu prices at this venue.",
+            "$ref": "common.schema.json#/$defs/Multiplier"
+          },
+          "offline_income_per_minute": {
+            "description": "Base offline income rate at this venue before upgrade/band multipliers. See economy.offline for the full formula.",
+            "$ref": "common.schema.json#/$defs/Dinars"
+          },
+          "offline_cap_hours": {
+            "description": "Base cap on how many hours of offline time are paid out.",
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "guest_mix": {
+            "description": "Spawn weight per guest type id. Types not listed never appear here.",
+            "type": "object",
+            "propertyNames": {
+              "$ref": "common.schema.json#/$defs/Id"
+            },
+            "additionalProperties": {
+              "$ref": "common.schema.json#/$defs/Weight"
+            },
+            "minProperties": 1
+          }
+        },
+        "required": [
+          "id",
+          "order",
+          "name",
+          "unlock_cost",
+          "base_tables",
+          "max_tables",
+          "arrivals_per_minute",
+          "price_multiplier",
+          "offline_income_per_minute",
+          "offline_cap_hours",
+          "guest_mix"
+        ],
+        "additionalProperties": false
+      }
+    }
+  }
+}

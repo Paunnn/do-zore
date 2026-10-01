@@ -1,0 +1,1030 @@
+{
+  "app_title": {
+    "sr": "DO ZORE",
+    "en": "DO ZORE"
+  },
+  "tagline": {
+    "sr": "JOŠ JEDNA PESMA.",
+    "en": "ONE MORE SONG."
+  },
+  "nav_floor": {
+    "sr": "Kafana",
+    "en": "Kafana"
+  },
+  "nav_band": {
+    "sr": "Bend",
+    "en": "Band"
+  },
+  "nav_menu": {
+    "sr": "Piće",
+    "en": "Menu"
+  },
+  "nav_upgrades": {
+    "sr": "Unapređenja",
+    "en": "Upgrades"
+  },
+  "nav_venues": {
+    "sr": "Lokali",
+    "en": "Venues"
+  },
+  "money": {
+    "sr": "NOVAC",
+    "en": "MONEY"
+  },
+  "money_amount": {
+    "sr": "{amount} din",
+    "en": "{amount} din"
+  },
+  "mood": {
+    "sr": "RASPOLOŽENJE",
+    "en": "ROOM MOOD"
+  },
+  "guests": {
+    "sr": "GOSTI",
+    "en": "GUESTS"
+  },
+  "mood_value": {
+    "sr": "{value} / 100",
+    "en": "{value} / 100"
+  },
+  "floor_title": {
+    "sr": "Dobro veče, domaćine.",
+    "en": "Good evening, host."
+  },
+  "floor_hint": {
+    "sr": "Dodirni sto da uslužiš goste ili ispuniš muzičku želju.",
+    "en": "Tap a table to serve guests or hear their song request."
+  },
+  "stage": {
+    "sr": "VEČERAS NA BINI",
+    "en": "ON STAGE TONIGHT"
+  },
+  "choose_song": {
+    "sr": "Izaberi pesmu",
+    "en": "Choose a song"
+  },
+  "song_idle": {
+    "sr": "Harmonika čeka tvoju pesmu.",
+    "en": "The band is waiting for your song."
+  },
+  "song_remaining": {
+    "sr": "{seconds} s do kraja",
+    "en": "{seconds} s remaining"
+  },
+  "table_number": {
+    "sr": "STO {number}",
+    "en": "TABLE {number}"
+  },
+  "table_empty": {
+    "sr": "Slobodan sto",
+    "en": "Empty table"
+  },
+  "table_waiting": {
+    "sr": "Gosti uskoro stižu",
+    "en": "Guests are on their way"
+  },
+  "table_party": {
+    "sr": "{name} · {count} gostiju",
+    "en": "{name} · {count} guests"
+  },
+  "request": {
+    "sr": "Želja: {song}",
+    "en": "Request: {song}"
+  },
+  "no_request": {
+    "sr": "Slušaju muziku",
+    "en": "Enjoying the music"
+  },
+  "dancing": {
+    "sr": "♪ Igraju!",
+    "en": "♪ Dancing!"
+  },
+  "mood_icon_happy": {
+    "sr": "☺",
+    "en": "☺"
+  },
+  "mood_icon_neutral": {
+    "sr": "○",
+    "en": "○"
+  },
+  "mood_icon_unhappy": {
+    "sr": "!",
+    "en": "!"
+  },
+  "order_waiting": {
+    "sr": "Čekaju: {item}",
+    "en": "Waiting: {item}"
+  },
+  "order_preparing": {
+    "sr": "Priprema: {item} · {seconds} s",
+    "en": "Preparing: {item} · {seconds} s"
+  },
+  "order_served": {
+    "sr": "Posluženi · živeli!",
+    "en": "Served · cheers!"
+  },
+  "serve": {
+    "sr": "Usluži sto",
+    "en": "Serve table"
+  },
+  "song_popup_title": {
+    "sr": "Pesma za društvo",
+    "en": "A song for the table"
+  },
+  "song_popup_hint": {
+    "sr": "Pesma se čuje u celoj kafani. Pogledaj želje svih stolova.",
+    "en": "Every table hears your choice. Keep everyone's requests in mind."
+  },
+  "known_songs": {
+    "sr": "REPERTOAR BENDA",
+    "en": "BAND REPERTOIRE"
+  },
+  "learn_song": {
+    "sr": "Nauči pesmu",
+    "en": "Learn song"
+  },
+  "play": {
+    "sr": "Sviraj",
+    "en": "Play"
+  },
+  "playing": {
+    "sr": "Sada svira",
+    "en": "Now playing"
+  },
+  "owned": {
+    "sr": "Kupljeno",
+    "en": "Owned"
+  },
+  "current": {
+    "sr": "Trenutno",
+    "en": "Current"
+  },
+  "buy": {
+    "sr": "Kupi · {amount} din",
+    "en": "Buy · {amount} din"
+  },
+  "unlock": {
+    "sr": "Otključaj · {amount} din",
+    "en": "Unlock · {amount} din"
+  },
+  "level": {
+    "sr": "Nivo {level} / {max}",
+    "en": "Level {level} / {max}"
+  },
+  "requires": {
+    "sr": "Potreban lokal: {name}",
+    "en": "Requires venue: {name}"
+  },
+  "requires_band": {
+    "sr": "Potreban bend: {name}",
+    "en": "Requires band: {name}"
+  },
+  "not_enough_money": {
+    "sr": "Nema dovoljno novca.",
+    "en": "Not enough money."
+  },
+  "locked": {
+    "sr": "Još nije dostupno",
+    "en": "Not available yet"
+  },
+  "max_level": {
+    "sr": "Najviši nivo",
+    "en": "Maximum level"
+  },
+  "menu_hint": {
+    "sr": "Gosti biraju iz otključanog menija. Usluži ih dodirom na sto.",
+    "en": "Guests order from the unlocked menu. Tap their table to serve."
+  },
+  "menu_price": {
+    "sr": "Cena {price} din · trošak {cost} din · {seconds} s",
+    "en": "Price {price} din · cost {cost} din · {seconds} s"
+  },
+  "food": {
+    "sr": "HRANA",
+    "en": "FOOD"
+  },
+  "drink": {
+    "sr": "PIĆE",
+    "en": "DRINK"
+  },
+  "band_hint": {
+    "sr": "Bolji bend, veći repertoar, bogatiji bakšiš.",
+    "en": "A better band, more songs, bigger tips."
+  },
+  "upgrades_hint": {
+    "sr": "Mali koraci do velike kafane.",
+    "en": "Small steps toward a great kafana."
+  },
+  "venues_hint": {
+    "sr": "Od tri stola do noći na vodi.",
+    "en": "From three tables to nights on the river."
+  },
+  "venue_stats": {
+    "sr": "{tables} stolova · do {max} · {rate} din/min dok te nema",
+    "en": "{tables} tables · up to {max} · {rate} din/min away"
+  },
+  "band_stats": {
+    "sr": "{members} muzičara · održavanje {upkeep} din/h",
+    "en": "{members} musicians · upkeep {upkeep} din/h"
+  },
+  "event_title": {
+    "sr": "Veče je nepredvidivo",
+    "en": "Anything can happen tonight"
+  },
+  "event_timeout": {
+    "sr": "Odluči za {seconds} s",
+    "en": "Decide within {seconds} s"
+  },
+  "choice_cost": {
+    "sr": "{label} · {amount} din",
+    "en": "{label} · {amount} din"
+  },
+  "continue": {
+    "sr": "Nastavi",
+    "en": "Continue"
+  },
+  "close": {
+    "sr": "Zatvori",
+    "en": "Close"
+  },
+  "offline_title": {
+    "sr": "Kafana je radila i bez tebe.",
+    "en": "Your kafana kept working."
+  },
+  "offline_detail": {
+    "sr": "Plaćeno vreme: {minutes} min · limit {hours} h",
+    "en": "Paid time: {minutes} min · cap {hours} h"
+  },
+  "offline_local": {
+    "sr": "Obračun sa ovog uređaja",
+    "en": "Calculated on this device"
+  },
+  "offline_server": {
+    "sr": "Potvrđeno na serveru",
+    "en": "Granted by the server"
+  },
+  "offline_cap": {
+    "sr": "Dostignut je limit zarade dok te nema.",
+    "en": "Your away earnings cap was reached."
+  },
+  "conflict_title": {
+    "sr": "Dve sačuvane priče",
+    "en": "Two saved stories"
+  },
+  "conflict_body": {
+    "sr": "Izaberi napredak koji želiš da nastaviš. Druga kopija biće zamenjena.",
+    "en": "Choose the progress to continue. The other copy will be replaced."
+  },
+  "keep_device": {
+    "sr": "Zadrži ovaj uređaj",
+    "en": "Keep this device"
+  },
+  "keep_cloud": {
+    "sr": "Zadrži cloud",
+    "en": "Keep cloud"
+  },
+  "conflict_money": {
+    "sr": "Uređaj: {local} din · cloud: {cloud} din",
+    "en": "Device: {local} din · cloud: {cloud} din"
+  },
+  "leaderboard": {
+    "sr": "Lista domaćina",
+    "en": "Hosts leaderboard"
+  },
+  "leaderboard_hint": {
+    "sr": "Nedeljni bakšiš · {week}",
+    "en": "Weekly tips · {week}"
+  },
+  "leaderboard_row": {
+    "sr": "{rank}.  {name}   —   {score} din",
+    "en": "{rank}.  {name}   —   {score} din"
+  },
+  "leaderboard_me": {
+    "sr": "Tvoj bakšiš: {score} din",
+    "en": "Your tips: {score} din"
+  },
+  "loading": {
+    "sr": "Učitavanje…",
+    "en": "Loading…"
+  },
+  "leaderboard_offline": {
+    "sr": "Lista će biti dostupna kada se poveže server. Kafana nastavlja da radi.",
+    "en": "The leaderboard will be available when the server is connected. Your kafana keeps running."
+  },
+  "settings": {
+    "sr": "Podešavanja",
+    "en": "Settings"
+  },
+  "sound": {
+    "sr": "Zvuk",
+    "en": "Sound"
+  },
+  "music": {
+    "sr": "Muzika",
+    "en": "Music"
+  },
+  "language": {
+    "sr": "Jezik",
+    "en": "Language"
+  },
+  "locale_sr": {
+    "sr": "Srpski (latinica)",
+    "en": "Serbian (Latin)"
+  },
+  "locale_en": {
+    "sr": "English",
+    "en": "English"
+  },
+  "reset": {
+    "sr": "Počni iz početka",
+    "en": "Reset progress"
+  },
+  "reset_title": {
+    "sr": "Nova kafanska priča?",
+    "en": "Start a new story?"
+  },
+  "reset_body": {
+    "sr": "Novac, bend i unapređenja ovog uređaja biće obrisani. Ovo ne može da se poništi.",
+    "en": "This device's money, band and upgrades will be reset. This cannot be undone."
+  },
+  "cancel": {
+    "sr": "Odustani",
+    "en": "Cancel"
+  },
+  "save": {
+    "sr": "Sačuvaj napredak",
+    "en": "Save progress"
+  },
+  "sound_stub": {
+    "sr": "Zvuk i muzika čekaju snimke. Podešavanja se čuvaju.",
+    "en": "Audio hooks are ready for recordings. Your preferences are saved."
+  },
+  "mock_label": {
+    "sr": "PROTOTIP · LOKALNI MOCK",
+    "en": "PROTOTYPE · LOCAL MOCK"
+  },
+  "offline_label": {
+    "sr": "LOKALNA IGRA",
+    "en": "LOCAL PLAY"
+  },
+  "demo_conflict": {
+    "sr": "Prikaži probni sukob čuvanja",
+    "en": "Preview save conflict"
+  },
+  "sync_starting": {
+    "sr": "Lokalna igra",
+    "en": "Local play"
+  },
+  "sync_syncing": {
+    "sr": "Čuvanje…",
+    "en": "Saving…"
+  },
+  "sync_online": {
+    "sr": "Povezano",
+    "en": "Connected"
+  },
+  "sync_offline": {
+    "sr": "Bez mreže · igra radi",
+    "en": "Offline · game continues"
+  },
+  "sync_conflict": {
+    "sr": "Izaberi sačuvanu igru",
+    "en": "Choose a save"
+  },
+  "sync_mock": {
+    "sr": "Mock · lokalno",
+    "en": "Mock · local"
+  },
+  "notice_saved": {
+    "sr": "Napredak je sačuvan.",
+    "en": "Progress saved."
+  },
+  "notice_save_failed": {
+    "sr": "Čuvanje nije uspelo. Pokušaj ponovo.",
+    "en": "Save failed. Please try again."
+  },
+  "notice_config_updated": {
+    "sr": "Podaci igre su osveženi.",
+    "en": "Game data updated."
+  },
+  "notice_network_offline": {
+    "sr": "Kafana radi bez mreže.",
+    "en": "Your kafana works offline."
+  },
+  "notice_cloud_kept": {
+    "sr": "Nastavljaš cloud igru.",
+    "en": "Continuing the cloud save."
+  },
+  "notice_device_kept": {
+    "sr": "Nastavljaš igru sa uređaja.",
+    "en": "Continuing this device's save."
+  },
+  "notice_progress_reset": {
+    "sr": "Nova priča počinje.",
+    "en": "A new story begins."
+  },
+  "notice_purchase": {
+    "sr": "Kupljeno. Živeli!",
+    "en": "Purchased. Cheers!"
+  },
+  "notice_unavailable": {
+    "sr": "Trenutno nije dostupno.",
+    "en": "Currently unavailable."
+  },
+  "notice_serving": {
+    "sr": "Porudžbina se priprema.",
+    "en": "Preparing the order."
+  },
+  "night_status": {
+    "sr": "KAFANA JE OTVORENA",
+    "en": "OPEN TILL DAWN"
+  },
+  "venue_closed": {
+    "sr": "Privremeno zatvoreno · {seconds} s",
+    "en": "Temporarily closed · {seconds} s"
+  },
+  "mock_player_name": {
+    "sr": "Domaćin",
+    "en": "Host"
+  },
+  "notice.not_enough_money": {
+    "en": "Not enough money.",
+    "sr": "Nema dovoljno novca."
+  },
+  "notice.glass": {
+    "en": "Glass broken: cost {cost} din, bonus {bonus} din.",
+    "sr": "Čaša je razbijena: trošak {cost} din, bonus {bonus} din."
+  },
+  "purchase_table_limit": {
+    "sr": "Nema više mesta za stolove u ovom lokalu.",
+    "en": "This venue has no room for more tables."
+  },
+  "purchase_venue_required": {
+    "sr": "Potreban je bolji lokal.",
+    "en": "A better venue is required."
+  },
+  "purchase_band_required": {
+    "sr": "Potreban je bolji bend.",
+    "en": "A better band is required."
+  },
+  "purchase_owned": {
+    "sr": "Već imaš ovo unapređenje.",
+    "en": "Already owned."
+  },
+  "purchase_unavailable": {
+    "sr": "Nije dostupno.",
+    "en": "Unavailable."
+  },
+  "purchase_previous_required": {
+    "sr": "Prvo otključaj prethodni nivo.",
+    "en": "Unlock the previous level first."
+  },
+  "purchase_max_level": {
+    "sr": "Najviši nivo je dostignut.",
+    "en": "Maximum level reached."
+  },
+  "data.band_levels.solo_harmonikas.name": {
+    "sr": "Solo harmonikaš",
+    "en": "Solo accordionist"
+  },
+  "data.band_levels.solo_harmonikas.description": {
+    "sr": "Jedan čovek, jedna harmonika, ceo repertoar sela.",
+    "en": "One man, one accordion, the whole village repertoire."
+  },
+  "data.band_levels.trio.name": {
+    "sr": "Trio",
+    "en": "Trio"
+  },
+  "data.band_levels.trio.description": {
+    "sr": "Harmonika, gitara i bas. Sad može i narodnjaka.",
+    "en": "Accordion, guitar and bass. Now pop-folk too."
+  },
+  "data.band_levels.tamburaski_orkestar.name": {
+    "sr": "Tamburaški orkestar",
+    "en": "Tamburica orchestra"
+  },
+  "data.band_levels.tamburaski_orkestar.description": {
+    "sr": "Pet tamburaša koji znaju svaku pesmu.",
+    "en": "Five tamburica players who know every song."
+  },
+  "data.band_levels.pevacica.name": {
+    "sr": "Pevačica",
+    "en": "Lead singer"
+  },
+  "data.band_levels.pevacica.description": {
+    "sr": "Orkestar i zvezda večeri, sa svojim hitovima.",
+    "en": "The orchestra plus the star of the night, with her own hits."
+  },
+  "data.drinks.domaca_kafa.name": {
+    "sr": "Domaća kafa",
+    "en": "Turkish coffee"
+  },
+  "data.drinks.kisela_voda.name": {
+    "sr": "Kisela voda",
+    "en": "Mineral water"
+  },
+  "data.drinks.pivo.name": {
+    "sr": "Pivo",
+    "en": "Beer"
+  },
+  "data.drinks.sljivovica.name": {
+    "sr": "Šljivovica",
+    "en": "Plum brandy"
+  },
+  "data.drinks.lozovaca.name": {
+    "sr": "Lozovača",
+    "en": "Grape brandy"
+  },
+  "data.drinks.meze.name": {
+    "sr": "Meze",
+    "en": "Meze platter"
+  },
+  "data.drinks.crno_vino.name": {
+    "sr": "Crno vino",
+    "en": "Red wine"
+  },
+  "data.drinks.vinjak.name": {
+    "sr": "Vinjak",
+    "en": "Brandy"
+  },
+  "data.drinks.rostilj.name": {
+    "sr": "Mešano meso",
+    "en": "Mixed grill"
+  },
+  "data.drinks.viski.name": {
+    "sr": "Viski",
+    "en": "Whisky"
+  },
+  "data.drinks.riblja_corba.name": {
+    "sr": "Riblja čorba",
+    "en": "Fish stew"
+  },
+  "data.drinks.sampanjac.name": {
+    "sr": "Šampanjac",
+    "en": "Champagne"
+  },
+  "data.events.tuca.name": {
+    "sr": "Tuča!",
+    "en": "Fight!"
+  },
+  "data.events.tuca.text": {
+    "sr": "Dva stola su se posvađala oko pesme. Lete čaše.",
+    "en": "Two tables are arguing over the song. Glasses are flying."
+  },
+  "data.events.tuca.choices.izbaci.label": {
+    "sr": "Izbaci ih napolje",
+    "en": "Throw them out"
+  },
+  "data.events.tuca.choices.izbaci.outcomes.0.text": {
+    "sr": "Izbačeni su bez većeg loma.",
+    "en": "Thrown out without much damage."
+  },
+  "data.events.tuca.choices.izbaci.outcomes.1.text": {
+    "sr": "Izbačeni su, ali su polomili stolice.",
+    "en": "Thrown out, but they broke some chairs."
+  },
+  "data.events.tuca.choices.runda.label": {
+    "sr": "Runda za sve na račun kuće",
+    "en": "A round for everyone, on the house"
+  },
+  "data.events.tuca.choices.runda.outcomes.0.text": {
+    "sr": "Pomirili su se uz rakiju i zapevali zajedno.",
+    "en": "They made up over rakija and sang together."
+  },
+  "data.events.tuca.choices.runda.outcomes.1.text": {
+    "sr": "Popili su rundu i nastavili da se svađaju.",
+    "en": "They drank the round and kept fighting."
+  },
+  "data.events.tuca.choices.policija.label": {
+    "sr": "Zovi policiju",
+    "en": "Call the police"
+  },
+  "data.events.tuca.choices.policija.outcomes.0.text": {
+    "sr": "Policija je smirila situaciju. Gosti su se uplašili.",
+    "en": "The police calmed things down. Guests got nervous."
+  },
+  "data.events.tuca.choices.policija.outcomes.1.text": {
+    "sr": "Policija je dovela i inspekciju.",
+    "en": "The police brought an inspector along."
+  },
+  "data.events.inspekcija.name": {
+    "sr": "Inspekcija",
+    "en": "Inspection"
+  },
+  "data.events.inspekcija.text": {
+    "sr": "Na vratima su dva inspektora sa fasciklama.",
+    "en": "Two inspectors with folders are at the door."
+  },
+  "data.events.inspekcija.choices.pusti.label": {
+    "sr": "Pusti ih da pregledaju",
+    "en": "Let them inspect"
+  },
+  "data.events.inspekcija.choices.pusti.outcomes.0.text": {
+    "sr": "Sve je uredno.",
+    "en": "Everything is in order."
+  },
+  "data.events.inspekcija.choices.pusti.outcomes.1.text": {
+    "sr": "Našli su nepravilnosti. Kazna.",
+    "en": "They found irregularities. A fine."
+  },
+  "data.events.inspekcija.choices.casti.label": {
+    "sr": "Ponudi kafu i rakiju",
+    "en": "Offer coffee and rakija"
+  },
+  "data.events.inspekcija.choices.casti.outcomes.0.text": {
+    "sr": "Popili su, pohvalili rakiju i otišli.",
+    "en": "They drank, praised the rakija and left."
+  },
+  "data.events.inspekcija.choices.casti.outcomes.1.text": {
+    "sr": "Shvatili su to kao mito. Duplo veća kazna.",
+    "en": "They took it as a bribe. Double fine."
+  },
+  "data.events.inspekcija.choices.zatvori.label": {
+    "sr": "Zatvori ranije \"zbog kvara\"",
+    "en": "Close early \"for repairs\""
+  },
+  "data.events.inspekcija.choices.zatvori.outcomes.0.text": {
+    "sr": "Inspektori će doći drugi put.",
+    "en": "The inspectors will come back another time."
+  },
+  "data.events.svadba.name": {
+    "sr": "Svadba",
+    "en": "Wedding"
+  },
+  "data.events.svadba.text": {
+    "sr": "Kum pita da li mogu da proslave svadbu kod vas večeras.",
+    "en": "The best man asks if they can hold the wedding party here tonight."
+  },
+  "data.events.svadba.choices.prihvati.label": {
+    "sr": "Prihvati svadbu",
+    "en": "Host the wedding"
+  },
+  "data.events.svadba.choices.prihvati.outcomes.0.text": {
+    "sr": "Svatovi stižu! Biće para, a možda i loma.",
+    "en": "The wedding party arrives! Money is coming, and maybe trouble."
+  },
+  "data.events.svadba.choices.avans.label": {
+    "sr": "Traži avans unapred",
+    "en": "Ask for a deposit"
+  },
+  "data.events.svadba.choices.avans.outcomes.0.text": {
+    "sr": "Kum je platio bez pogovora.",
+    "en": "The best man paid without a word."
+  },
+  "data.events.svadba.choices.avans.outcomes.1.text": {
+    "sr": "Kum se uvredio i odveo svatove drugde.",
+    "en": "The best man took offence and went elsewhere."
+  },
+  "data.events.svadba.choices.odbij.label": {
+    "sr": "Odbij, večeras nema mesta",
+    "en": "Decline, no room tonight"
+  },
+  "data.events.svadba.choices.odbij.outcomes.0.text": {
+    "sr": "Veče ide po starom.",
+    "en": "The evening goes on as usual."
+  },
+  "data.events.nestanak_struje.name": {
+    "sr": "Nestanak struje",
+    "en": "Power cut"
+  },
+  "data.events.nestanak_struje.text": {
+    "sr": "Nestalo je struje u celoj ulici.",
+    "en": "The power is out on the whole street."
+  },
+  "data.events.nestanak_struje.choices.svece.label": {
+    "sr": "Sveće i akustika",
+    "en": "Candles and acoustic set"
+  },
+  "data.events.nestanak_struje.choices.svece.outcomes.0.text": {
+    "sr": "Romantično je, ali kuhinja ne radi.",
+    "en": "It's romantic, but the kitchen is down."
+  },
+  "data.events.nestanak_struje.choices.agregat.label": {
+    "sr": "Upali agregat",
+    "en": "Start the generator"
+  },
+  "data.events.nestanak_struje.choices.agregat.outcomes.0.text": {
+    "sr": "Agregat bruji, sve radi.",
+    "en": "The generator hums, everything works."
+  },
+  "data.events.nestanak_struje.choices.zatvori.label": {
+    "sr": "Zatvori dok ne dođe struja",
+    "en": "Close until power returns"
+  },
+  "data.events.nestanak_struje.choices.zatvori.outcomes.0.text": {
+    "sr": "Zatvoreno do daljeg.",
+    "en": "Closed until further notice."
+  },
+  "data.events.vip_gost.name": {
+    "sr": "VIP gost",
+    "en": "VIP guest"
+  },
+  "data.events.vip_gost.text": {
+    "sr": "Ušao je poznati pevač sa društvom.",
+    "en": "A famous singer walked in with friends."
+  },
+  "data.events.vip_gost.choices.sampanjac.label": {
+    "sr": "Najbolji sto i šampanjac",
+    "en": "Best table and champagne"
+  },
+  "data.events.vip_gost.choices.sampanjac.outcomes.0.text": {
+    "sr": "Oduševljen je. Ostavio je bogat bakšiš.",
+    "en": "Delighted. He left a huge tip."
+  },
+  "data.events.vip_gost.choices.sampanjac.outcomes.1.text": {
+    "sr": "Samo se ljubazno zahvalio.",
+    "en": "He just thanked you politely."
+  },
+  "data.events.vip_gost.choices.normalno.label": {
+    "sr": "Usluži ga kao i sve ostale",
+    "en": "Serve him like everyone else"
+  },
+  "data.events.vip_gost.choices.normalno.outcomes.0.text": {
+    "sr": "Popio je piće i ostavio pristojan bakšiš.",
+    "en": "He had a drink and left a decent tip."
+  },
+  "data.events.vip_gost.choices.slika.label": {
+    "sr": "Zamoli ga za sliku za zid",
+    "en": "Ask for a photo for the wall"
+  },
+  "data.events.vip_gost.choices.slika.outcomes.0.text": {
+    "sr": "Slika je na zidu. Svi dolaze da je vide.",
+    "en": "The photo is on the wall. Everyone comes to see it."
+  },
+  "data.events.vip_gost.choices.slika.outcomes.1.text": {
+    "sr": "Odbio je i otišao ranije.",
+    "en": "He refused and left early."
+  },
+  "data.genres.starogradske.name": {
+    "sr": "Starogradske",
+    "en": "Old-town songs"
+  },
+  "data.genres.starogradske.description": {
+    "sr": "Sentimentalne gradske pesme uz violinu i gitaru.",
+    "en": "Sentimental urban ballads with violin and guitar."
+  },
+  "data.genres.tamburica.name": {
+    "sr": "Tamburica",
+    "en": "Tamburica"
+  },
+  "data.genres.tamburica.description": {
+    "sr": "Vojvođanski tamburaški zvuk, bećarci i romanse.",
+    "en": "Vojvodina tamburica sound, bećarac and romances."
+  },
+  "data.genres.izvorna.name": {
+    "sr": "Izvorna",
+    "en": "Folk"
+  },
+  "data.genres.izvorna.description": {
+    "sr": "Narodna kola i pesme sa sela, uz harmoniku.",
+    "en": "Village folk dances and songs on the accordion."
+  },
+  "data.genres.narodnjaci.name": {
+    "sr": "Narodnjaci",
+    "en": "Pop-folk"
+  },
+  "data.genres.narodnjaci.description": {
+    "sr": "Novokomponovana narodna muzika za lomljenje čaša.",
+    "en": "Newly composed folk music for breaking glasses."
+  },
+  "data.guest_types.penzioner.name": {
+    "sr": "Penzioner",
+    "en": "Pensioner"
+  },
+  "data.guest_types.penzioner.description": {
+    "sr": "Sedi dugo, troši malo, pamti kad je bilo bolje.",
+    "en": "Stays long, spends little, remembers better days."
+  },
+  "data.guest_types.studenti.name": {
+    "sr": "Studenti",
+    "en": "Students"
+  },
+  "data.guest_types.studenti.description": {
+    "sr": "Glasni, nestrpljivi i uvek na ivici budžeta.",
+    "en": "Loud, impatient and always at the edge of their budget."
+  },
+  "data.guest_types.ozalosceni.name": {
+    "sr": "Ožalošćeni",
+    "en": "Mourners"
+  },
+  "data.guest_types.ozalosceni.description": {
+    "sr": "Posle sahrane, za dušu pokojnika. Pogrešna pesma se ne prašta.",
+    "en": "After the funeral, for the departed's soul. A wrong song is not forgiven."
+  },
+  "data.guest_types.svatovi.name": {
+    "sr": "Svatovi",
+    "en": "Wedding guests"
+  },
+  "data.guest_types.svatovi.description": {
+    "sr": "Veliko društvo, puno para, još više rakije.",
+    "en": "Big party, lots of money, even more rakija."
+  },
+  "data.guest_types.biznismen.name": {
+    "sr": "Biznismen",
+    "en": "Businessman"
+  },
+  "data.guest_types.biznismen.description": {
+    "sr": "Nema vremena, ima para. Lepi bakšiš ako je sve po njegovom.",
+    "en": "No time, lots of money. Tips big if everything goes his way."
+  },
+  "data.songs.kafu_mi_draga.title": {
+    "sr": "Kafu mi, draga, ispeci",
+    "en": ""
+  },
+  "data.songs.tamo_daleko.title": {
+    "sr": "Tamo daleko",
+    "en": ""
+  },
+  "data.songs.oj_moravo.title": {
+    "sr": "Oj, Moravo",
+    "en": ""
+  },
+  "data.songs.ciganine_sviraj.title": {
+    "sr": "Ciganine, sviraj, sviraj",
+    "en": ""
+  },
+  "data.songs.ajde_jano.title": {
+    "sr": "Ajde, Jano",
+    "en": ""
+  },
+  "data.songs.uzicko_kolo.title": {
+    "sr": "Užičko kolo",
+    "en": ""
+  },
+  "data.songs.moravac.title": {
+    "sr": "Moravac",
+    "en": ""
+  },
+  "data.songs.cacak_kolo.title": {
+    "sr": "Čačak kolo",
+    "en": ""
+  },
+  "data.songs.dve_case.title": {
+    "sr": "Dve čaše, jedno srce",
+    "en": ""
+  },
+  "data.songs.noc_na_savi.title": {
+    "sr": "Noć na Savi",
+    "en": ""
+  },
+  "data.songs.pijem_za_nas.title": {
+    "sr": "Noćas pijem za nas dvoje",
+    "en": ""
+  },
+  "data.songs.lomi_case.title": {
+    "sr": "Lomi čaše, sviraj jače",
+    "en": ""
+  },
+  "data.songs.becarac.title": {
+    "sr": "Bećarac",
+    "en": ""
+  },
+  "data.songs.sremsko_kolo.title": {
+    "sr": "Sremsko kolo",
+    "en": ""
+  },
+  "data.songs.veseli_se_domacine.title": {
+    "sr": "Veseli se, kućni domaćine",
+    "en": ""
+  },
+  "data.songs.zlatna_ravnica.title": {
+    "sr": "Zlatna ravnica",
+    "en": ""
+  },
+  "data.songs.do_zore.title": {
+    "sr": "Do zore",
+    "en": ""
+  },
+  "data.songs.suze_od_sampanjca.title": {
+    "sr": "Suze od šampanjca",
+    "en": ""
+  },
+  "data.songs.poslednja_tura.title": {
+    "sr": "Poslednja tura",
+    "en": ""
+  },
+  "data.songs.srebrna_reka.title": {
+    "sr": "Srebrna reka",
+    "en": ""
+  },
+  "data.upgrades.dodatni_sto.name": {
+    "sr": "Dodatni sto",
+    "en": "Extra table"
+  },
+  "data.upgrades.dodatni_sto.description": {
+    "sr": "Još jedan sto, do granice lokala.",
+    "en": "One more table, up to the venue's limit."
+  },
+  "data.upgrades.konobar.name": {
+    "sr": "Konobar",
+    "en": "Waiter"
+  },
+  "data.upgrades.konobar.description": {
+    "sr": "Brža usluga, manje čekanja.",
+    "en": "Faster service, less waiting."
+  },
+  "data.upgrades.bolji_sank.name": {
+    "sr": "Bolji šank",
+    "en": "Better bar"
+  },
+  "data.upgrades.bolji_sank.description": {
+    "sr": "Bolja pića, bolje cene.",
+    "en": "Better drinks, better prices."
+  },
+  "data.upgrades.ozvucenje.name": {
+    "sr": "Ozvučenje",
+    "en": "Sound system"
+  },
+  "data.upgrades.ozvucenje.description": {
+    "sr": "Da se pesma čuje i u poslednjem ćošku.",
+    "en": "So the song reaches the last corner."
+  },
+  "data.upgrades.dekor.name": {
+    "sr": "Ćilimi i slike",
+    "en": "Rugs and pictures"
+  },
+  "data.upgrades.dekor.description": {
+    "sr": "Toplija atmosfera, gosti se duže dobro osećaju.",
+    "en": "A warmer room keeps guests happy longer."
+  },
+  "data.upgrades.oglas.name": {
+    "sr": "Oglas u novinama",
+    "en": "Newspaper ad"
+  },
+  "data.upgrades.oglas.description": {
+    "sr": "Više gostiju zna za vas.",
+    "en": "More guests know about you."
+  },
+  "data.upgrades.sef.name": {
+    "sr": "Sef",
+    "en": "Safe"
+  },
+  "data.upgrades.sef.description": {
+    "sr": "Kasa radi i dok vas nema — duže.",
+    "en": "The till keeps earning longer while you're away."
+  },
+  "data.upgrades.kuhinja.name": {
+    "sr": "Kuhinja",
+    "en": "Kitchen"
+  },
+  "data.upgrades.kuhinja.description": {
+    "sr": "Brža kuhinja, strpljiviji gosti.",
+    "en": "A faster kitchen keeps guests patient."
+  },
+  "data.upgrades.izbacivac.name": {
+    "sr": "Izbacivač",
+    "en": "Bouncer"
+  },
+  "data.upgrades.izbacivac.description": {
+    "sr": "Manje tuča. Mnogo manje.",
+    "en": "Fewer fights. Many fewer."
+  },
+  "data.upgrades.basta.name": {
+    "sr": "Bašta",
+    "en": "Garden"
+  },
+  "data.upgrades.basta.description": {
+    "sr": "Stolovi napolju, pod lozom.",
+    "en": "Tables outside, under the vines."
+  },
+  "data.upgrades.knjigovodja.name": {
+    "sr": "Knjigovođa",
+    "en": "Bookkeeper"
+  },
+  "data.upgrades.knjigovodja.description": {
+    "sr": "Neko pazi na pare dok vas nema.",
+    "en": "Someone minds the money while you're away."
+  },
+  "data.venues.birtija.name": {
+    "sr": "Birtija",
+    "en": "Dive bar"
+  },
+  "data.venues.birtija.description": {
+    "sr": "Tri klimava stola i harmonikaš koji je video bolje dane.",
+    "en": "Three wobbly tables and an accordionist who has seen better days."
+  },
+  "data.venues.kafana.name": {
+    "sr": "Kafana",
+    "en": "Kafana"
+  },
+  "data.venues.kafana.description": {
+    "sr": "Prava kafana, sa stolnjacima i stalnim gostima.",
+    "en": "A proper kafana, with tablecloths and regulars."
+  },
+  "data.venues.restoran.name": {
+    "sr": "Restoran",
+    "en": "Restaurant"
+  },
+  "data.venues.restoran.description": {
+    "sr": "Bela tehnika, beli stolnjaci, bele košulje konobara.",
+    "en": "White tablecloths, white shirts on the waiters."
+  },
+  "data.venues.splav.name": {
+    "sr": "Splav",
+    "en": "River raft club"
+  },
+  "data.venues.splav.description": {
+    "sr": "Splav na reci. Ovde se ide do zore.",
+    "en": "A club on the river. Here the night lasts till dawn."
+  }
+}
