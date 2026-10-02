@@ -154,7 +154,8 @@ DRINKS = {
 }
 
 # ---------------------------------------------------------------------------------------------
-# UI icons: 64x64 artwork. Nav glyphs are white so Godot can tint them.
+# HUD pictures: 64x64 artwork in colour (the coin and the three room moods). Interface glyphs,
+# frames and buttons come from build_ui.py.
 # ---------------------------------------------------------------------------------------------
 
 ICONS = {
@@ -171,32 +172,6 @@ ICONS = {
 <path d="M18 20 L28 25 M46 20 L36 25" stroke="#3a1610" stroke-width="3.5" stroke-linecap="round"/>
 <g fill="#3a1610"><circle cx="24" cy="30" r="3.5"/><circle cx="40" cy="30" r="3.5"/></g>
 <path d="M21 46 Q32 36 43 46" stroke="#3a1610" stroke-width="3.5" fill="none" stroke-linecap="round"/>""",
-    "guests": """<g fill="#f4eedc"><circle cx="23" cy="22" r="9"/><path d="M8 52 Q8 34 23 34 Q38 34 38 52 Z"/></g>
-<g fill="#9fb3ad"><circle cx="43" cy="24" r="8"/><path d="M30 52 Q30 36 43 36 Q56 36 56 52 Z"/></g>""",
-    "guests_dark": """<g fill="#3b6e8a" stroke="#2b1d14" stroke-width="2.5"><circle cx="23" cy="22" r="9"/><path d="M8 52 Q8 34 23 34 Q38 34 38 52 Z"/></g>
-<g fill="#ff8a5a" stroke="#2b1d14" stroke-width="2.5"><circle cx="43" cy="24" r="8"/><path d="M30 52 Q30 36 43 36 Q56 36 56 52 Z"/></g>""",
-    "trophy": """<path d="M18 10 L46 10 L46 26 Q46 40 32 42 Q18 40 18 26 Z" fill="#eab575" stroke="#8a5a1c" stroke-width="2.5"/>
-<path d="M18 14 L8 14 Q8 30 20 32 M46 14 L56 14 Q56 30 44 32" fill="none" stroke="#eab575" stroke-width="4"/>
-<rect x="28" y="42" width="8" height="8" fill="#b07a2c"/><rect x="18" y="50" width="28" height="7" rx="2" fill="#8a5a1c"/>""",
-    "gear": """<g transform="translate(32 32)" fill="#f4eedc">
-<path d="M-4 -27 L4 -27 L6 -19 L12 -16 L19 -21 L24 -16 L19 -9 L22 -3 L29 -2 L29 6 L21 8 L18 14 L23 21 L17 26 L11 21 L5 24 L3 31 L-5 31 L-6 23 L-12 20 L-19 25 L-24 19 L-19 13 L-22 6 L-29 4 L-29 -4 L-21 -6 L-18 -12 L-23 -19 L-17 -24 L-10 -19 L-5 -21 Z"/>
-<circle r="9" fill="#1c2a2e"/></g>""",
-    "note": """<path d="M26 12 L52 6 L52 42" fill="none" stroke="#ffffff" stroke-width="5" stroke-linejoin="round"/>
-<path d="M26 12 L26 48" stroke="#ffffff" stroke-width="5"/>
-<ellipse cx="19" cy="49" rx="9" ry="7" fill="#ffffff" transform="rotate(-20 19 49)"/><ellipse cx="45" cy="43" rx="9" ry="7" fill="#ffffff" transform="rotate(-20 45 43)"/>""",
-    "nav_floor": """<path d="M6 26 L32 14 L58 26 L32 38 Z" fill="#ffffff"/><path d="M8 28 L8 34 L32 46 L56 34 L56 28 L32 40 Z" fill="#ffffff" opacity="0.7"/>
-<rect x="30" y="44" width="4" height="14" fill="#ffffff"/><rect x="22" y="56" width="20" height="4" rx="2" fill="#ffffff"/>""",
-    "nav_band": """<rect x="8" y="16" width="16" height="34" rx="3" fill="#ffffff"/><rect x="40" y="16" width="16" height="34" rx="3" fill="#ffffff"/>
-<path d="M24 18 L28 50 L32 18 L36 50 L40 18" fill="none" stroke="#ffffff" stroke-width="3" stroke-linejoin="round"/>
-<g fill="#1c2a2e"><rect x="12" y="22" width="8" height="4" rx="1"/><rect x="12" y="30" width="8" height="4" rx="1"/><rect x="12" y="38" width="8" height="4" rx="1"/></g>""",
-    "nav_menu": """<path d="M27 6 L37 6 L35 24 Q48 32 46 46 Q45 58 32 58 Q19 58 18 46 Q16 32 29 24 Z" fill="#ffffff"/>
-<path d="M22 44 Q32 48 42 44 L41 50 Q32 54 23 50 Z" fill="#1c2a2e" opacity="0.35"/>""",
-    "nav_upgrades": """<path d="M32 6 L52 28 L40 28 L40 52 L24 52 L24 28 L12 28 Z" fill="#ffffff"/><rect x="14" y="54" width="36" height="5" rx="2.5" fill="#ffffff" opacity="0.7"/>""",
-    "nav_venues": """<path d="M6 28 L32 8 L58 28 Z" fill="#ffffff"/><rect x="12" y="28" width="40" height="28" fill="#ffffff"/>
-<rect x="27" y="38" width="10" height="18" fill="#1c2a2e"/><rect x="16" y="34" width="8" height="8" fill="#1c2a2e"/><rect x="40" y="34" width="8" height="8" fill="#1c2a2e"/>""",
-    "lock": """<path d="M20 28 L20 20 Q20 8 32 8 Q44 8 44 20 L44 28" fill="none" stroke="#f4eedc" stroke-width="6"/>
-<rect x="12" y="28" width="40" height="30" rx="6" fill="#eab575" stroke="#8a5a1c" stroke-width="2.5"/><circle cx="32" cy="41" r="4" fill="#5a3a12"/><rect x="30" y="42" width="4" height="9" fill="#5a3a12"/>""",
-    "sparkle": """<path d="M32 4 Q36 28 60 32 Q36 36 32 60 Q28 36 4 32 Q28 28 32 4 Z" fill="#ffffff"/>""",
 }
 
 
@@ -207,11 +182,7 @@ def main() -> None:
         (OUT / "drinks" / f"{name}.svg").write_text(svg(240, 240, "0 0 120 120", body.strip()), encoding="utf-8")
     for name, body in ICONS.items():
         (OUT / "icons" / f"{name}.svg").write_text(svg(128, 128, "0 0 64 64", body.strip()), encoding="utf-8")
-    for state, fill, knob_x in (("on", "#6fd06a", 62), ("off", "#d8ccb4", 26)):
-        body = (f'<rect x="4" y="6" width="80" height="40" rx="20" fill="{fill}" stroke="#2b1d14" stroke-width="4"/>'
-                f'<circle cx="{knob_x}" cy="26" r="15" fill="#fffdf6" stroke="#2b1d14" stroke-width="4"/>')
-        (OUT / "icons" / f"toggle_{state}.svg").write_text(svg(176, 104, "0 0 88 52", body), encoding="utf-8")
-    print(f"Wrote {len(DRINKS)} drink and {len(ICONS) + 1} icon sprites to {OUT}")
+    print(f"Wrote {len(DRINKS)} drink and {len(ICONS)} icon sprites to {OUT}")
 
 
 if __name__ == "__main__":

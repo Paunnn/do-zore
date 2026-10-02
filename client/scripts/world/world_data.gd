@@ -48,3 +48,12 @@ static func sprite(name: String) -> Sprite2D:
 static func venue_layout(venue_id: String) -> Dictionary:
 	ensure_loaded()
 	return world.venues.get(venue_id, world.venues.values()[0])
+
+## One frame of a character sheet as its own texture, for portraits in the interface.
+static func portrait(sheet: String, frame: int, frames_per_row: int) -> AtlasTexture:
+	ensure_loaded()
+	var cell: Vector2 = Vector2(float(people.cell[0]), float(people.cell[1])) * float(people.scale)
+	var atlas: AtlasTexture = AtlasTexture.new()
+	atlas.atlas = texture(ROOT + "people/" + sheet + ".svg")
+	atlas.region = Rect2(Vector2(frame % frames_per_row, frame / frames_per_row) * cell, cell)
+	return atlas

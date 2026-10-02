@@ -2736,23 +2736,19 @@
  "themes": {
   "birtija": {
    "lights": "bulbs",
-   "open": false,
-   "backdrop": "#1b2a44"
+   "open": false
   },
   "kafana": {
    "lights": "string",
-   "open": false,
-   "backdrop": "#1b2a44"
+   "open": false
   },
   "restoran": {
    "lights": "chandelier",
-   "open": false,
-   "backdrop": "#1b2a44"
+   "open": false
   },
   "splav": {
    "lights": "lanterns",
-   "open": true,
-   "backdrop": "#13314f"
+   "open": true
   }
  }
 }

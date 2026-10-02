@@ -687,7 +687,7 @@ def main() -> None:
     tv(manifest)
     emotes(manifest)
     data = {"tile": [TW, TH], "wall_h": WALL_H, "sprites": manifest, "venues": layouts,
-            "themes": {k: {"lights": v["lights"], "open": v["open"], "backdrop": "#13314f" if v["open"] else "#1b2a44"} for k, v in THEMES.items()}}
+            "themes": {k: {"lights": v["lights"], "open": v["open"]} for k, v in THEMES.items()}}
     (OUT / "world.json").write_text(json.dumps(data, indent=1) + "\n", encoding="utf-8")
     print(f"{len(manifest)} sprites; rooms: " + ", ".join(f"{k} {v['w']}x{v['d']} ({len(v['tables'])} slots)" for k, v in layouts.items()))
 

@@ -6,6 +6,7 @@ signal stage_tapped
 signal slot_tapped(index: int)
 
 const KafanaWorld = preload("res://scripts/world/kafana_world.gd")
+const UIKit = preload("res://scripts/ui/ui_kit.gd")
 const WorldData = preload("res://scripts/world/world_data.gd")
 const TAP_SLOP = 18.0
 const MIN_ZOOM = 0.38
@@ -20,9 +21,12 @@ var fx: Control
 var song_bar: PanelContainer
 var song_title: Label
 var song_progress: ProgressBar
+var song_note: TextureRect
 var music_button: Button
 var venue_id: String = ""
-var backdrop: ColorRect
+var backdrop: TextureRect
+const PARALLAX = 0.12
+const BACKDROP_BLEED = 90.0
 var top_inset: float = 260.0
 var bottom_inset: float = 200.0
 var money_target: Callable = Callable()
@@ -57,9 +61,12 @@ func _ready() -> void:
 	var sky: CanvasLayer = CanvasLayer.new()
 	sky.layer = -10
 	viewport.add_child(sky)
-	backdrop = ColorRect.new()
-	backdrop.color = Color("1b2a44")
+	# Night scenery around the venue, a little larger than the screen so it can drift with the camera.
+	backdrop = TextureRect.new()
+	backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	sky.add_child(backdrop)
 	camera = Camera2D.new()
 	viewport.add_child(camera)
@@ -76,106 +83,49 @@ func _ready() -> void:
 	_ensure_world()
 
 func _build_song_bar() -> void:
-	song_bar = PanelContainer.new()
-	var style: StyleBoxFlat = StyleBoxFlat.new()
-	style.bg_color = Color("fff6df")
-	style.set_corner_radius_all(30)
-	style.set_border_width_all(4)
-	style.border_color = INK
-	style.content_margin_left = 22
-	style.content_margin_right = 22
-	style.content_margin_top = 8
-	style.content_margin_bottom = 12
-	song_bar.add_theme_stylebox_override("panel", style)
+	# Now playing: a dark inset plaque with the genre note and a brass progress line.
+	var line: HBoxContainer = UIKit.row(UIKit.S)
+	song_note = UIKit.tinted("note", 44, UIKit.LAMP)
+	song_note.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	line.add_child(song_note)
+	var column: VBoxContainer = UIKit.column(4)
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	line.add_child(column)
+	song_title = UIKit.label("", "label", 26, UIKit.CREAM)
+	song_title.autowrap_mode = TextServer.AUTOWRAP_OFF
+	song_title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	column.add_child(song_title)
+	song_progress = UIKit.bar(UIKit.BRASS, 14)
+	column.add_child(song_progress)
+	song_bar = UIKit.panel("chip", line)
 	song_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	song_bar.visible = false
 	add_child(song_bar)
-	var column: VBoxContainer = VBoxContainer.new()
-	column.add_theme_constant_override("separation", 4)
-	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	song_bar.add_child(column)
-	song_title = Label.new()
-	song_title.add_theme_font_size_override("font_size", 28)
-	song_title.add_theme_color_override("font_color", INK)
-	song_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	song_title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	song_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_child(song_title)
-	song_progress = ProgressBar.new()
-	song_progress.show_percentage = false
-	song_progress.custom_minimum_size = Vector2(0, 16)
-	var back: StyleBoxFlat = StyleBoxFlat.new()
-	back.bg_color = Color("e8d9b8")
-	back.set_corner_radius_all(8)
-	back.set_border_width_all(2)
-	back.border_color = INK
-	var fill: StyleBoxFlat = StyleBoxFlat.new()
-	fill.bg_color = Color("3ec9a7")
-	fill.set_corner_radius_all(8)
-	song_progress.add_theme_stylebox_override("background", back)
-	song_progress.add_theme_stylebox_override("fill", fill)
-	song_progress.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_child(song_progress)
-	music_button = Button.new()
-	music_button.icon = load("res://assets/sprites/icons/note.svg")
-	music_button.expand_icon = true
-	music_button.focus_mode = Control.FOCUS_NONE
-	music_button.custom_minimum_size = Vector2(150, 150)
-	music_button.add_theme_constant_override("icon_max_width", 76)
-	for state in ["normal", "hover", "pressed", "disabled"]:
-		var round_style: StyleBoxFlat = StyleBoxFlat.new()
-		round_style.bg_color = Color("ffc83d") if state != "pressed" else Color("f0a020")
-		round_style.set_corner_radius_all(40)
-		round_style.set_border_width_all(5)
-		round_style.border_color = INK
-		round_style.shadow_color = Color(0, 0, 0, 0.35)
-		round_style.shadow_offset = Vector2(0, 6)
-		round_style.shadow_size = 1
-		music_button.add_theme_stylebox_override(state, round_style)
-	for state in ["icon_normal_color", "icon_hover_color", "icon_pressed_color", "icon_focus_color"]:
-		music_button.add_theme_color_override(state, INK)
-	music_button.pressed.connect(func(): stage_tapped.emit())
+	music_button = UIKit.medallion("note", func(): stage_tapped.emit(), 136)
 	add_child(music_button)
-	closed_pill = _cream_pill()
-	closed_label = Label.new()
-	closed_label.add_theme_font_size_override("font_size", 34)
-	closed_label.add_theme_color_override("font_color", Color("d6453a"))
-	closed_pill.add_child(closed_label)
+	closed_label = UIKit.label("", "label", 30, UIKit.CREAM)
+	closed_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	closed_pill = UIKit.panel("ribbon", closed_label)
+	closed_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	closed_pill.visible = false
 	add_child(closed_pill)
 	hint = Control.new()
 	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hint.visible = false
 	add_child(hint)
-	var hint_pill: PanelContainer = _cream_pill()
+	hint_label = UIKit.label("", "bold", 28, UIKit.INK)
+	hint_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	var hint_pill: PanelContainer = UIKit.panel("paper_brass", hint_label)
+	hint_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hint.add_child(hint_pill)
-	hint_label = Label.new()
-	hint_label.add_theme_font_size_override("font_size", 28)
-	hint_label.add_theme_color_override("font_color", INK)
-	hint_pill.add_child(hint_label)
 	hint_arrow = Control.new()
 	hint_arrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hint_arrow.draw.connect(func():
 		var points: PackedVector2Array = PackedVector2Array([Vector2(-26, -40), Vector2(26, -40), Vector2(0, 0)])
-		hint_arrow.draw_colored_polygon(points, Color("ffc83d"))
+		hint_arrow.draw_colored_polygon(points, UIKit.BRASS)
 		hint_arrow.draw_polyline(points + PackedVector2Array([points[0]]), INK, 5.0, true))
 	add_child(hint_arrow)
 	_place_overlays()
-
-func _cream_pill() -> PanelContainer:
-	var pill: PanelContainer = PanelContainer.new()
-	var style: StyleBoxFlat = StyleBoxFlat.new()
-	style.bg_color = Color("fff6df")
-	style.set_corner_radius_all(30)
-	style.set_border_width_all(4)
-	style.border_color = INK
-	style.content_margin_left = 24
-	style.content_margin_right = 24
-	style.content_margin_top = 8
-	style.content_margin_bottom = 10
-	pill.add_theme_stylebox_override("panel", style)
-	pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return pill
 
 func set_insets(top: float, bottom: float) -> void:
 	top_inset = top
@@ -191,8 +141,8 @@ func _place_overlays() -> void:
 	if song_bar == null:
 		return
 	song_bar.size = Vector2(minf(size.x - 120, 760), 0)
-	song_bar.position = Vector2((size.x - song_bar.size.x) / 2, top_inset + 14)
-	music_button.position = Vector2(size.x - music_button.custom_minimum_size.x - 34, size.y - bottom_inset - music_button.custom_minimum_size.y - 24)
+	song_bar.position = Vector2((size.x - song_bar.size.x) / 2, top_inset + UIKit.S)
+	music_button.position = Vector2(size.x - music_button.custom_minimum_size.x - UIKit.GUTTER - 8, size.y - bottom_inset - music_button.custom_minimum_size.y - UIKit.L)
 
 func _ensure_world() -> void:
 	var venue: String = str(GameState.save.venue)
@@ -200,11 +150,18 @@ func _ensure_world() -> void:
 		return
 	venue_id = venue
 	world.build(venue)
-	backdrop.color = Color(str(WorldData.world.themes.get(world.theme, {}).get("backdrop", "#1b2a44")))
+	backdrop.texture = WorldData.texture(WorldData.ROOT + "backdrops/%s.svg" % venue)
 	camera.zoom = Vector2.ONE * _default_zoom()
 	camera.position = world.focus_point()
 	_clamp_camera()
 	world.sync(GameState.simulation, GameState.save)
+
+func _drift_backdrop() -> void:
+	var shift: Vector2 = ((world.focus_point() - camera.position) * camera.zoom.x * PARALLAX).clamp(Vector2.ONE * -BACKDROP_BLEED, Vector2.ONE * BACKDROP_BLEED)
+	backdrop.offset_left = -BACKDROP_BLEED + shift.x
+	backdrop.offset_right = BACKDROP_BLEED + shift.x
+	backdrop.offset_top = -BACKDROP_BLEED + shift.y
+	backdrop.offset_bottom = BACKDROP_BLEED + shift.y
 
 func _default_zoom() -> float:
 	# Close enough to read faces; small rooms may show a little more.
@@ -221,6 +178,7 @@ func refresh() -> void:
 		var song: Dictionary = DataCatalog.get_item("songs", str(simulation.current_song))
 		song_total = maxf(1.0, float(song.get("duration_seconds", 1.0)))
 		song_title.text = DataCatalog.localized(song.get("title", {})) + "  ·  " + DataCatalog.text("song_remaining", {"seconds": ceili(simulation.song_remaining)})
+		song_note.self_modulate = UIKit.GENRE_COLORS.get(str(song.get("genre", "")), UIKit.LAMP).lightened(0.25)
 		song_progress.max_value = song_total
 		song_progress.value = song_total - simulation.song_remaining
 	closed_pill.visible = simulation.closed_remaining > 0.0
@@ -267,6 +225,7 @@ func _update_hint() -> void:
 func _process(delta: float) -> void:
 	if not is_visible_in_tree():
 		return
+	_drift_backdrop()
 	refresh_timer += delta
 	if refresh_timer >= 0.1:
 		refresh_timer = 0.0
@@ -373,9 +332,10 @@ func _tap(screen_point: Vector2) -> void:
 func _on_payout(world_point: Vector2, amount: int, angry: bool) -> void:
 	var start: Vector2 = world_to_screen(world_point)
 	var label: Label = Label.new()
-	label.text = DataCatalog.text("floor_left_angry") if angry and amount <= 0 else "+" + DataCatalog.text("money_amount", {"amount": amount})
-	label.add_theme_font_size_override("font_size", 40)
-	label.add_theme_color_override("font_color", Color("ff6a5a") if angry and amount <= 0 else Color("ffd23f"))
+	label.text = DataCatalog.text("floor_left_angry") if angry and amount <= 0 else "+" + DataCatalog.text("money_amount", {"amount": UIKit.amount(amount, DataCatalog.locale)})
+	label.add_theme_font_override("font", UIKit.font("number"))
+	label.add_theme_font_size_override("font_size", 44)
+	label.add_theme_color_override("font_color", Color("ff6a5a") if angry and amount <= 0 else UIKit.BRASS_LIGHT)
 	label.add_theme_color_override("font_outline_color", INK)
 	label.add_theme_constant_override("outline_size", 12)
 	label.position = start - Vector2(80, 30)
