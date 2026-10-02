@@ -3,8 +3,7 @@
 Godot 4.x / GDScript offline vertical slice. The design viewport is 1080 × 1920
 portrait; the UI uses expanding containers, scroll views and safe-area padding.
 Serbian Latin (`sr`) is the default language, with an English (`en`) catalog.
-The main screen is a painted kafana with animated band and guests (see **Art**);
-audio hooks are still silent.
+The main screen is an animated isometric kafana (see **Art**); audio hooks are still silent.
 
 ## Run
 
@@ -21,12 +20,11 @@ The vertical slice intentionally does not make real network requests.
 
 ## Play
 
-- New groups arrive and sit at the tables. A bubble above a table shows what they
-  ordered: tap the table to serve it (a ring fills while it is prepared). Tap a
-  table again for its details. The coloured note badge is the genre they want.
-- Tap the stage or **Izaberi pesmu** to play a known song. The accordionist plays
-  while it lasts and happy tables dance. Faces show each table's mood; when guests
-  leave, their bill and bakšiš float up from the table.
+- Guests walk in and sit down; a thought cloud shows what they ordered. Tap the cloud or the
+  table to serve it (a ring fills while it is prepared) and tap the table again for details.
+  A small cloud with a coloured note is the genre they want.
+- Tap the stage or the yellow music button to play a known song. The band plays, notes rise
+  and happy tables get up to dance. Leaving guests pay; the coins fly to the money counter.
 - Matching music improves table mood and eventual bakšiš. Mismatches and long
   waits reduce mood. Nearby unhappy groups can trigger a fight.
 - The bottom navigation opens **Kafana**, **Bend**, **Piće**, **Unapređenja** and
@@ -38,17 +36,25 @@ The vertical slice intentionally does not make real network requests.
 
 ## Art
 
-`scripts/ui/floor_view.gd` draws the floor: the painted room, a repeating floor
-below it, flickering lanterns and string lights, the musician animation and one
-`scripts/ui/table_view.gd` per table. Tables follow the simulation's
-`floor_columns` grid (staggered), so a venue with more tables simply scrolls. Each
-table is three painted layers with up to four guests between them (two facing us,
-two seen from behind) plus a `+N` badge for bigger parties.
+The Kafana tab is an isometric scene in the style of cartoon idle tycoon games: one outlined
+art style for the room, the furniture and the people. `scripts/ui/floor_view.gd` hosts it in a
+`SubViewport` with a `Camera2D` (drag to pan, pinch or wheel to zoom, tap to act) and
+`scripts/world/kafana_world.gd` builds the current venue and keeps it in step with the
+simulation:
 
-Assets live in `assets/art` (painted layers, `layout.json`) and `assets/sprites`
-(SVG guests in three moods and from behind, drinks and icons; Godot imports the SVG
-files directly). Both are generated: see `tools/README.md` and
-`art_source/README.md` for how to rebuild them and where the paintings came from.
+- Guests walk in through the door (A* on the floor grid), sit on the chairs around their table
+  and walk out again when they leave; faces follow the table's mood and happy tables dance.
+- Thought clouds (`scripts/world/table_hud.gd`) show the order (tap to serve; a ring fills while
+  it is prepared), the requested genre and emoji for the mood; big parties get a `+N` badge.
+- Waiters carry served drinks from the bar, the bartender works behind it and the band on stage
+  plays while a song is on. Konobar, ozvučenje, dekor, izbacivač and sef levels are visible.
+- Paying guests drop coins that fly to the money counter; a power cut darkens the room and a
+  fight raises a dust cloud. The next free table slot shows a `+` that opens the upgrades.
+- A brand-new game coaches the first order and the first song request.
+
+Every venue has its own room, palette and band line-up. All art is generated from code: see
+`tools/README.md`. World textures are VRAM-compressed with mipmaps (S3TC on desktop, ETC2/ASTC on
+Android). The UI font is Baloo 2 (SIL Open Font License, `assets/fonts/OFL.txt`).
 
 ## Architecture
 
@@ -136,8 +142,8 @@ The rendered UI was also inspected at 450×800, 450×1000 and 768×1024 window s
 set `DO_ZORE_TEST_USER_DIR` to an isolated absolute save directory and
 `DO_ZORE_CAPTURE_OUTPUT` to an absolute output directory, then run
 `godot --path client --audio-driver Dummy --script res://tests/capture_ui.gd`.
-`tests/capture_floor.gd` takes the same variables and renders a busy floor (song
-playing, every order state, dancing and angry tables) at 1080×1920. Without a
+`tests/capture_floor.gd` takes the same variables and renders every venue full of guests
+with a song playing at 1080×1920. Without a
 display, wrap either command in `xvfb-run -a` and add `--rendering-driver opengl3`.
 
 The read-only Python progression simulator and its assumptions are documented in
@@ -145,8 +151,7 @@ The read-only Python progression simulator and its assumptions are documented in
 
 ## TODO / explicit stubs
 
-- Give each venue its own painted room (all four currently share the kafana).
-- Animate guests arriving/leaving with walking sprites and add waiter characters.
+- Add a kitchen/cook for the kuhinja upgrade and characters for the inspection and VIP events.
 - Attach licensed music and sound to the silent hooks; settings already expose
   the intended controls.
 - Add real HTTP/auth/cloud integration after the offline slice. Mock behavior

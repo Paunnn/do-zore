@@ -1,21 +1,28 @@
 extends Control
 ## Presentation only: actions enter GameState; all balance lives in the catalog.
-const BG = Color("10191e")
-const PANEL = Color("1c2a2e")
-const INK = Color("f4eedc")
-const MUTED = Color("9fb3ad")
-const GOLD = Color("eab575")
-const GREEN = Color("72cbb6")
-const RED = Color("ed8c7a")
+const BG = Color("1b2a44")
+const PANEL = Color("fff6df")
+const CARD = Color("fffdf6")
+const INK = Color("2b1d14")
+const MUTED = Color("8a6f55")
+const GOLD = Color("d9771e")
+const GREEN = Color("2f9a5a")
+const RED = Color("d6453a")
+const YELLOW = Color("ffc83d")
+const LIME = Color("6fd06a")
+const BODY_FONT = preload("res://assets/fonts/Baloo2-SemiBold.ttf")
+const BOLD_FONT = preload("res://assets/fonts/Baloo2-ExtraBold.ttf")
 const FloorView = preload("res://scripts/ui/floor_view.gd")
 const SPRITES = "res://assets/sprites/"
-const GENRE_COLORS = {"starogradske": Color("eab575"), "tamburica": Color("72cbb6"), "izvorna": Color("ed8c7a"), "narodnjaci": Color("c49be8")}
+const GENRE_COLORS = {"starogradske": Color("ffb43d"), "tamburica": Color("3ec9a7"), "izvorna": Color("ff6a5a"), "narodnjaci": Color("b77cff")}
 var shell: MarginContainer
 var body: VBoxContainer
 var floor_view: Control
 var floor_spacer: Control
-var dim_backdrop: TextureRect
+var dim_backdrop: ColorRect
+var sheet: PanelContainer
 var mood_icon: TextureRect
+var money_icon: TextureRect
 var hud_panel: PanelContainer
 var nav_panel: PanelContainer
 var toast_panel: PanelContainer
@@ -61,33 +68,59 @@ func _ready() -> void:
 
 func _install_theme() -> void:
 	var theme_resource: Theme = Theme.new()
+	theme_resource.default_font = BODY_FONT
 	theme_resource.default_font_size = 30
+	theme_resource.set_font("font", "Button", BOLD_FONT)
 	theme_resource.set_color("font_color", "Label", INK)
-	theme_resource.set_color("font_color", "Button", INK)
-	theme_resource.set_color("font_hover_color", "Button", INK)
-	theme_resource.set_color("font_disabled_color", "Button", MUTED.darkened(0.2))
-	theme_resource.set_stylebox("normal", "Button", _box(PANEL.lightened(0.04), 20, PANEL.lightened(0.17)))
-	theme_resource.set_stylebox("hover", "Button", _box(PANEL.lightened(0.14), 20, GOLD))
-	theme_resource.set_stylebox("pressed", "Button", _box(Color("375248"), 20, GREEN))
-	theme_resource.set_stylebox("disabled", "Button", _box(PANEL.darkened(0.12), 20, PANEL))
-	theme_resource.set_stylebox("focus", "Button", _box(Color(0, 0, 0, 0), 20, GOLD))
-	theme_resource.set_constant("separation", "VBoxContainer", 22)
-	theme_resource.set_constant("separation", "HBoxContainer", 18)
-	for key in ["background", "fill"]:
-		var bar_style: StyleBoxFlat = _box(BG if key == "background" else GREEN, 7)
-		bar_style.set_content_margin_all(0)
-		theme_resource.set_stylebox(key, "ProgressBar", bar_style)
+	for key in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		theme_resource.set_color(key, "Button", INK)
+	theme_resource.set_color("font_disabled_color", "Button", MUTED)
+	theme_resource.set_color("font_color", "CheckButton", INK)
+	theme_resource.set_color("font_hover_color", "CheckButton", INK)
+	theme_resource.set_color("font_pressed_color", "CheckButton", INK)
+	theme_resource.set_stylebox("normal", "Button", _box(YELLOW, 24))
+	theme_resource.set_stylebox("hover", "Button", _box(YELLOW.lightened(0.15), 24))
+	theme_resource.set_stylebox("pressed", "Button", _box(YELLOW.darkened(0.12), 24, INK, false))
+	theme_resource.set_stylebox("disabled", "Button", _box(Color("e6dcc6"), 24, MUTED.lightened(0.2), false))
+	theme_resource.set_stylebox("focus", "Button", StyleBoxEmpty.new())
+	for state in ["normal", "hover", "pressed", "focus", "hover_pressed"]:
+		theme_resource.set_stylebox(state, "CheckButton", _box(CARD, 24))
+	for icon_name in ["checked", "checked_mirrored"]:
+		theme_resource.set_icon(icon_name, "CheckButton", _icon("toggle_on"))
+	for icon_name in ["unchecked", "unchecked_mirrored"]:
+		theme_resource.set_icon(icon_name, "CheckButton", _icon("toggle_off"))
+	theme_resource.set_constant("separation", "VBoxContainer", 18)
+	theme_resource.set_constant("separation", "HBoxContainer", 16)
+	var bar_back: StyleBoxFlat = _box(Color("e8d9b8"), 10, INK, false)
+	bar_back.set_border_width_all(3)
+	bar_back.set_content_margin_all(0)
+	var bar_fill: StyleBoxFlat = _box(Color("3ec9a7"), 10, Color.TRANSPARENT, false)
+	bar_fill.set_border_width_all(0)
+	bar_fill.set_content_margin_all(0)
+	theme_resource.set_stylebox("background", "ProgressBar", bar_back)
+	theme_resource.set_stylebox("fill", "ProgressBar", bar_fill)
+	var scroll: StyleBoxFlat = _box(Color(INK, 0.25), 6, Color.TRANSPARENT, false)
+	scroll.set_content_margin_all(4)
+	theme_resource.set_stylebox("grabber", "VScrollBar", scroll)
+	theme_resource.set_stylebox("grabber_highlight", "VScrollBar", scroll)
+	theme_resource.set_stylebox("grabber_pressed", "VScrollBar", scroll)
+	theme_resource.set_stylebox("scroll", "VScrollBar", StyleBoxEmpty.new())
 	theme = theme_resource
 
-func _box(color: Color, radius: int = 24, border: Color = Color.TRANSPARENT) -> StyleBoxFlat:
+## Cartoon box: flat colour, thick dark outline and a solid drop shadow underneath.
+func _box(color: Color, radius: int = 24, border: Color = INK, shadow: bool = true) -> StyleBoxFlat:
 	var result: StyleBoxFlat = StyleBoxFlat.new()
 	result.bg_color = color
 	result.set_corner_radius_all(radius)
-	result.set_border_width_all(2)
+	result.set_border_width_all(4)
 	result.border_color = border
+	if shadow:
+		result.shadow_color = Color(INK, 0.35)
+		result.shadow_offset = Vector2(0, 6)
+		result.shadow_size = 1
 	result.content_margin_left = 26
 	result.content_margin_right = 26
-	result.content_margin_top = 20
+	result.content_margin_top = 18
 	result.content_margin_bottom = 20
 	return result
 
@@ -97,6 +130,8 @@ func _label(value: String, font_size: int = 30, color: Color = INK) -> Label:
 	result.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	result.add_theme_font_size_override("font_size", font_size)
 	result.add_theme_color_override("font_color", color)
+	if font_size >= 34:
+		result.add_theme_font_override("font", BOLD_FONT)
 	result.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return result
 
@@ -108,11 +143,12 @@ func _button(value: String, action: Callable, accent: bool = false) -> Button:
 	result.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	result.pressed.connect(action)
 	if accent:
-		result.add_theme_stylebox_override("normal", _box(Color("684d34"), 20, GOLD.darkened(0.3)))
-		result.add_theme_color_override("font_color", INK)
+		result.add_theme_stylebox_override("normal", _box(LIME, 24))
+		result.add_theme_stylebox_override("hover", _box(LIME.lightened(0.15), 24))
+		result.add_theme_stylebox_override("pressed", _box(LIME.darkened(0.12), 24, INK, false))
 	return result
 
-func _panel(parent: Node, color: Color = PANEL) -> VBoxContainer:
+func _panel(parent: Node, color: Color = CARD) -> VBoxContainer:
 	var panel: PanelContainer = PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", _box(color))
 	# Cards must not swallow drags, or lists cannot be scrolled by touching a card.
@@ -141,23 +177,34 @@ func _icon_rect(name: String, side: float) -> TextureRect:
 	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return rect
 
-func _icon_button(name: String, action: Callable) -> Button:
+func _icon_button(name: String, action: Callable, tint: bool = true) -> Button:
 	var button: Button = Button.new()
 	button.icon = _icon(name)
 	button.expand_icon = true
-	button.custom_minimum_size = Vector2(104, 96)
+	button.custom_minimum_size = Vector2(104, 104)
 	button.focus_mode = Control.FOCUS_NONE
-	var style: StyleBoxFlat = _box(PANEL.lightened(0.04), 20, PANEL.lightened(0.17))
-	style.set_content_margin_all(16)
-	button.add_theme_stylebox_override("normal", style)
+	button.add_theme_constant_override("icon_max_width", 64)
+	for state in ["normal", "hover", "pressed"]:
+		var style: StyleBoxFlat = _box(YELLOW if state != "pressed" else YELLOW.darkened(0.12), 52, INK, state != "pressed")
+		style.set_content_margin_all(18)
+		button.add_theme_stylebox_override(state, style)
+	if tint:
+		for state in ["icon_normal_color", "icon_hover_color", "icon_pressed_color", "icon_focus_color"]:
+			button.add_theme_color_override(state, INK)
 	button.pressed.connect(action)
 	return button
 
-func _glass(alpha: float) -> StyleBoxFlat:
-	var style: StyleBoxFlat = _box(Color(PANEL, alpha), 28, Color(GOLD, 0.28))
-	style.content_margin_top = 16
-	style.content_margin_bottom = 16
-	return style
+func _pill(content: Control, color: Color = PANEL) -> PanelContainer:
+	var pill: PanelContainer = PanelContainer.new()
+	var style: StyleBoxFlat = _box(color, 40)
+	style.content_margin_left = 12
+	style.content_margin_right = 22
+	style.content_margin_top = 6
+	style.content_margin_bottom = 6
+	pill.add_theme_stylebox_override("panel", style)
+	pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pill.add_child(content)
+	return pill
 
 func _build_shell() -> void:
 	var backdrop: ColorRect = ColorRect.new()
@@ -165,80 +212,106 @@ func _build_shell() -> void:
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(backdrop)
-	dim_backdrop = TextureRect.new()
-	dim_backdrop.texture = load("res://assets/art/kafana_room.jpg")
-	dim_backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	dim_backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	dim_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim_backdrop.modulate = Color(0.24, 0.27, 0.29)
-	dim_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(dim_backdrop)
 	floor_view = FloorView.new()
 	add_child(floor_view)
 	floor_view.table_tapped.connect(_on_table_tapped)
 	floor_view.stage_tapped.connect(func(): _show_songs(-1))
+	floor_view.slot_tapped.connect(func(_index): _open_tab("upgrades"))
+	floor_view.money_target = func() -> Vector2: return money_icon.get_global_rect().get_center() if is_instance_valid(money_icon) else Vector2.ZERO
+	# Other screens sit on a sheet over the still-running kafana, dimmed and not clickable.
+	dim_backdrop = ColorRect.new()
+	dim_backdrop.color = Color(0.06, 0.09, 0.16, 0.62)
+	dim_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dim_backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+	add_child(dim_backdrop)
 	shell = MarginContainer.new()
 	shell.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	shell.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(shell)
 	var column: VBoxContainer = VBoxContainer.new()
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	column.add_theme_constant_override("separation", 14)
+	column.add_theme_constant_override("separation", 16)
 	shell.add_child(column)
 	hud_panel = PanelContainer.new()
-	hud_panel.add_theme_stylebox_override("panel", _glass(0.88))
+	hud_panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	hud_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(hud_panel)
 	var hud: VBoxContainer = VBoxContainer.new()
-	hud.add_theme_constant_override("separation", 10)
+	hud.add_theme_constant_override("separation", 12)
+	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud_panel.add_child(hud)
 	var top: HBoxContainer = HBoxContainer.new()
 	top.add_theme_constant_override("separation", 12)
+	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud.add_child(top)
-	var brand: VBoxContainer = VBoxContainer.new()
-	brand.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	brand.add_theme_constant_override("separation", 0)
-	top.add_child(brand)
-	brand.add_child(_label(_t("app_title"), 40, GOLD))
-	venue_label = _label("", 22, INK)
-	brand.add_child(venue_label)
-	status_label = _label("", 20, MUTED)
-	status_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	status_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	top.add_child(status_label)
-	top.add_child(_icon_button("trophy", func(): _open_tab("leaderboard")))
-	top.add_child(_icon_button("gear", func(): _open_tab("settings")))
-	var stats: HBoxContainer = HBoxContainer.new()
-	stats.add_theme_constant_override("separation", 14)
-	hud.add_child(stats)
 	for key in ["money", "mood", "guests"]:
 		var group: HBoxContainer = HBoxContainer.new()
-		group.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		group.size_flags_stretch_ratio = 1.4 if key == "money" else 1.0
-		group.add_theme_constant_override("separation", 10)
-		stats.add_child(group)
-		var icon: TextureRect = _icon_rect({"money": "coin", "mood": "mood_neutral", "guests": "guests"}[key], 58)
+		group.add_theme_constant_override("separation", 8)
+		group.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var icon: TextureRect = _icon_rect({"money": "coin", "mood": "mood_neutral", "guests": "guests_dark"}[key], 62)
 		group.add_child(icon)
-		var number: Label = _label("", 36, GOLD if key == "money" else INK)
+		var number: Label = _label("", 36, INK)
 		number.autowrap_mode = TextServer.AUTOWRAP_OFF
 		number.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		group.add_child(number)
+		var holder: Control = group
+		if key == "mood":
+			var stack: VBoxContainer = VBoxContainer.new()
+			stack.add_theme_constant_override("separation", 0)
+			stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			group.remove_child(number)
+			stack.add_child(number)
+			mood_bar = ProgressBar.new()
+			mood_bar.custom_minimum_size = Vector2(110, 16)
+			mood_bar.show_percentage = false
+			mood_bar.min_value = DataCatalog.data.economy.mood.min
+			mood_bar.max_value = DataCatalog.data.economy.mood.max
+			mood_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			stack.add_child(mood_bar)
+			group.add_child(stack)
+			number.add_theme_font_size_override("font_size", 28)
+		var pill: PanelContainer = _pill(holder)
+		pill.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		pill.size_flags_stretch_ratio = 1.6 if key == "money" else 1.0
+		top.add_child(pill)
 		match key:
-			"money": money_label = number
+			"money":
+				money_label = number
+				money_icon = icon
 			"mood":
 				mood_label = number
 				mood_icon = icon
 			"guests": guest_label = number
-	mood_bar = ProgressBar.new()
-	mood_bar.custom_minimum_size.y = 12
-	mood_bar.show_percentage = false
-	mood_bar.min_value = DataCatalog.data.economy.mood.min
-	mood_bar.max_value = DataCatalog.data.economy.mood.max
-	hud.add_child(mood_bar)
+	top.add_child(_icon_button("trophy", func(): _open_tab("leaderboard"), false))
+	top.add_child(_icon_button("gear", func(): _open_tab("settings")))
+	var ribbon: HBoxContainer = HBoxContainer.new()
+	ribbon.alignment = BoxContainer.ALIGNMENT_CENTER
+	ribbon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_child(ribbon)
+	venue_label = _label("", 26, Color.WHITE)
+	venue_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	venue_label.add_theme_font_override("font", BOLD_FONT)
+	venue_label.add_theme_color_override("font_outline_color", INK)
+	venue_label.add_theme_constant_override("outline_size", 10)
+	ribbon.add_child(venue_label)
+	status_label = _label("", 20, Color(1, 1, 1, 0.75))
+	status_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	status_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	status_label.add_theme_color_override("font_outline_color", INK)
+	status_label.add_theme_constant_override("outline_size", 6)
+	ribbon.add_child(status_label)
+	sheet = PanelContainer.new()
+	var sheet_style: StyleBoxFlat = _box(PANEL, 36)
+	sheet_style.content_margin_left = 22
+	sheet_style.content_margin_right = 14
+	sheet_style.content_margin_top = 20
+	sheet_style.content_margin_bottom = 18
+	sheet.add_theme_stylebox_override("panel", sheet_style)
+	sheet.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_child(sheet)
 	content_scroll = ScrollContainer.new()
-	content_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	column.add_child(content_scroll)
+	sheet.add_child(content_scroll)
 	body = VBoxContainer.new()
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content_scroll.add_child(body)
@@ -247,15 +320,15 @@ func _build_shell() -> void:
 	floor_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(floor_spacer)
 	toast_panel = PanelContainer.new()
-	toast_panel.add_theme_stylebox_override("panel", _glass(0.92))
+	toast_panel.add_theme_stylebox_override("panel", _box(PANEL, 34))
 	toast_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	toast_panel.visible = false
 	column.add_child(toast_panel)
-	toast = _label("", 26, GOLD)
+	toast = _label("", 28, INK)
 	toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	toast_panel.add_child(toast)
 	nav_panel = PanelContainer.new()
-	var nav_style: StyleBoxFlat = _glass(0.92)
+	var nav_style: StyleBoxFlat = _box(PANEL, 36)
 	nav_style.set_content_margin_all(10)
 	nav_panel.add_theme_stylebox_override("panel", nav_style)
 	column.add_child(nav_panel)
@@ -271,16 +344,9 @@ func _build_shell() -> void:
 		button.autowrap_mode = TextServer.AUTOWRAP_OFF
 		button.clip_text = true
 		button.focus_mode = Control.FOCUS_NONE
-		button.custom_minimum_size = Vector2(0, 128)
-		button.add_theme_font_size_override("font_size", 21)
-		button.add_theme_constant_override("icon_max_width", 54)
-		var flat: StyleBoxFlat = _box(Color(0, 0, 0, 0), 20)
-		flat.set_content_margin_all(8)
-		button.add_theme_stylebox_override("normal", flat)
-		button.add_theme_stylebox_override("hover", flat)
-		var pressed: StyleBoxFlat = _box(Color(GOLD, 0.16), 20)
-		pressed.set_content_margin_all(8)
-		button.add_theme_stylebox_override("pressed", pressed)
+		button.custom_minimum_size = Vector2(0, 132)
+		button.add_theme_font_size_override("font_size", 22)
+		button.add_theme_constant_override("icon_max_width", 58)
 		nav.add_child(button)
 		nav_buttons[key] = button
 
@@ -305,10 +371,11 @@ func _safe_area() -> void:
 	_fit_floor.call_deferred()
 
 func _fit_floor() -> void:
-	# Leave room under the floating navigation so the last row of tables can scroll into view.
-	if is_instance_valid(floor_view) and is_instance_valid(nav_panel):
-		floor_view.bottom_padding = nav_panel.size.y + shell.get_theme_constant("margin_bottom") + 60.0
-		floor_view._layout()
+	# The world camera keeps the playable area between the HUD and the navigation bar.
+	if is_instance_valid(floor_view) and is_instance_valid(nav_panel) and is_instance_valid(hud_panel):
+		var top: float = hud_panel.get_global_rect().end.y
+		var bottom: float = get_viewport_rect().size.y - nav_panel.get_global_rect().position.y
+		floor_view.set_insets(top, bottom)
 
 func _clear(node: Node) -> void:
 	for child in node.get_children():
@@ -321,15 +388,20 @@ func _open_tab(key: String) -> void:
 	purchase_buttons.clear()
 	content_scroll.scroll_vertical = 0
 	var on_floor: bool = key == "floor"
-	floor_view.visible = on_floor
 	floor_spacer.visible = on_floor
-	content_scroll.visible = not on_floor
+	sheet.visible = not on_floor
 	dim_backdrop.visible = not on_floor
 	for nav in nav_buttons:
-		var color: Color = GOLD if key == nav else MUTED
-		nav_buttons[nav].add_theme_color_override("font_color", color)
+		var active: bool = key == nav
+		var color: Color = INK if active else MUTED
+		var button: Button = nav_buttons[nav]
+		button.add_theme_color_override("font_color", color)
 		for state in ["icon_normal_color", "icon_hover_color", "icon_pressed_color", "icon_focus_color"]:
-			nav_buttons[nav].add_theme_color_override(state, color)
+			button.add_theme_color_override(state, color)
+		var style: StyleBoxFlat = _box(YELLOW, 26, INK, false) if active else _box(Color(0, 0, 0, 0), 26, Color.TRANSPARENT, false)
+		style.set_content_margin_all(8)
+		for state in ["normal", "hover", "pressed"]:
+			button.add_theme_stylebox_override(state, style)
 	match key:
 		"floor": floor_view.refresh()
 		"band": _band()
@@ -521,7 +593,7 @@ func _new_modal(kind: String, title: String) -> void:
 	add_child(modal)
 	var shade: ColorRect = ColorRect.new()
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.color = Color(0.015, 0.025, 0.03, 0.9)
+	shade.color = Color(0.05, 0.08, 0.14, 0.66)
 	modal.add_child(shade)
 	var margin: MarginContainer = MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -530,7 +602,7 @@ func _new_modal(kind: String, title: String) -> void:
 	modal.add_child(margin)
 	var panel: PanelContainer = PanelContainer.new()
 	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	panel.add_theme_stylebox_override("panel", _box(PANEL, 32, GOLD.darkened(0.4)))
+	panel.add_theme_stylebox_override("panel", _box(PANEL, 40))
 	margin.add_child(panel)
 	var scroll: ScrollContainer = ScrollContainer.new()
 	modal_scroll = scroll

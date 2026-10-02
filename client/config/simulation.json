@@ -1,4 +1,5 @@
 {
   "tick_seconds": 0.25,
-  "floor_columns": 2
+  "floor_columns": 2,
+  "first_arrival_seconds": 3
 }

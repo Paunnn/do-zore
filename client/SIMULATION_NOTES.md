@@ -4,6 +4,11 @@ The `kafana_simulation.gd` RefCounted owns runtime tables, orders, requests, moo
 
 ## Formula and timing choices
 
+- A newly configured simulation (no saved `client.simulation` timers) sends its first guest after
+  `first_arrival_seconds` from `config/simulation.json` (3 s) instead of a full arrival interval,
+  so a new game never opens on empty tables. Restored saves keep their own timers. The Python
+  simulator does not model this one-off head start.
+
 - Upgrade additions are summed before multiplication; multiplicative upgrade effects use `per_level ** owned_level`. Table capacity is capped by the current venue.
 - Offline income, upkeep deduction, table scaling, cap and minimum absence follow the description in `economy.schema.json`. Offline amounts use floor. Upgrade costs and scaled event amounts use ceiling where the descriptions leave integer rounding unspecified.
 - Genre matching includes related genres and their data-defined strength. Song effects include song power, guest sensitivity, positive band mood power and sound-system upgrades. Named wishes display an example known song; matching behavior remains genre-based as required by the economy formula.

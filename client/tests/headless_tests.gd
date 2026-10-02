@@ -273,7 +273,7 @@ func _test_ui() -> void:
 		for tab: String in ["floor", "band", "menu", "upgrades", "venues", "settings", "leaderboard"]:
 			ui._open_tab(tab)
 			await process_frame
-			var shown: bool = ui.floor_view.visible and ui.floor_view.table_views.size() == game.simulation.tables.size() if tab == "floor" else ui.body.get_child_count() > 0
+			var shown: bool = ui.floor_view.visible and ui.floor_view.world.slots.size() >= game.simulation.tables.size() if tab == "floor" else ui.body.get_child_count() > 0
 			check(str(ui.active_tab) == tab and shown, "UI route " + locale + "/" + tab)
 	ui._open_tab("floor")
 	ui._show_songs(-1)
@@ -283,15 +283,27 @@ func _test_ui() -> void:
 	check(str(ui.modal_kind) == "song", "tapping the stage opens the song picker")
 	ui._close_modal(false)
 	game.simulation.closed_remaining = 0.0
+	var world = ui.floor_view.world
 	var free_table: int = -1
 	for table_index in range(game.simulation.tables.size()):
 		if str(game.simulation.tables[table_index].guest_type).is_empty():
 			free_table = table_index
 			break
-	check(free_table >= 0 and game.simulation.spawn_guest("penzioner", free_table), "floor test guest arrives")
+	check(free_table >= 0 and game.simulation.spawn_guest("studenti", free_table), "floor test guest arrives")
 	ui.floor_view.refresh()
-	var view = ui.floor_view.table_views[free_table]
-	check(view.occupied and view.back_guests[0].visible and view.order_bubble.visible and view.waiting, "seated guest and pending order are drawn")
+	var slot: Dictionary = world.slots[free_table]
+	var party: int = int(game.simulation.tables[free_table].party_size)
+	check(not slot.locked and slot.guests.size() == mini(party, 6) and slot.guests[0].get_meta("state") == "walking", "a new party walks in from the door")
+	for guest in slot.guests:
+		world._seat(slot, guest)
+	ui.floor_view.refresh()
+	check(slot.hud.mode == "order" and slot.guests[0].current.begins_with("sit"), "seated guests show their order in a thought cloud")
+	var hit: Dictionary = world.pick(world.WorldData.iso_v(slot.center) + Vector2(0, -30))
+	check(str(hit.kind) == "table" and int(hit.index) == free_table, "tapping a table picks it in the world")
+	var stage_hit: Dictionary = world.pick(world.WorldData.iso(1.5, 1.5, float(world.lay.stage[4])))
+	check(str(stage_hit.kind) == "stage", "tapping the stage picks it in the world")
+	var locked_slots: int = world.slots.size() - game.simulation.tables.size()
+	check(locked_slots <= 0 or world.slots[game.simulation.tables.size()].plus.visible, "the next free table slot offers a purchase")
 	var money_before_tap: int = int(game.save.money)
 	ui.floor_view.table_tapped.emit(free_table)
 	check(str(game.simulation.tables[free_table].order_status) == "preparing" and int(game.save.money) < money_before_tap, "tapping a waiting table serves it")
@@ -299,6 +311,8 @@ func _test_ui() -> void:
 	check(str(ui.modal_kind) == "song" and int(ui.modal_table) == free_table, "tapping a served table opens its details")
 	ui._close_modal(false)
 	game.simulation.depart(free_table)
+	ui.floor_view.refresh()
+	check(slot.guests.is_empty(), "leaving guests release their table")
 	ui._show_offline({"granted_amount": 0, "away_seconds": 3600, "counted_seconds": 3600, "cap_hours": 2.0, "capped": false, "source": "local"})
 	check(str(ui.modal_kind) == "offline", "offline earnings popup opens")
 	ui._close_modal(false)

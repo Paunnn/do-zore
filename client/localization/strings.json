@@ -487,6 +487,14 @@
     "sr": "Otišli ljuti!",
     "en": "Left angry!"
   },
+  "hint_serve": {
+    "sr": "Dodirni oblačić da uslužiš goste",
+    "en": "Tap the bubble to serve the guests"
+  },
+  "hint_song": {
+    "sr": "Gosti žele pesmu, pusti im je!",
+    "en": "They want a song, play it!"
+  },
   "data.band_levels.solo_harmonikas.name": {
     "sr": "Solo harmonikaš",
     "en": "Solo accordionist"

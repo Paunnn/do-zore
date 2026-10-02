@@ -1,4 +1,4 @@
-"""Generate the vector sprites (guests, drinks, UI icons) as SVG files Godot imports directly.
+"""Generate the UI vector sprites (drinks and icons) as SVG files Godot imports directly.
 
 Every sprite is written at twice its on-screen size so the default import scale stays crisp.
 
@@ -13,32 +13,8 @@ ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "client/assets/sprites"
 
 # ---------------------------------------------------------------------------------------------
-# Guests: a 120x160 bust, drawn front-on (back chairs) or from behind (front chairs).
+# Helpers
 # ---------------------------------------------------------------------------------------------
-
-GUESTS = {
-    "penzioner_a": dict(skin="#e9c2a0", hair="#bdbbb5", style="fringe", top="#7a5a3c", collar="#efe8d8",
-                        wear="cardigan", extras=["cap", "mustache"]),
-    "penzioner_b": dict(skin="#efc8a8", hair="#cfcdc8", style="bun", top="#7b4f7f", collar="#f2ece0",
-                        wear="cardigan", extras=["glasses"]),
-    "studenti_a": dict(skin="#f0c8a4", hair="#3a2a22", style="messy", top="#2f8f8a", collar="#2f8f8a",
-                       wear="hoodie", extras=[]),
-    "studenti_b": dict(skin="#f3cfae", hair="#6b3f24", style="long", top="#e0a43a", collar="#e0a43a",
-                       wear="sweater", extras=["glasses"]),
-    "ozalosceni_a": dict(skin="#e8c09c", hair="#2b2622", style="short", top="#26262b", collar="#f1eee8",
-                         wear="suit", tie="#111114", extras=[]),
-    "ozalosceni_b": dict(skin="#eec6a6", hair="#1f1f24", style="scarf", top="#2a2a30", collar="#2a2a30",
-                         wear="sweater", extras=[]),
-    "svatovi_a": dict(skin="#f0c49e", hair="#3b2a1f", style="short", top="#b8302f", collar="#f5f2ea",
-                      wear="vest", extras=["carnation"]),
-    "svatovi_b": dict(skin="#f3cdb0", hair="#2e1f18", style="long", top="#c23a3a", collar="#c23a3a",
-                      wear="dress", extras=["wreath"]),
-    "biznismen_a": dict(skin="#e8bf98", hair="#1f1a17", style="slick", top="#1f2a44", collar="#f4f1ea",
-                        wear="suit", tie="#d9a531", extras=["chain"]),
-    "biznismen_b": dict(skin="#e2b48c", hair="#1c1816", style="bald", top="#333238", collar="#f4f1ea",
-                        wear="suit", tie="#b8302f", extras=["mustache", "shades"]),
-}
-
 
 def shade(color: str, amount: float) -> str:
     """Lighten (amount > 0) or darken (amount < 0) a #rrggbb colour."""
@@ -53,167 +29,6 @@ def shade(color: str, amount: float) -> str:
 def svg(width: int, height: int, view: str, body: str) -> str:
     return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="{view}">\n'
             f'{body}\n</svg>\n')
-
-
-def gradient(name: str, color: str, light: float = 0.18, dark: float = -0.22, vertical: bool = True) -> str:
-    x2, y2 = ("0", "1") if vertical else ("1", "0")
-    return (f'<linearGradient id="{name}" x1="0" y1="0" x2="{x2}" y2="{y2}">'
-            f'<stop offset="0" stop-color="{shade(color, light)}"/>'
-            f'<stop offset="1" stop-color="{shade(color, dark)}"/></linearGradient>')
-
-
-def torso(g: dict, back: bool) -> str:
-    top, edge = g["top"], shade(g["top"], -0.45)
-    parts = [f'<path d="M8 160 L8 132 Q10 104 38 97 L82 97 Q110 104 112 132 L112 160 Z" fill="url(#top)" '
-             f'stroke="{edge}" stroke-width="2"/>']
-    if back:
-        if g["wear"] == "hoodie":
-            parts.append(f'<path d="M34 100 Q60 128 86 100 Q78 92 60 92 Q42 92 34 100 Z" fill="{shade(top, -0.12)}" '
-                         f'stroke="{edge}" stroke-width="2"/>')
-        if g["wear"] in ("suit", "vest"):
-            parts.append(f'<path d="M60 104 L60 160" stroke="{shade(top, -0.3)}" stroke-width="2"/>')
-        return "".join(parts)
-    wear = g["wear"]
-    if wear in ("suit", "vest"):
-        parts.append(f'<path d="M44 97 L60 132 L76 97 Z" fill="{g["collar"]}" stroke="{shade(g["collar"], -0.3)}" stroke-width="1.5"/>')
-        if wear == "suit":
-            parts.append(f'<path d="M40 98 L58 140 L50 112 L56 104 Z M80 98 L62 140 L70 112 L64 104 Z" '
-                         f'fill="{shade(top, -0.18)}" stroke="{edge}" stroke-width="1.5"/>')
-        else:
-            parts.append(f'<path d="M30 102 Q44 120 52 160 M90 102 Q76 120 68 160" stroke="#e7b44c" stroke-width="3" fill="none"/>')
-            parts.append(f'<path d="M8 160 L8 132 Q10 106 30 100 L44 160 Z M112 160 L112 132 Q110 106 90 100 L76 160 Z" '
-                         f'fill="{g["collar"]}" stroke="{shade(g["collar"], -0.3)}" stroke-width="1.5"/>')
-        if "tie" in g:
-            parts.append(f'<path d="M57 100 L63 100 L65 108 L62 134 L60 138 L58 134 L55 108 Z" fill="{g["tie"]}" '
-                         f'stroke="{shade(g["tie"], -0.4)}" stroke-width="1"/>')
-    elif wear == "cardigan":
-        parts.append(f'<path d="M46 97 L60 120 L74 97 Z" fill="{g["collar"]}"/>')
-        parts.append(f'<path d="M48 98 L60 160 M72 98 L60 160" stroke="{edge}" stroke-width="2"/>')
-        parts.append(f'<g fill="{shade(top, 0.45)}"><circle cx="60" cy="132" r="2.4"/><circle cx="60" cy="148" r="2.4"/></g>')
-    elif wear == "hoodie":
-        parts.append(f'<path d="M36 99 Q60 120 84 99" fill="none" stroke="{edge}" stroke-width="3"/>')
-        parts.append('<path d="M52 108 L50 130 M68 108 L70 130" stroke="#f4f1ea" stroke-width="2.5" stroke-linecap="round"/>')
-    elif wear == "sweater":
-        parts.append(f'<path d="M44 97 Q60 110 76 97" fill="none" stroke="{shade(top, -0.3)}" stroke-width="4"/>')
-    elif wear == "dress":
-        parts.append(f'<path d="M40 97 Q60 118 80 97" fill="{g["skin"]}" stroke="{shade(g["skin"], -0.25)}" stroke-width="1.5"/>')
-    return "".join(parts)
-
-
-def hair_back(g: dict) -> str:
-    """Hair that sits behind the head (long hair, buns, scarves)."""
-    h, edge = g["hair"], shade(g["hair"], -0.35)
-    if g["style"] == "long":
-        return f'<path d="M30 58 Q28 22 60 22 Q92 22 90 58 L94 104 Q78 112 60 108 Q42 112 26 104 Z" fill="{h}" stroke="{edge}" stroke-width="2"/>'
-    if g["style"] == "bun":
-        return f'<circle cx="60" cy="24" r="12" fill="{h}" stroke="{edge}" stroke-width="2"/>'
-    if g["style"] == "scarf":
-        return f'<path d="M26 66 Q22 18 60 18 Q98 18 94 66 L98 100 Q60 112 22 100 Z" fill="{h}" stroke="{shade(h, 0.25)}" stroke-width="2"/>'
-    return ""
-
-
-def hair_front(g: dict) -> str:
-    h, edge, style = g["hair"], shade(g["hair"], -0.35), g["style"]
-    if style == "short":
-        return f'<path d="M33 56 Q30 26 60 25 Q90 26 87 56 Q84 42 72 38 Q60 44 46 38 Q36 42 33 56 Z" fill="{h}" stroke="{edge}" stroke-width="2"/>'
-    if style == "messy":
-        return (f'<path d="M32 58 Q26 30 44 24 L48 16 L56 23 L62 14 L68 23 L78 17 L80 27 Q94 34 88 58 '
-                f'Q84 42 74 38 L66 44 L60 38 L52 44 L44 38 Q36 44 32 58 Z" fill="{h}" stroke="{edge}" stroke-width="2"/>')
-    if style == "slick":
-        return (f'<path d="M33 54 Q30 24 60 23 Q90 24 87 54 Q84 36 60 34 Q40 35 33 54 Z" fill="{h}" stroke="{edge}" stroke-width="2"/>'
-                f'<path d="M44 30 Q60 26 76 30" stroke="{shade(h, 0.5)}" stroke-width="2.5" fill="none" stroke-linecap="round"/>')
-    if style == "fringe":
-        return (f'<path d="M33 66 Q30 50 36 42 L40 60 Z M87 66 Q90 50 84 42 L80 60 Z" fill="{h}" stroke="{edge}" stroke-width="1.5"/>')
-    if style == "bun":
-        return f'<path d="M33 58 Q30 28 60 28 Q90 28 87 58 Q78 40 60 42 Q42 40 33 58 Z" fill="{h}" stroke="{edge}" stroke-width="2"/>'
-    if style == "long":
-        return f'<path d="M33 60 Q32 30 60 29 Q88 30 87 60 Q82 42 66 38 Q52 46 40 44 Q35 50 33 60 Z" fill="{h}" stroke="{edge}" stroke-width="2"/>'
-    if style == "scarf":
-        return (f'<path d="M31 70 Q28 26 60 26 Q92 26 89 70 Q86 44 60 42 Q34 44 31 70 Z" fill="{h}" stroke="{shade(h, 0.25)}" stroke-width="2"/>'
-                f'<path d="M50 96 L60 90 L70 96 L64 104 L56 104 Z" fill="{h}" stroke="{shade(h, 0.25)}" stroke-width="1.5"/>')
-    if style == "bald":
-        return (f'<path d="M33 66 Q31 54 35 46 L39 62 Z M87 66 Q89 54 85 46 L81 62 Z" fill="{h}"/>'
-                f'<ellipse cx="50" cy="36" rx="8" ry="4" fill="#fff" opacity="0.35"/>')
-    return ""
-
-
-def face(g: dict, mood: str) -> str:
-    ink, mouth = "#3b2418", "#9b3b34"
-    parts = ['<ellipse cx="44" cy="70" rx="6" ry="3.5" fill="#f08a7a" opacity="0.35"/>',
-             '<ellipse cx="76" cy="70" rx="6" ry="3.5" fill="#f08a7a" opacity="0.35"/>']
-    if mood == "happy":
-        parts.append(f'<path d="M44 61 Q50 55 55 61 M65 61 Q70 55 76 61" stroke="{ink}" stroke-width="2.8" fill="none" stroke-linecap="round"/>')
-        parts.append(f'<path d="M50 73 Q60 84 70 73 Q60 77 50 73 Z" fill="{mouth}" stroke="{ink}" stroke-width="1.6" stroke-linejoin="round"/>')
-    elif mood == "angry":
-        parts.append(f'<path d="M42 51 L55 56 M78 51 L65 56" stroke="{ink}" stroke-width="3" stroke-linecap="round"/>')
-        parts.append(f'<g fill="{ink}"><ellipse cx="50" cy="61" rx="3" ry="3.6"/><ellipse cx="70" cy="61" rx="3" ry="3.6"/></g>')
-        parts.append(f'<path d="M51 78 Q60 71 69 78" stroke="{ink}" stroke-width="2.6" fill="none" stroke-linecap="round"/>')
-    else:
-        parts.append(f'<path d="M44 53 Q50 50 55 53 M65 53 Q70 50 76 53" stroke="{shade(g["hair"], -0.2)}" stroke-width="2.4" fill="none" stroke-linecap="round"/>')
-        parts.append(f'<g fill="{ink}"><ellipse cx="50" cy="61" rx="3" ry="3.6"/><ellipse cx="70" cy="61" rx="3" ry="3.6"/></g>')
-        parts.append(f'<path d="M53 75 Q60 78 67 75" stroke="{ink}" stroke-width="2.4" fill="none" stroke-linecap="round"/>')
-    parts.append(f'<path d="M60 63 Q57 69 61 70" stroke="{shade(g["skin"], -0.3)}" stroke-width="1.8" fill="none" stroke-linecap="round"/>')
-    return "".join(parts)
-
-
-def extras(g: dict, back: bool) -> str:
-    parts = []
-    for extra in g["extras"]:
-        if extra == "cap":
-            parts.append('<path d="M31 48 Q32 24 60 23 Q88 24 89 48 Q60 40 31 48 Z" fill="#5a5a5f" stroke="#38383c" stroke-width="2"/>')
-            if not back:
-                parts.append('<path d="M34 48 Q60 38 92 46 Q96 52 88 52 Q60 46 34 52 Z" fill="#4a4a4f" stroke="#38383c" stroke-width="1.5"/>')
-        elif back:
-            continue
-        elif extra == "mustache":
-            color = shade(g["hair"], -0.1) if g["style"] != "bald" else "#2a211c"
-            parts.append(f'<path d="M48 71 Q54 66 60 69 Q66 66 72 71 Q66 75 60 72 Q54 75 48 71 Z" fill="{color}" stroke="{shade(color, -0.3)}" stroke-width="1"/>')
-        elif extra == "glasses":
-            parts.append('<g fill="#ffffff" fill-opacity="0.25" stroke="#3b2f2a" stroke-width="2"><circle cx="50" cy="61" r="8"/><circle cx="70" cy="61" r="8"/></g>'
-                         '<path d="M58 61 L62 61" stroke="#3b2f2a" stroke-width="2"/>')
-        elif extra == "shades":
-            parts.append('<path d="M40 56 L58 56 L56 66 Q49 69 43 66 Z M62 56 L80 56 L77 66 Q71 69 64 66 Z" fill="#1b1b1f"/>'
-                         '<path d="M58 58 L62 58" stroke="#1b1b1f" stroke-width="2.5"/>'
-                         '<path d="M44 58 L48 58" stroke="#fff" stroke-width="1.5" opacity="0.6"/>')
-        elif extra == "carnation":
-            parts.append('<g transform="translate(88 118)"><circle r="7" fill="#d63a3a"/><circle r="4" fill="#f06a5a"/>'
-                         '<path d="M0 6 L-2 16" stroke="#3f8a4f" stroke-width="2"/></g>')
-        elif extra == "wreath":
-            flowers = "".join(f'<circle cx="{x}" cy="{y}" r="5" fill="{c}" stroke="#7a2a2a" stroke-width="1"/>'
-                              for x, y, c in [(36, 40, "#f4f1ea"), (46, 31, "#d63a3a"), (60, 28, "#f4f1ea"),
-                                              (74, 31, "#d63a3a"), (84, 40, "#f4f1ea")])
-            parts.append(flowers)
-        elif extra == "chain":
-            parts.append('<path d="M46 100 Q60 118 74 100" stroke="#e7b44c" stroke-width="2.5" fill="none" stroke-dasharray="3 2"/>')
-    return "".join(parts)
-
-
-def guest(g: dict, mood: str = "neutral", back: bool = False) -> str:
-    skin, edge = g["skin"], shade(g["skin"], -0.3)
-    defs = f'<defs>{gradient("top", g["top"])}</defs>'
-    parts = [defs, hair_back(g) if not back or g["style"] in ("long", "bun", "scarf") else "", torso(g, back),
-             f'<rect x="51" y="84" width="18" height="18" rx="4" fill="{shade(skin, -0.12)}"/>']
-    if back:
-        parts.append(f'<ellipse cx="33" cy="62" rx="5" ry="8" fill="{skin}" stroke="{edge}" stroke-width="1.5"/>'
-                     f'<ellipse cx="87" cy="62" rx="5" ry="8" fill="{skin}" stroke="{edge}" stroke-width="1.5"/>')
-        scalp = skin if g["style"] in ("fringe", "bald") else g["hair"]
-        parts.append(f'<ellipse cx="60" cy="56" rx="27" ry="31" fill="{scalp}" stroke="{shade(scalp, -0.3)}" stroke-width="2"/>')
-        if g["style"] in ("fringe", "bald"):
-            parts.append(f'<path d="M35 66 Q60 80 85 66 L84 71 Q60 85 36 71 Z" fill="{g["hair"]}"/>')
-        elif g["style"] == "slick":
-            parts.append(f'<path d="M44 40 Q60 34 76 40 M42 52 Q60 46 78 52" stroke="{shade(g["hair"], 0.4)}" stroke-width="2" fill="none"/>')
-        elif g["style"] == "messy":
-            parts.append(f'<path d="M40 34 L44 24 L50 32 L56 22 L62 32 L70 22 L74 32 L80 26" stroke="{shade(g["hair"], -0.35)}" '
-                         f'stroke-width="2" fill="{g["hair"]}"/>')
-        parts.append(extras(g, True))
-    else:
-        parts.append(f'<ellipse cx="33" cy="62" rx="5" ry="8" fill="{skin}" stroke="{edge}" stroke-width="1.5"/>'
-                     f'<ellipse cx="87" cy="62" rx="5" ry="8" fill="{skin}" stroke="{edge}" stroke-width="1.5"/>')
-        parts.append(f'<ellipse cx="60" cy="58" rx="27" ry="30" fill="{skin}" stroke="{edge}" stroke-width="2"/>')
-        parts.append(face(g, mood))
-        parts.append(hair_front(g))
-        parts.append(extras(g, False))
-    return svg(240, 320, "0 0 120 160", "\n".join(p for p in parts if p))
 
 
 # ---------------------------------------------------------------------------------------------
@@ -358,6 +173,8 @@ ICONS = {
 <path d="M21 46 Q32 36 43 46" stroke="#3a1610" stroke-width="3.5" fill="none" stroke-linecap="round"/>""",
     "guests": """<g fill="#f4eedc"><circle cx="23" cy="22" r="9"/><path d="M8 52 Q8 34 23 34 Q38 34 38 52 Z"/></g>
 <g fill="#9fb3ad"><circle cx="43" cy="24" r="8"/><path d="M30 52 Q30 36 43 36 Q56 36 56 52 Z"/></g>""",
+    "guests_dark": """<g fill="#3b6e8a" stroke="#2b1d14" stroke-width="2.5"><circle cx="23" cy="22" r="9"/><path d="M8 52 Q8 34 23 34 Q38 34 38 52 Z"/></g>
+<g fill="#ff8a5a" stroke="#2b1d14" stroke-width="2.5"><circle cx="43" cy="24" r="8"/><path d="M30 52 Q30 36 43 36 Q56 36 56 52 Z"/></g>""",
     "trophy": """<path d="M18 10 L46 10 L46 26 Q46 40 32 42 Q18 40 18 26 Z" fill="#eab575" stroke="#8a5a1c" stroke-width="2.5"/>
 <path d="M18 14 L8 14 Q8 30 20 32 M46 14 L56 14 Q56 30 44 32" fill="none" stroke="#eab575" stroke-width="4"/>
 <rect x="28" y="42" width="8" height="8" fill="#b07a2c"/><rect x="18" y="50" width="28" height="7" rx="2" fill="#8a5a1c"/>""",
@@ -383,26 +200,18 @@ ICONS = {
 }
 
 
-def bubble() -> str:
-    """Speech bubble with a tail at the bottom centre: 112x124 artwork."""
-    return svg(224, 248, "0 0 112 124",
-               '<path d="M18 4 L94 4 Q108 4 108 18 L108 88 Q108 102 94 102 L66 102 L56 120 L46 102 L18 102 '
-               'Q4 102 4 88 L4 18 Q4 4 18 4 Z" fill="#fbf6ea" stroke="#3b2a1c" stroke-width="4" stroke-linejoin="round"/>')
-
-
 def main() -> None:
-    for folder in ("guests", "drinks", "icons"):
+    for folder in ("drinks", "icons"):
         (OUT / folder).mkdir(parents=True, exist_ok=True)
-    for name, spec in GUESTS.items():
-        for mood in ("happy", "neutral", "angry"):
-            (OUT / "guests" / f"{name}_{mood}.svg").write_text(guest(spec, mood), encoding="utf-8")
-        (OUT / "guests" / f"{name}_back.svg").write_text(guest(spec, back=True), encoding="utf-8")
     for name, body in DRINKS.items():
         (OUT / "drinks" / f"{name}.svg").write_text(svg(240, 240, "0 0 120 120", body.strip()), encoding="utf-8")
     for name, body in ICONS.items():
         (OUT / "icons" / f"{name}.svg").write_text(svg(128, 128, "0 0 64 64", body.strip()), encoding="utf-8")
-    (OUT / "icons" / "bubble.svg").write_text(bubble(), encoding="utf-8")
-    print(f"Wrote {len(GUESTS) * 4} guest, {len(DRINKS)} drink and {len(ICONS) + 1} icon sprites to {OUT}")
+    for state, fill, knob_x in (("on", "#6fd06a", 62), ("off", "#d8ccb4", 26)):
+        body = (f'<rect x="4" y="6" width="80" height="40" rx="20" fill="{fill}" stroke="#2b1d14" stroke-width="4"/>'
+                f'<circle cx="{knob_x}" cy="26" r="15" fill="#fffdf6" stroke="#2b1d14" stroke-width="4"/>')
+        (OUT / "icons" / f"toggle_{state}.svg").write_text(svg(176, 104, "0 0 88 52", body), encoding="utf-8")
+    print(f"Wrote {len(DRINKS)} drink and {len(ICONS) + 1} icon sprites to {OUT}")
 
 
 if __name__ == "__main__":
