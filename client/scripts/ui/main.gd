@@ -115,6 +115,8 @@ func _button(value: String, action: Callable, accent: bool = false) -> Button:
 func _panel(parent: Node, color: Color = PANEL) -> VBoxContainer:
 	var panel: PanelContainer = PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", _box(color))
+	# Cards must not swallow drags, or lists cannot be scrolled by touching a card.
+	panel.mouse_filter = Control.MOUSE_FILTER_PASS
 	parent.add_child(panel)
 	var column: VBoxContainer = VBoxContainer.new()
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -245,7 +247,6 @@ func _build_shell() -> void:
 	floor_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(floor_spacer)
 	toast_panel = PanelContainer.new()
-	toast_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	toast_panel.add_theme_stylebox_override("panel", _glass(0.92))
 	toast_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	toast_panel.visible = false
@@ -568,7 +569,7 @@ func _show_songs(index: int) -> void:
 	_new_modal("song", _t("song_popup_title"))
 	if index >= 0:
 		var table: Dictionary = GameState.simulation.tables[index]
-		modal_body.add_child(_label(_t("table_party", {"name": _name("guest_types", table.guest_type), "count": table.party_size}), 31))
+		modal_body.add_child(_label(_t("table_party", {"name": _name("guest_types", table.guest_type), "count": int(table.party_size)}), 31))
 		modal_body.add_child(_label(_table_mood(table), 29, RED if table.mood < DataCatalog.data.economy.mood.unhappy_below else GREEN))
 		modal_body.add_child(_label(_request_text(table), 31, GREEN))
 		modal_body.add_child(_label(_order_text(table), 27, MUTED))
