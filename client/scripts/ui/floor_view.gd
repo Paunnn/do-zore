@@ -60,6 +60,10 @@ var hint_target: Vector2 = Vector2.ZERO
 var target: Vector3 = Vector3.ZERO
 var view_width: float = 24.0
 var flight: Tween
+## Set before a venue is bought with a celebration: the camera waits on the old venue until
+## release_flight() so the player sees the glide across the city.
+var hold_flight: bool = false
+var held_focus: Array = []
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -226,6 +230,11 @@ func _ensure_world() -> void:
 		target = focus
 		view_width = width
 		_apply_camera()
+	elif hold_flight:
+		var old: Dictionary = city.lots[previous]
+		target = old.origin + Vector3(old.lay.w * 0.5, 0, old.lay.d * 0.5)
+		_apply_camera()
+		held_focus = [focus, width]
 	else:
 		fly_to(focus, width, city.lots[previous].origin)
 	world.sync(GameState.simulation, GameState.save)
@@ -501,6 +510,12 @@ func _tap(screen_point: Vector2) -> void:
 			elif id != venue_id:
 				venue_tapped.emit(id)
 			return
+
+func release_flight() -> void:
+	hold_flight = false
+	if not held_focus.is_empty():
+		fly_to(held_focus[0], held_focus[1])
+		held_focus = []
 
 ## Show the whole road from the birtija to the splav.
 func show_map() -> void:

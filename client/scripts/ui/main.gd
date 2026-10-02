@@ -578,7 +578,10 @@ func _purchase(kind: String, id: String) -> void:
 		"band": ok = GameState.buy_band(id)
 		"song": ok = GameState.unlock_song(id)
 		"upgrade": ok = GameState.buy_upgrade(id)
-		"venue": ok = GameState.buy_venue(id)
+		"venue":
+			floor_view.hold_flight = true
+			ok = GameState.buy_venue(id)
+			if not ok: floor_view.hold_flight = false
 	if ok: SaveSystem.save_now()
 	if ok and kind == "venue":
 		_open_tab("floor")
@@ -1200,6 +1203,7 @@ func _end_celebration() -> void:
 	if not is_instance_valid(celebration): return
 	var leaving: Control = celebration
 	celebration = null
+	floor_view.release_flight()
 	var tween: Tween = leaving.create_tween()
 	tween.tween_property(leaving, "modulate:a", 0.0, 0.4)
 	tween.tween_callback(leaving.queue_free)
