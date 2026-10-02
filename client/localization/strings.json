@@ -575,6 +575,18 @@
     "sr": "{count} muzičara",
     "en": "{count} musicians"
   },
+  "nav_map": {
+    "sr": "Mapa",
+    "en": "Map"
+  },
+  "nav_music": {
+    "sr": "Pesma",
+    "en": "Song"
+  },
+  "show_on_map": {
+    "sr": "Na mapi",
+    "en": "On the map"
+  },
   "data.band_levels.solo_harmonikas.name": {
     "sr": "Solo harmonikaš",
     "en": "Solo accordionist"

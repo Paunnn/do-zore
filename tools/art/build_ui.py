@@ -1,4 +1,5 @@
-"""Kafana UI kit: walnut planks, cream paper, brass buttons, the red ribbon and the icon set.
+"""Modern-kafana UI kit: floating HUD pills, glossy round and lipped buttons, cream cards with a
+red header and a tablecloth trim, and the icon set.
 
 Every texture is drawn at 1x design pixels for a 1080-wide screen. The nine-patch margins that
 client/scripts/ui/ui_kit.gd uses are listed beside each piece in PIECES; keep them in sync.
@@ -18,9 +19,6 @@ ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "client/assets/ui"
 
 INK = "#2b1d14"
-WALNUT = "#4a2c1a"
-WALNUT_LIGHT = "#6b4128"
-WALNUT_DARK = "#2e1a0f"
 BRASS = "#d9a531"
 BRASS_LIGHT = "#f6dc8e"
 BRASS_DARK = "#8a5a1c"
@@ -46,73 +44,11 @@ def rrect(x, y, w, h, r, fill, stroke="none", width=0, extra="") -> str:
     return f'<rect x="{x:g}" y="{y:g}" width="{w:g}" height="{h:g}" rx="{r:g}" fill="{fill}"{s}{extra}/>'
 
 
-def stud(x, y, r=4.5) -> str:
-    return (f'<circle cx="{x}" cy="{y}" r="{r}" fill="{BRASS}" stroke="{INK}" stroke-width="1.5"/>'
-            f'<circle cx="{x - r * 0.3:.1f}" cy="{y - r * 0.3:.1f}" r="{r * 0.35:.1f}" fill="{BRASS_LIGHT}"/>')
-
-
-# ---------------------------------------------------------------------------------------------
-# Nine-patch pieces
-# ---------------------------------------------------------------------------------------------
-
-def plank() -> str:
-    """Walnut board with a brass inlay and four studs: the HUD and the navigation bar."""
-    w, h, r = 160, 118, 26
-    rng = random.Random(4)
-    grain = []
-    for k in range(9):
-        y = 12 + k * 10.5 + rng.uniform(-2, 2)
-        a, b = rng.uniform(-2.5, 2.5), rng.uniform(-2.5, 2.5)
-        color, alpha = (WALNUT_DARK, 0.45) if k % 2 == 0 else ("#8a5a3a", 0.3)
-        grain.append(f'<path d="M10 {y:.1f} C50 {y + a:.1f} 110 {y + b:.1f} 150 {y:.1f}" stroke="{color}" stroke-width="1.6" fill="none" opacity="{alpha}"/>')
-    body = (rrect(0, 6, w, h - 6, r, INK, extra=' opacity="0.4"')
-            + rrect(2, 2, w - 4, h - 10, r - 2, "url(#wood)", INK, 4)
-            + f'<clipPath id="pc"><rect x="4" y="4" width="{w - 8}" height="{h - 14}" rx="{r - 4}"/></clipPath>'
-            + f'<g clip-path="url(#pc)">{"".join(grain)}</g>'
-            + rrect(10, 10, w - 20, h - 26, r - 10, "none", BRASS, 2.5)
-            + rrect(12.5, 12.5, w - 25, h - 31, r - 12, "none", WALNUT_DARK, 1.2, ' opacity="0.7"')
-            + stud(19, 19) + stud(w - 19, 19) + stud(19, h - 27) + stud(w - 19, h - 27))
-    defs = vgrad("wood", [(0, "#7a4a2c"), (0.5, WALNUT), (1, "#3a2213")])
-    return svg(w, h, body, defs)
-
-
-def paper(border: str = "#6b4a30", fill: str = PAPER, edge: float = 3) -> str:
-    """Cream card with a walnut outline and a soft printed inner line."""
-    w, h, r = 96, 100, 20
-    body = (rrect(0, 5, w, h - 5, r, INK, extra=' opacity="0.22"')
-            + rrect(1.5, 1.5, w - 3, h - 8, r, fill, border, edge)
-            + rrect(7, 7, w - 14, h - 19, r - 6, "none", "#e3d2ae", 1.5))
-    return svg(w, h, body)
-
-
-def sheet() -> str:
-    """Large cream sheet framed in walnut with a brass inlay: the background of every screen."""
-    w, h, r = 168, 168, 34
-    body = (rrect(0, 8, w, h - 8, r, INK, extra=' opacity="0.45"')
-            + rrect(3, 3, w - 6, h - 12, r - 2, WALNUT, INK, 4)
-            + rrect(11, 11, w - 22, h - 28, r - 9, CREAM, INK, 2)
-            + rrect(17, 17, w - 34, h - 40, r - 14, "none", BRASS, 2)
-            + stud(21, 21, 4) + stud(w - 21, 21, 4) + stud(21, h - 29, 4) + stud(w - 21, h - 29, 4))
-    return svg(w, h, body)
-
-
-def night_sheet() -> str:
-    """Navy panel in the same walnut frame, for the journey map."""
-    w, h, r = 168, 168, 34
-    body = (rrect(0, 8, w, h - 8, r, INK, extra=' opacity="0.45"')
-            + rrect(3, 3, w - 6, h - 12, r - 2, WALNUT, INK, 4)
-            + rrect(11, 11, w - 22, h - 28, r - 9, "url(#nightg)", INK, 2)
-            + rrect(17, 17, w - 34, h - 40, r - 14, "none", BRASS, 2, ' opacity="0.8"')
-            + stud(21, 21, 4) + stud(w - 21, 21, 4) + stud(21, h - 29, 4) + stud(w - 21, h - 29, 4))
-    return svg(w, h, body, vgrad("nightg", [(0, "#1d2c52"), (1, "#121a33")]))
-
-
 BUTTONS = {
     # name: (face gradient, lip, border, highlight)
-    "brass": ([(0, "#f8de92"), (0.5, "#e4b24a"), (1, "#c99232")], BRASS_DARK, INK, 0.6),
+    "gold": ([(0, "#ffd95a"), (0.5, "#ffbf2e"), (1, "#f0a01c")], "#a8620c", INK, 0.55),
     "red": ([(0, "#de5246"), (0.55, RED), (1, "#962521")], "#6a1916", INK, 0.35),
     "paper": ([(0, "#fffaf0"), (1, "#efe2c6")], "#a88c64", INK, 0.8),
-    "dark": ([(0, "#5a3a24"), (1, "#3a2213")], "#1e110a", INK, 0.18),
 }
 
 
@@ -127,55 +63,11 @@ def button(name: str, pressed: bool = False) -> str:
 
 
 def button_disabled() -> str:
+    """Greyed glossy face, pressed flat: still a button, clearly not yet available."""
     w, h, r, depth = 96, 92, 22, 7
-    body = rrect(1.5, depth + 1.5, w - 3, h - depth - 3, r, "#e6dbc3", "#b9a586", 3)
-    return svg(w, h, body)
-
-
-def ribbon() -> str:
-    """Red ribbon with folded swallowtail ends and brass stitching."""
-    w, h = 220, 70
-    tail = 34
-    body = (f'<path d="M0 14 L{tail + 8} 14 L{tail + 8} 64 L0 64 L14 39 Z" fill="#8f2422" stroke="{INK}" stroke-width="3" stroke-linejoin="round"/>'
-            f'<path d="M{w} 14 L{w - tail - 8} 14 L{w - tail - 8} 64 L{w} 64 L{w - 14} 39 Z" fill="#8f2422" stroke="{INK}" stroke-width="3" stroke-linejoin="round"/>'
-            f'<path d="M{tail - 4} 56 L{tail + 8} 64 L{tail + 8} 56 Z M{w - tail + 4} 56 L{w - tail - 8} 64 L{w - tail - 8} 56 Z" fill="#5e1715"/>'
-            + rrect(tail - 4, 4, w - 2 * tail + 8, 52, 6, "url(#rib)", INK, 3)
-            + f'<path d="M{tail + 6} 12 L{w - tail - 6} 12 M{tail + 6} 48 L{w - tail - 6} 48" stroke="{BRASS}" stroke-width="2" stroke-dasharray="6 5" opacity="0.9"/>')
-    return svg(w, h, body, vgrad("rib", [(0, "#d64a3f"), (1, "#a42a28")]))
-
-
-def chip() -> str:
-    """Dark inset counter with a brass edge: money, mood and guest counts."""
-    w, h, r = 84, 72, 30
-    body = (rrect(0, 4, w, h - 4, r, INK, extra=' opacity="0.35"')
-            + rrect(2, 2, w - 4, h - 8, r - 2, "url(#chipg)", INK, 3)
-            + rrect(5.5, 5.5, w - 11, h - 15, r - 6, "none", BRASS, 2, ' opacity="0.85"')
-            + f'<path d="M{r} 9.5 L{w - r} 9.5" stroke="#000" stroke-width="3" opacity="0.25" stroke-linecap="round"/>')
-    return svg(w, h, body, vgrad("chipg", [(0, "#24140a"), (1, "#3a2414")]))
-
-
-def medallion(pressed: bool = False) -> str:
-    """Round brass button with a rim of sixteen studs."""
-    w = 112
-    h = w + 8
-    c = w / 2
-    drop = 8 if pressed else 0
-    studs = "".join(f'<circle cx="{c + math.cos(k * math.tau / 16) * (c - 10):.1f}" cy="{c + drop + math.sin(k * math.tau / 16) * (c - 10):.1f}" r="2.4" fill="{BRASS_DARK}"/>' for k in range(16))
-    body = (f'<circle cx="{c}" cy="{c + 8}" r="{c - 2}" fill="{BRASS_DARK}" stroke="{INK}" stroke-width="3.5"/>'
-            f'<circle cx="{c}" cy="{c + drop}" r="{c - 2}" fill="url(#med)" stroke="{INK}" stroke-width="3.5"/>'
-            f'<circle cx="{c}" cy="{c + drop}" r="{c - 17}" fill="url(#medin)" stroke="{BRASS_DARK}" stroke-width="2.5"/>' + studs)
-    defs = (vgrad("med", [(0, "#f8de92"), (0.55, "#e0ad44"), (1, "#b07c26")])
-            + vgrad("medin", [(0, "#e9bd58"), (1, "#f4d27e")]))
-    return svg(w, h, body, defs)
-
-
-def tab_active() -> str:
-    """Raised brass plaque behind the active navigation item."""
-    w, h, r = 80, 84, 20
-    body = (rrect(1.5, 7.5, w - 3, h - 9, r, BRASS_DARK, INK, 3)
-            + rrect(1.5, 1.5, w - 3, h - 9, r, "url(#tab)", INK, 3)
-            + f'<path d="M{r} 9 L{w - r} 9" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity="0.55"/>')
-    return svg(w, h, body, vgrad("tab", [(0, "#f8de92"), (0.6, "#e4b24a"), (1, "#cf9a38")]))
+    body = rrect(1.5, depth + 1.5, w - 3, h - depth - 3, r, "url(#off)", "#6e6458", 3)
+    body += f'<path d="M{r} {9 + depth} L{w - r} {9 + depth}" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.35"/>'
+    return svg(w, h, body, vgrad("off", [(0, "#cfc6b6"), (1, "#a89e8c")]))
 
 
 def bar_back() -> str:
@@ -190,23 +82,6 @@ def bar_back_light() -> str:
 def bar_fill() -> str:
     body = rrect(0, 0, 48, 26, 13, "url(#fill)") + '<path d="M10 7 L38 7" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity="0.6"/>'
     return svg(48, 26, body, vgrad("fill", [(0, "#ffffff"), (1, "#c9c9c9")]))
-
-
-def kilim_strip() -> str:
-    """Seamless kilim band: stepped diamonds in red, brass and cream on navy."""
-    w, h = 48, 26
-    body = f'<rect width="{w}" height="{h}" fill="{NAVY}"/>'
-    c, m = w / 2, h / 2
-    for size, color in ((10, RED), (6, BRASS), (2.5, CREAM)):
-        step = size / 2
-        pts = [(c, m - size), (c + step, m - size), (c + step, m - step), (c + size, m - step), (c + size, m + step),
-               (c + step, m + step), (c + step, m + size), (c - step, m + size), (c - step, m + step), (c - size, m + step),
-               (c - size, m - step), (c - step, m - step), (c - step, m - size)]
-        body += f'<path d="M{" L".join(f"{x:g} {y:g}" for x, y in pts)} Z" fill="{color}"/>'
-    for x in (0, w):
-        body += f'<rect x="{x - 2.5}" y="{m - 2.5}" width="5" height="5" fill="{CREAM}" transform="rotate(45 {x} {m})"/>'
-    body += f'<rect y="0" width="{w}" height="2.5" fill="{INK}"/><rect y="{h - 2.5}" width="{w}" height="2.5" fill="{INK}"/>'
-    return svg(w, h, body)
 
 
 def night_tile() -> str:
@@ -282,6 +157,9 @@ GLYPHS = {
     "nav_venues": """<rect x="29" y="8" width="6" height="52" rx="2" fill="#fff"/><rect x="22" y="56" width="20" height="5" rx="2.5" fill="#fff"/>
 <path d="M10 12 L46 12 L54 19 L46 26 L10 26 Z" fill="#fff"/><path d="M54 32 L18 32 L10 39 L18 46 L54 46 Z" fill="#fff"/>
 <g fill="#000" opacity="0.35"><rect x="16" y="17" width="22" height="4" rx="2"/><rect x="24" y="37" width="24" height="4" rx="2"/></g>""",
+    "map": """<path d="M6 14 L22 8 L42 14 L58 8 L58 52 L42 58 L22 52 L6 58 Z" fill="#fff"/>
+<path d="M22 8 L22 52 M42 14 L42 58" stroke="#000" stroke-width="2.5" opacity="0.35"/>
+<path d="M32 22 C26 22 23 27 25 31 L32 42 L39 31 C41 27 38 22 32 22 Z" fill="#000" opacity="0.4"/><circle cx="32" cy="28" r="3.5" fill="#fff"/>""",
     "gear": """<g transform="translate(32 32)"><path d="M-5 -27 L5 -27 L6.5 -19 L12 -16.5 L19 -21 L25 -14.5 L20 -8 L22.5 -2.5 L30 -1 L30 7 L22 8.5 L19.5 14 L24 21 L17.5 27 L11 22 L5 24.5 L4 32 L-5 32 L-6 24 L-12 21.5 L-19 26 L-25 19.5 L-20 13 L-22.5 7 L-30 6 L-30 -3 L-22 -4.5 L-19.5 -10.5 L-24 -17 L-17.5 -23 L-11 -18 L-6 -20 Z" fill="#fff"/>
 <circle r="8.5" fill="#000" opacity="0.45"/></g>""",
     "trophy": """<path d="M17 8 L47 8 L47 24 Q47 40 32 42 Q17 40 17 24 Z" fill="#fff"/>
@@ -499,13 +377,102 @@ PICTURES = {
     "events/nestanak_struje": p_candle, "events/vip_gost": p_crown,
 }
 
+# ---------------------------------------------------------------------------------------------
+# Modern-kafana pieces: floating HUD pills, glossy round buttons, cards with a cloth trim
+# ---------------------------------------------------------------------------------------------
+
+def pill_dark() -> str:
+    """Translucent dark pill for HUD counters, with a soft top sheen."""
+    w, h, r = 96, 76, 34
+    body = (rrect(0, 4, w, h - 4, r, "#000000", extra=' opacity="0.28"')
+            + rrect(2, 2, w - 4, h - 8, r - 2, "#1a1428", "#0b0814", 2.5, ' fill-opacity="0.72"')
+            + f'<path d="M{r} 9 L{w - r} 9" stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.18"/>')
+    return svg(w, h, body)
+
+
+def round_button(fill_top: str, fill_bottom: str, lip: str, pressed: bool = False, size: int = 120) -> str:
+    """Glossy round button with a darker lip and a highlight, like a polished enamel badge."""
+    c = size / 2
+    depth = 8
+    drop = depth if pressed else 0
+    r = c - 4
+    body = (f'<ellipse cx="{c}" cy="{c + depth + 3}" rx="{r}" ry="{r * 0.96}" fill="#000" opacity="0.25"/>'
+            f'<circle cx="{c}" cy="{c + depth}" r="{r}" fill="{lip}" stroke="#2b1d14" stroke-width="4"/>'
+            f'<circle cx="{c}" cy="{c + drop}" r="{r}" fill="url(#rb)" stroke="#2b1d14" stroke-width="4"/>'
+            f'<ellipse cx="{c}" cy="{c + drop - r * 0.42}" rx="{r * 0.62}" ry="{r * 0.28}" fill="#ffffff" opacity="0.32"/>')
+    return svg(size, size + depth + 6, body, vgrad("rb", [(0, fill_top), (1, fill_bottom)]))
+
+
+def card() -> str:
+    """Cream card with a soft shadow and a fine warm edge."""
+    w, h, r = 120, 120, 30
+    body = (rrect(0, 8, w, h - 8, r, "#000000", extra=' opacity="0.3"')
+            + rrect(2, 2, w - 4, h - 12, r - 2, "#fbf3e2", "#2b1d14", 3.5)
+            + rrect(8, 8, w - 16, h - 24, r - 8, "none", "#ead9b6", 2))
+    return svg(w, h, body)
+
+
+def row() -> str:
+    """List row inside a card: white with a light edge and a little depth."""
+    w, h, r = 96, 96, 22
+    body = (rrect(0, 4, w, h - 4, r, "#c9b48c", extra=' opacity="0.55"')
+            + rrect(1.5, 1.5, w - 3, h - 7, r - 1, "#ffffff", "#e3d2ae", 2.5))
+    return svg(w, h, body)
+
+
+def header() -> str:
+    """The card header: a red band with folded ends and a gold edge."""
+    w, h = 220, 92
+    tail = 30
+    body = (f'<path d="M0 22 L{tail + 6} 22 L{tail + 6} 80 L0 80 L12 51 Z" fill="#8f2422" stroke="#2b1d14" stroke-width="3.5" stroke-linejoin="round"/>'
+            f'<path d="M{w} 22 L{w - tail - 6} 22 L{w - tail - 6} 80 L{w} 80 L{w - 12} 51 Z" fill="#8f2422" stroke="#2b1d14" stroke-width="3.5" stroke-linejoin="round"/>'
+            + rrect(tail - 6, 4, w - 2 * tail + 12, 68, 10, "url(#hd)", "#2b1d14", 4)
+            + f'<path d="M{tail + 6} 12 L{w - tail - 6} 12" stroke="#ffffff" stroke-width="3" opacity="0.25" stroke-linecap="round"/>')
+    return svg(w, h, body, vgrad("hd", [(0, "#e5574b"), (1, "#b52f2b")]))
+
+
+def checker_strip() -> str:
+    """Tablecloth trim: two rows of red and cream checks, tileable."""
+    w, h = 32, 16
+    body = ""
+    for row_ in range(2):
+        for col in range(4):
+            colour = "#c0322c" if (row_ + col) % 2 == 0 else "#f6eedc"
+            body += f'<rect x="{col * 8}" y="{row_ * 8}" width="8" height="8" fill="{colour}"/>'
+    return svg(w, h, body)
+
+
+def close_button(pressed: bool = False) -> str:
+    size = 88
+    c = size / 2
+    drop = 5 if pressed else 0
+    body = (f'<circle cx="{c}" cy="{c + 5}" r="{c - 4}" fill="#7a1a17" stroke="#2b1d14" stroke-width="4"/>'
+            f'<circle cx="{c}" cy="{c + drop}" r="{c - 4}" fill="url(#cl)" stroke="#2b1d14" stroke-width="4"/>'
+            f'<path d="M{c - 13} {c - 13 + drop} L{c + 13} {c + 13 + drop} M{c + 13} {c - 13 + drop} L{c - 13} {c + 13 + drop}" stroke="#ffffff" stroke-width="8" stroke-linecap="round"/>')
+    return svg(size, size + 6, body, vgrad("cl", [(0, "#ef6a5c"), (1, "#c0322c")]))
+
+
+def badge() -> str:
+    size = 44
+    c = size / 2
+    body = (f'<circle cx="{c}" cy="{c}" r="{c - 3}" fill="#e23b2e" stroke="#ffffff" stroke-width="3.5"/>'
+            f'<path d="M{c} {c - 10} L{c} {c + 3}" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="{c}" cy="{c + 10}" r="3" fill="#fff"/>')
+    return svg(size, size, body)
+
+
 PIECES = {
-    "plank": plank, "paper": paper, "sheet": sheet, "night_sheet": night_sheet, "ribbon": ribbon, "chip": chip,
-    "tab_active": tab_active, "bar_back": bar_back, "bar_back_light": bar_back_light, "bar_fill": bar_fill, "kilim_strip": kilim_strip,
+    "bar_back": bar_back, "bar_back_light": bar_back_light, "bar_fill": bar_fill,
     "night_tile": night_tile, "divider": divider, "button_disabled": button_disabled,
-    "paper_brass": lambda: paper(BRASS, "#fff8e4", 4), "medallion": medallion, "medallion_pressed": lambda: medallion(True),
-    "ring_paper": lambda: ring("paper"), "ring_dark": lambda: ring("dark"), "ring_night": lambda: ring("night"),
+    "ring_paper": lambda: ring("paper"), "ring_dark": lambda: ring("dark"),
     "toggle_on": lambda: toggle(True), "toggle_off": lambda: toggle(False),
+    "pill_dark": pill_dark, "card": card, "row": row, "header": header, "checker_strip": checker_strip, "badge": badge,
+    "close": close_button, "close_pressed": lambda: close_button(True),
+    "round_cream": lambda: round_button("#fffaf0", "#efdcb4", "#b8955a"),
+    "round_cream_pressed": lambda: round_button("#fffaf0", "#efdcb4", "#b8955a", True),
+    "round_red": lambda: round_button("#ef6a5c", "#c0322c", "#7a1a17", False, 168),
+    "round_red_pressed": lambda: round_button("#ef6a5c", "#c0322c", "#7a1a17", True, 168),
+    "round_gold": lambda: round_button("#ffd95a", "#f0a01c", "#a8620c", False, 150),
+    "round_gold_pressed": lambda: round_button("#ffd95a", "#f0a01c", "#a8620c", True, 150),
 }
 
 

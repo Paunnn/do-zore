@@ -3,7 +3,8 @@
 Godot 4.x / GDScript offline vertical slice. The design viewport is 1080 × 1920
 portrait; the UI uses expanding containers, scroll views and safe-area padding.
 Serbian Latin (`sr`) is the default language, with an English (`en`) catalog.
-The main screen is an animated isometric kafana (see **Art**); audio hooks are still silent.
+The main screen is a lit 3D night city that doubles as the map, with the venue being played
+as a roofless cut-away full of guests (see **Art**); audio hooks are still silent.
 
 ## Run
 
@@ -20,41 +21,57 @@ The vertical slice intentionally does not make real network requests.
 
 ## Play
 
-- Guests walk in and sit down; a thought cloud shows what they ordered. Tap the cloud or the
-  table to serve it (a ring fills while it is prepared) and tap the table again for details.
-  A small cloud with a coloured note is the genre they want.
-- Tap the stage or the yellow music button to play a known song. The band plays, notes rise
-  and happy tables get up to dance. Leaving guests pay; the coins fly to the money counter.
-- Matching music improves table mood and eventual bakšiš. Mismatches and long
-  waits reduce mood. Nearby unhappy groups can trigger a fight.
-- The bottom navigation opens **Kafana**, **Bend**, **Piće**, **Unapređenja** and
-  **Lokali**. Hire each band tier, buy upgrades and songs, and advance from
-  **birtija → kafana → restoran → splav** using data-defined prices and gates.
-- Random events offer choices with costs and consequences. Settings controls
-  language, sound/music hooks and a confirmed progress reset. The leaderboard,
-  offline-earnings dialog and cloud-conflict dialog use mock data in this slice.
+- Guests walk in from the street and sit down; a thought cloud shows what they ordered. Tap the
+  cloud or the table to serve it (a ring fills while it is prepared) and tap the table again for
+  details. A small cloud with a coloured note is the genre they want.
+- Tap the stage or the red **Pesma** button to play a known song: the band plays, notes rise and
+  happy tables get up to dance. Leaving guests pay; the coins fly to the money counter.
+- Matching music improves table mood and eventual bakšiš. Mismatches and long waits reduce
+  mood. Nearby unhappy groups can trigger a fight.
+- The HUD floats over the city: money and room mood at the top with the leaderboard and
+  settings, the venue on its red ribbon with the guest count and the road to the next venue
+  (tap it for **Lokali**). **Bend** and **Piće** sit on the right; **Mapa**, **Pesma** and
+  **Unapređenja** at the bottom. A red badge means something there is affordable.
+- **Mapa** pulls the camera out over the whole city: the birtija at the village edge, the
+  kafana in the old town, the restoran on the central square and the splav on the river. The
+  next venue shows its price; tap a venue to see it in **Lokali**. Buying it plays a short
+  opening and flies the camera across the city to the new place.
+- Random events offer choices with costs and consequences. Settings controls language,
+  sound/music hooks and a confirmed progress reset. The leaderboard, offline-earnings dialog
+  and cloud-conflict dialog use mock data in this slice.
 
 ## Art
 
-The Kafana tab is an isometric scene in the style of cartoon idle tycoon games: one outlined
-art style for the room, the furniture and the people. `scripts/ui/floor_view.gd` hosts it in a
-`SubViewport` with a `Camera2D` (drag to pan, pinch or wheel to zoom, tap to act) and
-`scripts/world/kafana_world.gd` builds the current venue and keeps it in step with the
-simulation:
+Everything is drawn in real time in 3D with the Compatibility renderer, through an orthographic
+isometric camera, in the lit low-poly style of idle tycoon games (`design/research.md` explains
+the choice). `scripts/ui/floor_view.gd` hosts the 3D world in a `SubViewport` (drag to pan, pinch
+or wheel to zoom from a table close-up out to the whole map, tap to act) and keeps the 2D thought
+clouds, coins and notes over their 3D anchors.
 
-- Guests walk in through the door (A* on the floor grid), sit on the chairs around their table
-  and walk out again when they leave; faces follow the table's mood and happy tables dance.
-- Thought clouds (`scripts/world/table_hud.gd`) show the order (tap to serve; a ring fills while
-  it is prepared), the requested genre and emoji for the mood; big parties get a `+N` badge.
-- Waiters carry served drinks from the bar, the bartender works behind it and the band on stage
-  plays while a song is on. Konobar, ozvučenje, dekor, izbacivač and sef levels are visible.
-- Paying guests drop coins that fly to the money counter; a power cut darkens the room and a
-  fight raises a dust cloud. The next free table slot shows a `+` that opens the upgrades.
-- A brand-new game coaches the first order and the first song request.
+- `scripts/world3d/city3d.gd` builds the city on a 52 m street grid in four districts along the
+  road "up" the screen, the river with its quay and bridge, the far bank, parked and passing
+  cars. Buildings in front of the played venue give way to small parks so it is never hidden.
+- `scripts/world3d/venue3d.gd` lays out and builds each venue: the played one as a cut-away
+  (floor, back walls with windows, bar, stage, themed decor, pendant lamps with real lights, a
+  table set per slot); the others as closed buildings with their signs.
+- `scripts/world3d/venue_world.gd` turns simulation state into people and props: parties walk
+  in from the street along an A* grid, sit, order, drink, dance and leave paying; waiters carry
+  trays from the bar; the band plays; konobar, ozvučenje, dekor, izbacivač and sef levels show.
+- `scripts/world3d/people3d.gd` builds each character from a look (guest type, staff or
+  musician) as one skinned mesh with a procedural skeleton and poses it in code.
+- `scripts/world3d/builder.gd` merges primitives per material and per spatial chunk;
+  `kit3d.gd` holds the shared materials (vertex colours, world-mapped textures, one glow shader
+  for every lamp and window, the river shader).
 
-Every venue has its own room, palette and band line-up. All art is generated from code: see
-`tools/README.md`. World textures are VRAM-compressed with mipmaps (S3TC on desktop, ETC2/ASTC on
-Android). The UI font is Baloo 2 (SIL Open Font License, `assets/fonts/OFL.txt`).
+Budget, measured with a full venue at 1080×1920: about 500 draw calls at venue zoom and under
+1000 with the whole map in view (one draw per character; contact shadows are one MultiMesh).
+
+The interface is the modern-kafana kit in `scripts/ui/ui_kit.gd` (floating pills, glossy round
+and lipped buttons, cream cards with a red header over a tablecloth trim); see
+`design/README.md`. Fonts: Shrikhand, Titan One and Nunito (SIL Open Font License, licences in
+`assets/fonts`). All art is generated from code: see `tools/README.md`. The venue, band and
+guest pictures in `assets/ui/{venues,bands,guests}` are renders of the 3D models made with
+`tests/render_venue_cards.gd`.
 
 ## Architecture
 
@@ -130,7 +147,7 @@ then validates captured contract fixtures. It reports the temporary log director
 `--artifacts path/to/new-directory` keeps those artifacts in a chosen fresh path.
 Do not run the destructive headless test scripts directly against normal saves.
 
-Verified with Godot 4.5.1: 157 gameplay/integration checks, a fresh-process backup
+Verified with Godot 4.5.1: 162 gameplay/integration checks, a fresh-process backup
 recovery check, and 50 schema-validated source/bundle/save/API documents. Coverage
 includes both locales and every screen/popup, all venue and band tiers, hit and
 upgrade gates, song duration and duplicate rewards, offline caps and exact-once
@@ -143,7 +160,8 @@ set `DO_ZORE_TEST_USER_DIR` to an isolated absolute save directory and
 `DO_ZORE_CAPTURE_OUTPUT` to an absolute output directory, then run
 `godot --path client --audio-driver Dummy --script res://tests/capture_ui.gd`.
 `tests/capture_floor.gd` takes the same variables and renders every venue full of guests
-with a song playing at 1080×1920. Without a
+with a song playing at 1080×1920. `tests/render_venue_cards.gd` re-renders the interface
+pictures from the 3D models. Without a
 display, wrap either command in `xvfb-run -a` and add `--rendering-driver opengl3`.
 
 The read-only Python progression simulator and its assumptions are documented in
@@ -152,6 +170,7 @@ The read-only Python progression simulator and its assumptions are documented in
 ## TODO / explicit stubs
 
 - Add a kitchen/cook for the kuhinja upgrade and characters for the inspection and VIP events.
+- Add pedestrians to the city streets and a day/dawn lighting pass for the end of the night.
 - Attach licensed music and sound to the silent hooks; settings already expose
   the intended controls.
 - Add real HTTP/auth/cloud integration after the offline slice. Mock behavior

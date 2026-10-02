@@ -1,5 +1,5 @@
 extends RefCounted
-## Kafana UI kit: palette, type, spacing and the textured boxes drawn by tools/art/build_ui.py.
+## Modern-kafana UI kit: palette, type, spacing and the textured pieces drawn by tools/art/build_ui.py.
 ## Everything is measured in design pixels on a 1080-wide portrait screen.
 const UI = "res://assets/ui/"
 
@@ -17,6 +17,8 @@ const INK = Color("2b1d14")
 const MUTED = Color("7a6148")
 const RED = Color("b8302f")
 const GREEN = Color("3d8a4f")
+const GOLD = Color("ffbf2e")
+const OUTLINE = Color("3a1d0e")
 const LAMP = Color("ffd36a")
 const GENRE_COLORS = {"starogradske": Color("e8a33a"), "tamburica": Color("2f9e86"), "izvorna": Color("d2553f"), "narodnjaci": Color("8e5cc7")}
 
@@ -39,19 +41,13 @@ const TINY = 21
 
 # Nine-patch margins of each piece: [left, top, right, bottom] texture margins, then content margins.
 const PIECES = {
-	"plank": [[30, 30, 30, 38], [24, 16, 24, 26]],
-	"paper": [[24, 24, 24, 30], [24, 20, 24, 26]],
-	"paper_brass": [[24, 24, 24, 30], [24, 20, 24, 26]],
-	"sheet": [[42, 42, 42, 50], [34, 30, 30, 42]],
-	"night_sheet": [[42, 42, 42, 50], [34, 30, 30, 42]],
-	"chip": [[32, 28, 32, 34], [14, 6, 24, 12]],
-	"ribbon": [[50, 18, 50, 18], [58, 6, 58, 18]],
-	"tab_active": [[24, 22, 24, 30], [6, 10, 6, 14]],
 	"bar_back": [[13, 12, 13, 12], [0, 0, 0, 0]],
 	"bar_back_light": [[13, 12, 13, 12], [0, 0, 0, 0]],
 	"bar_fill": [[13, 12, 13, 12], [0, 0, 0, 0]],
-	"medallion": [[54, 54, 54, 62], [20, 20, 20, 28]],
-	"medallion_pressed": [[54, 54, 54, 62], [20, 28, 20, 20]],
+	"pill_dark": [[36, 30, 36, 34], [16, 6, 24, 12]],
+	"card": [[40, 40, 40, 50], [30, 24, 26, 40]],
+	"row": [[26, 26, 26, 30], [22, 16, 22, 22]],
+	"header": [[48, 30, 48, 30], [52, 6, 52, 26]],
 }
 const BUTTON_MARGINS = [26, 24, 26, 32]
 
@@ -66,25 +62,33 @@ static func texture(path: String) -> Texture2D:
 static func glyph(name: String) -> Texture2D:
 	return texture("glyphs/" + name)
 
-## kind: display (Yeseva One), label (Alegreya SC), body, bold, number (lining tabular) or script.
+## kind: display (Shrikhand, titles and venue names), label / number (Titan One: buttons, counts,
+## prices), body and bold (Nunito).
 static func font(kind: String) -> Font:
 	if _fonts.has(kind):
 		return _fonts[kind]
-	var files: Dictionary = {"display": "YesevaOne", "label": "AlegreyaSC-ExtraBold", "body": "AlegreyaSans-500",
-		"bold": "AlegreyaSans-800", "number": "AlegreyaSans-800", "script": "MarckScript"}
-	var base: FontFile = load("res://assets/fonts/%s.ttf" % files.get(kind, "AlegreyaSans-500"))
 	var variation: FontVariation = FontVariation.new()
-	variation.base_font = base
-	var server: TextServer = TextServerManager.get_primary_interface()
-	# Alegreya defaults to old-style figures; prices and counters read better as lining numbers.
-	var features: Dictionary = {server.name_to_tag("lnum"): 1}
-	if kind == "number":
-		features[server.name_to_tag("tnum")] = 1
-	variation.opentype_features = features
-	if kind == "label":
-		variation.spacing_glyph = 1
+	match kind:
+		"display", "script":
+			variation.base_font = load("res://assets/fonts/Shrikhand-Regular.ttf")
+		"label", "number":
+			variation.base_font = load("res://assets/fonts/TitanOne-Regular.ttf")
+			variation.spacing_glyph = 1 if kind == "label" else 0
+		_:
+			variation.base_font = load("res://assets/fonts/Nunito-Variable.ttf")
+			variation.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"): 900 if kind == "bold" else 700}
 	_fonts[kind] = variation
 	return variation
+
+## Game lettering: a dark outline and a drop shadow, white or gold fill.
+static func outlined(target: Control, outline: int = 10, colour: Color = OUTLINE, shadow: bool = true) -> void:
+	target.add_theme_color_override("font_outline_color", colour)
+	target.add_theme_constant_override("outline_size", outline)
+	if shadow:
+		target.add_theme_color_override("font_shadow_color", Color(colour, 0.6))
+		target.add_theme_constant_override("shadow_offset_x", 0)
+		target.add_theme_constant_override("shadow_offset_y", 4)
+		target.add_theme_constant_override("shadow_outline_size", outline)
 
 static func box(piece: String) -> StyleBoxTexture:
 	var margins: Array = PIECES[piece]
@@ -103,7 +107,7 @@ static func _margins(style: StyleBoxTexture, texture_margins: Array, content: Ar
 	style.content_margin_right = content[2]
 	style.content_margin_bottom = content[3]
 
-## Button faces: brass (primary), red (the one big decision), paper (secondary), dark (on wood).
+## Button faces: gold (primary), red (the one big decision) and paper (secondary).
 static func button_box(kind: String, state: String) -> StyleBoxTexture:
 	var style: StyleBoxTexture = StyleBoxTexture.new()
 	var pressed: bool = state == "pressed"
@@ -116,15 +120,19 @@ static func button_box(kind: String, state: String) -> StyleBoxTexture:
 	_margins(style, BUTTON_MARGINS, [24, 19 if pressed else 12, 24, 15 if pressed else 22])
 	return style
 
-static func style_button(button: Button, kind: String = "brass", font_size: int = 30) -> void:
+static func style_button(button: Button, kind: String = "gold", font_size: int = 30) -> void:
 	for state in ["normal", "hover", "focus", "hover_pressed"]:
 		button.add_theme_stylebox_override(state, button_box(kind, "normal") if state != "focus" else StyleBoxEmpty.new())
 	button.add_theme_stylebox_override("pressed", button_box(kind, "pressed"))
 	button.add_theme_stylebox_override("disabled", button_box(kind, "disabled"))
-	var text: Color = CREAM if kind in ["red", "dark"] else INK
+	var light: bool = kind in ["red", "gold"]
+	var text: Color = Color.WHITE if light else INK
 	for key in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
 		button.add_theme_color_override(key, text)
-	button.add_theme_color_override("font_disabled_color", Color(MUTED, 0.85))
+	button.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.9) if light else Color(MUTED, 0.85))
+	if light:
+		button.add_theme_color_override("font_outline_color", OUTLINE if kind != "red" else Color("5a1210"))
+		button.add_theme_constant_override("outline_size", 9)
 	for key in ["icon_normal_color", "icon_hover_color", "icon_pressed_color", "icon_focus_color"]:
 		button.add_theme_color_override(key, text)
 	button.add_theme_color_override("icon_disabled_color", Color(MUTED, 0.7))
@@ -132,7 +140,7 @@ static func style_button(button: Button, kind: String = "brass", font_size: int 
 	button.add_theme_font_size_override("font_size", font_size)
 	button.focus_mode = Control.FOCUS_NONE
 
-static func make_button(text: String, action: Callable, kind: String = "brass", font_size: int = 30) -> Button:
+static func make_button(text: String, action: Callable, kind: String = "gold", font_size: int = 30) -> Button:
 	var button: Button = Button.new()
 	button.text = text
 	button.custom_minimum_size.y = 100
@@ -142,22 +150,41 @@ static func make_button(text: String, action: Callable, kind: String = "brass", 
 	button.pressed.connect(action)
 	return button
 
-## Round brass medallion carrying an ink glyph: settings, leaderboard, music.
-static func medallion(glyph_name: String, action: Callable, side: int = 104) -> Button:
-	var button: Button = Button.new()
-	button.icon = glyph(glyph_name)
-	button.expand_icon = true
+## Glossy round button with a glyph, an optional caption under it and a red badge slot.
+## style: "cream" (small, ink glyph), "gold" or "red" (large, white glyph).
+static func round_button(glyph_name: String, action: Callable, style: String = "cream", side: int = 104, caption: String = "") -> Control:
+	var holder: VBoxContainer = column(0)
+	holder.alignment = BoxContainer.ALIGNMENT_CENTER
+	var button: TextureButton = TextureButton.new()
+	button.texture_normal = texture("round_" + style)
+	button.texture_pressed = texture("round_%s_pressed" % style)
+	button.ignore_texture_size = true
+	button.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	button.custom_minimum_size = Vector2(side, side * 1.1)
 	button.focus_mode = Control.FOCUS_NONE
-	button.custom_minimum_size = Vector2(side, side + 8)
-	button.add_theme_constant_override("icon_max_width", int(side * 0.5))
-	button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	for state in ["normal", "hover", "focus", "hover_pressed", "disabled"]:
-		button.add_theme_stylebox_override(state, box("medallion"))
-	button.add_theme_stylebox_override("pressed", box("medallion_pressed"))
-	for key in ["icon_normal_color", "icon_hover_color", "icon_pressed_color", "icon_focus_color"]:
-		button.add_theme_color_override(key, INK)
+	button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	button.pressed.connect(action)
-	return button
+	holder.add_child(button)
+	var icon: TextureRect = tinted(glyph_name, side * 0.48, INK if style == "cream" else Color.WHITE)
+	icon.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	icon.offset_bottom = -side * 0.16
+	button.add_child(icon)
+	button.button_down.connect(func(): icon.position.y = side * 0.07)
+	button.button_up.connect(func(): icon.position.y = 0)
+	var mark: TextureRect = picture(texture("badge"), side * 0.36)
+	mark.position = Vector2(side * 0.7, -side * 0.02)
+	mark.visible = false
+	mark.name = "badge"
+	button.add_child(mark)
+	if caption != "":
+		var words: Label = label(caption, "label", 22 if side < 140 else 26, Color.WHITE)
+		words.autowrap_mode = TextServer.AUTOWRAP_OFF
+		words.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		outlined(words, 8)
+		holder.add_child(words)
+	holder.set_meta("button", button)
+	holder.set_meta("badge", mark)
+	return holder
 
 static func label(text: String, kind: String = "body", size: int = BODY, color: Color = INK) -> Label:
 	var result: Label = Label.new()
@@ -219,10 +246,10 @@ static func set_bar_color(progress: ProgressBar, fill: Color) -> void:
 	if fill_box is StyleBoxTexture and fill_box.modulate_color != fill:
 		fill_box.modulate_color = fill
 
-## Seamless kilim band used under headings and along the top of sheets.
-static func kilim(height: float = 26.0) -> TextureRect:
+## Tablecloth trim (red and cream checks) under card headers; "kilim" keeps its old name.
+static func kilim(height: float = 16.0) -> TextureRect:
 	var strip: TextureRect = TextureRect.new()
-	strip.texture = texture("kilim_strip")
+	strip.texture = texture("checker_strip")
 	strip.stretch_mode = TextureRect.STRETCH_TILE
 	strip.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	strip.custom_minimum_size = Vector2(0, height)

@@ -1,8 +1,8 @@
 # Do Zore tools
 
-These are standard-library Python tools. The balance tools read the canonical `/data`
-directory and never edit it or the contracts; the art tools in `tools/art` write the
-client's generated art. Run everything from the repository root with Python 3.10+.
+The balance tools are standard-library Python and read the canonical `/data` directory without
+editing it or the contracts. The art tools in `tools/art` write the client's generated art and
+need Pillow and NumPy. Run everything from the repository root with Python 3.10+.
 
 ## Build the Godot bundle
 
@@ -59,22 +59,29 @@ minutes, depending on timestep and upgrades.
 
 ## Rebuild the art
 
-All game art is generated from code in one outlined isometric cartoon style:
+The game world is built in 3D at run time (see `client/README.md`); these scripts generate the
+textures, interface pieces and branding it uses:
 
 ```sh
-python tools/art/build_people.py   # guests, waiters, bartender, bouncer and musicians (animation sheets)
-python tools/art/build_world.py    # rooms, furniture, decor and emotes for every venue + world.json
-python tools/art/build_sprites.py  # UI icons and drink pictures
+python tools/art/build_textures.py  # seamless floors, cloths, streets, walls, roofs, rugs, paintings, signs
+python tools/art/build_ui.py        # HUD pills, buttons, cards, glyphs, upgrade and event pictures
+python tools/art/build_fx.py        # thought clouds, emotes, coins, notes, "+" and fight dust
+python tools/art/build_sprites.py   # drink pictures and the coin and mood faces
+python tools/art/build_key_art.py   # key art / boot splash and app icon (SVG; see client/design/README.md)
 ```
 
-- `people.py` is a parametric chibi rig: 3/4 front and back views, walk, sit, drink, dance and
-  carry-tray frames, and instrument animations. Guest looks per type live in `GUESTS`.
-- `isokit.py` draws outlined isometric boxes, cylinders and wall decals; `build_world.py` uses it
-  for each venue's room (floor, walls, windows, kilims, shelves, door), its furniture and its
-  layout (table slots, stage, bar, door and the walkable grid) written to `world.json`.
+- `build_textures.py` uses NumPy for seamless noise; tiling textures are 512×512 and are mapped
+  in world space by the game, so one texture covers floors and walls of any size.
+- `build_ui.py` and `build_key_art.py` share `isokit.py`, a small outlined-isometric SVG kit used
+  for the upgrade and event pictures.
+- The venue, band and guest pictures are renders of the 3D models: run
+  `godot --path client --rendering-driver opengl3 --script res://tests/render_venue_cards.gd`
+  (under `xvfb-run -a` without a display). The key art embeds the venue renders, so render them
+  first.
 
 After running a script, run the Godot import step (`run_checks.py` does it) so new files get
-their `.import` settings; world textures use VRAM compression with mipmaps.
+their `.import` settings. Tiling textures use VRAM compression with mipmaps: after the first
+import set `compress/mode=2` and `mipmaps/generate=true` in their `.import` files.
 
 ## Tests
 

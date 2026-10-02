@@ -1,10 +1,10 @@
 extends Control
 ## Presentation only: actions enter GameState; all balance lives in the catalog.
-## Built from the kafana UI kit (ui_kit.gd): a walnut sign for the HUD and the navigation,
-## cream paper sheets for every screen and a night panel for the road from birtija to splav.
+## The city fills the screen; a floating HUD sits over it (money, mood, the venue and the road to
+## the next one), round buttons open the screens, and every screen is a cream card with a red
+## header over a tablecloth trim (see ui_kit.gd).
 const UIKit = preload("res://scripts/ui/ui_kit.gd")
 const FloorView = preload("res://scripts/ui/floor_view.gd")
-const WorldData = preload("res://scripts/world/world_data.gd")
 const SPRITES = "res://assets/sprites/"
 const TABS = ["floor", "band", "menu", "upgrades", "venues"]
 
@@ -14,9 +14,8 @@ var floor_view: Control
 var floor_spacer: Control
 var dim_backdrop: ColorRect
 var sheet: PanelContainer
-var sheet_stars: TextureRect
 var hud_panel: Control
-var nav_panel: PanelContainer
+var nav_panel: Control
 var toast_panel: PanelContainer
 var content_scroll: ScrollContainer
 var money_icon: TextureRect
@@ -46,6 +45,9 @@ var purchase_buttons: Array = []
 var song_buttons: Array = []
 var celebration: Control
 var pulse_time: float = 0.0
+var card_title: Label
+var side_column: VBoxContainer
+var music_button: TextureButton
 
 ## Draws a dotted leader between a menu item and its price, like a printed cenovnik.
 class Leader extends Control:
@@ -163,7 +165,7 @@ func _icon(name: String) -> Texture2D:
 func _label(value: String, font_size: int = UIKit.BODY, color: Color = UIKit.INK, kind: String = "body") -> Label:
 	return UIKit.label(value, kind, font_size, color)
 
-func _card(parent: Node, piece: String = "paper") -> VBoxContainer:
+func _card(parent: Node, piece: String = "row") -> VBoxContainer:
 	var column: VBoxContainer = UIKit.column(UIKit.S)
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var panel: PanelContainer = UIKit.panel(piece, column)
@@ -171,13 +173,13 @@ func _card(parent: Node, piece: String = "paper") -> VBoxContainer:
 	return column
 
 ## Price button with a coin. Colour pictures keep their own colours, so the icon is not tinted.
-func _price_button(price: int, action: Callable, kind: String = "brass") -> Button:
+func _price_button(price: int, action: Callable, kind: String = "gold") -> Button:
 	var button: Button = UIKit.make_button(UIKit.amount(price, DataCatalog.locale), action, kind, 30)
 	button.icon = _icon("coin")
 	button.expand_icon = true
 	button.add_theme_constant_override("icon_max_width", 40)
 	button.add_theme_font_override("font", UIKit.font("number"))
-	button.add_theme_font_size_override("font_size", 32)
+	button.add_theme_font_size_override("font_size", 34)
 	for key in ["icon_normal_color", "icon_hover_color", "icon_pressed_color", "icon_focus_color"]:
 		button.add_theme_color_override(key, Color.WHITE)
 	button.add_theme_color_override("icon_disabled_color", Color(1, 1, 1, 0.5))
@@ -205,7 +207,7 @@ func _clear(node: Node) -> void:
 		child.queue_free()
 
 # --------------------------------------------------------------------------------------------
-# Shell: HUD sign, screen sheet, toast and the navigation board
+# Shell: a floating HUD over the city, a screen card, the toast and the round action buttons
 # --------------------------------------------------------------------------------------------
 
 func _build_shell() -> void:
@@ -219,12 +221,16 @@ func _build_shell() -> void:
 	floor_view.table_tapped.connect(_on_table_tapped)
 	floor_view.stage_tapped.connect(func(): _show_songs(-1))
 	floor_view.slot_tapped.connect(func(_index): _open_tab("upgrades"))
+	floor_view.venue_tapped.connect(func(id): _open_tab("venues", id))
 	floor_view.money_target = func() -> Vector2: return money_icon.get_global_rect().get_center() if is_instance_valid(money_icon) else Vector2.ZERO
-	# Other screens sit on a sheet over the still-running kafana, dimmed and not clickable.
+	floor_view.music_point = func() -> Vector2: return music_button.get_global_rect().get_center() - Vector2(0, 70) if is_instance_valid(music_button) else Vector2.INF
+	# Screens open on a card over the still-running city, which dims and stops taking taps.
 	dim_backdrop = ColorRect.new()
-	dim_backdrop.color = Color(UIKit.NIGHT, 0.7)
+	dim_backdrop.color = Color(UIKit.NIGHT, 0.55)
 	dim_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dim_backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+	dim_backdrop.gui_input.connect(func(event):
+		if event is InputEventMouseButton and event.pressed: _open_tab("floor"))
 	add_child(dim_backdrop)
 	shell = MarginContainer.new()
 	shell.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -233,40 +239,20 @@ func _build_shell() -> void:
 	var column: VBoxContainer = UIKit.column(UIKit.GAP)
 	shell.add_child(column)
 	_build_hud(column)
-	sheet = PanelContainer.new()
-	sheet.add_theme_stylebox_override("panel", UIKit.box("sheet"))
-	sheet.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	column.add_child(sheet)
-	sheet_stars = TextureRect.new()
-	sheet_stars.texture = UIKit.texture("night_tile")
-	sheet_stars.stretch_mode = TextureRect.STRETCH_TILE
-	sheet_stars.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	sheet_stars.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	sheet.add_child(sheet_stars)
-	content_scroll = ScrollContainer.new()
-	content_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	sheet.add_child(content_scroll)
-	var inset: MarginContainer = MarginContainer.new()
-	inset.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	inset.add_theme_constant_override("margin_right", UIKit.S)
-	inset.add_theme_constant_override("margin_bottom", UIKit.L)
-	content_scroll.add_child(inset)
-	body = UIKit.column(UIKit.GAP)
-	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	body.mouse_filter = Control.MOUSE_FILTER_PASS
-	inset.add_child(body)
+	_build_card(column)
 	floor_spacer = Control.new()
 	floor_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	floor_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(floor_spacer)
-	toast_panel = UIKit.panel("chip")
+	toast_panel = UIKit.panel("pill_dark")
 	toast_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	toast_panel.visible = false
 	column.add_child(toast_panel)
-	toast = _label("", UIKit.BODY, UIKit.CREAM, "bold")
+	toast = _label("", UIKit.BODY, Color.WHITE, "bold")
 	toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	toast_panel.add_child(toast)
 	_build_nav(column)
+	_build_side()
 
 func _build_hud(column: VBoxContainer) -> void:
 	var hud: VBoxContainer = UIKit.column(UIKit.S)
@@ -274,126 +260,171 @@ func _build_hud(column: VBoxContainer) -> void:
 	column.add_child(hud)
 	var top: HBoxContainer = UIKit.row(UIKit.S)
 	hud.add_child(top)
-	var counters: HBoxContainer = UIKit.row(UIKit.S)
-	var sign_board: PanelContainer = UIKit.panel("plank", counters)
-	sign_board.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	sign_board.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top.add_child(sign_board)
-	# Money: the coin is where earnings fly to.
+	# Money: a big coin over the left end of a dark pill; earnings fly to it.
 	var money: HBoxContainer = UIKit.row(UIKit.XS)
-	money_icon = UIKit.picture(_icon("coin"), 52)
+	money_icon = UIKit.picture(_icon("coin"), 64)
 	money.add_child(money_icon)
-	money_label = _label("", 38, UIKit.BRASS_LIGHT, "number")
+	money_label = _label("", 42, Color.WHITE, "number")
 	money_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	money_label.clip_text = true
 	money_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UIKit.outlined(money_label, 10)
 	money.add_child(money_label)
-	_counter(counters, money, 1.75)
+	_counter(top, money, 1.9)
 	var mood: HBoxContainer = UIKit.row(UIKit.XS)
-	mood_icon = UIKit.picture(_icon("mood_neutral"), 46)
+	mood_icon = UIKit.picture(_icon("mood_neutral"), 50)
 	mood.add_child(mood_icon)
-	mood_bar = UIKit.bar(UIKit.BRASS, 18)
+	mood_bar = UIKit.bar(UIKit.GOLD, 18)
 	mood_bar.min_value = DataCatalog.data.economy.mood.min
 	mood_bar.max_value = DataCatalog.data.economy.mood.max
 	mood_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mood_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	mood.add_child(mood_bar)
-	_counter(counters, mood, 1.15)
-	var guests: HBoxContainer = UIKit.row(UIKit.XS)
-	guests.add_child(UIKit.tinted("people", 42, UIKit.CREAM))
-	guest_label = _label("", 34, UIKit.CREAM, "number")
-	guest_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	guests.add_child(guest_label)
-	_counter(counters, guests, 0.8)
-	top.add_child(UIKit.medallion("trophy", func(): _open_tab("leaderboard"), 100))
-	top.add_child(UIKit.medallion("gear", func(): _open_tab("settings"), 100))
-	# The venue on a red ribbon and, beside it, the road to the next one.
+	_counter(top, mood, 1.1)
+	top.add_child(UIKit.round_button("trophy", func(): _open_tab("leaderboard"), "cream", 90))
+	top.add_child(UIKit.round_button("gear", func(): _open_tab("settings"), "cream", 90))
+	# The venue's name on a red ribbon, guests in the room, and the road to the next venue.
 	var second: HBoxContainer = UIKit.row(UIKit.S)
-	second.alignment = BoxContainer.ALIGNMENT_CENTER
 	hud.add_child(second)
-	venue_label = _label("", 30, UIKit.CREAM, "label")
+	venue_label = _label("", 34, Color.WHITE, "display")
 	venue_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	venue_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var ribbon: PanelContainer = UIKit.panel("ribbon", venue_label)
+	UIKit.outlined(venue_label, 9, Color("5a1210"))
+	var ribbon: PanelContainer = UIKit.panel("header", venue_label)
 	ribbon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ribbon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	second.add_child(ribbon)
+	var guests: HBoxContainer = UIKit.row(UIKit.XS)
+	guests.add_child(UIKit.tinted("people", 40, Color.WHITE))
+	guest_label = _label("", 32, Color.WHITE, "number")
+	guest_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	UIKit.outlined(guest_label, 8)
+	guests.add_child(guest_label)
+	var guest_pill: PanelContainer = UIKit.panel("pill_dark", guests)
+	guest_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	guest_pill.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	second.add_child(guest_pill)
 	goal_button = Button.new()
 	goal_button.focus_mode = Control.FOCUS_NONE
 	goal_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	goal_button.custom_minimum_size = Vector2(0, 72)
+	goal_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	goal_button.custom_minimum_size = Vector2(0, 76)
 	for state in ["normal", "hover", "pressed", "focus", "hover_pressed"]:
-		goal_button.add_theme_stylebox_override(state, UIKit.box("chip"))
+		goal_button.add_theme_stylebox_override(state, UIKit.box("pill_dark"))
 	goal_button.pressed.connect(func(): _open_tab("venues"))
 	second.add_child(goal_button)
 	var goal: HBoxContainer = UIKit.row(UIKit.S)
 	goal.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	goal.offset_left = 20
-	goal.offset_right = -26
+	goal.offset_left = 18
+	goal.offset_right = -24
 	goal.offset_top = 6
 	goal.offset_bottom = -12
 	goal_button.add_child(goal)
-	goal.add_child(UIKit.tinted("nav_venues", 38, UIKit.BRASS))
-	var goal_text: VBoxContainer = UIKit.column(2)
+	goal.add_child(UIKit.tinted("map", 40, UIKit.GOLD))
+	var goal_text: VBoxContainer = UIKit.column(3)
 	goal_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	goal_text.alignment = BoxContainer.ALIGNMENT_CENTER
 	goal.add_child(goal_text)
-	goal_label = _label("", UIKit.TINY, UIKit.CREAM, "label")
+	goal_label = _label("", UIKit.TINY, Color.WHITE, "label")
 	goal_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	goal_label.clip_text = true
+	UIKit.outlined(goal_label, 6, UIKit.OUTLINE, false)
 	goal_text.add_child(goal_label)
-	goal_bar = UIKit.bar(UIKit.BRASS, 14)
+	goal_bar = UIKit.bar(UIKit.GOLD, 14)
 	goal_text.add_child(goal_bar)
 
 func _counter(parent: HBoxContainer, content: Control, ratio: float) -> void:
-	var chip: PanelContainer = UIKit.panel("chip", content)
+	var chip: PanelContainer = UIKit.panel("pill_dark", content)
 	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	chip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	chip.size_flags_stretch_ratio = ratio
 	parent.add_child(chip)
 
+## The screen card: a red header with the title and a close button over a tablecloth trim.
+func _build_card(column: VBoxContainer) -> void:
+	sheet = PanelContainer.new()
+	sheet.add_theme_stylebox_override("panel", UIKit.box("card"))
+	sheet.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	column.add_child(sheet)
+	var inner: VBoxContainer = UIKit.column(UIKit.S)
+	sheet.add_child(inner)
+	var head: HBoxContainer = UIKit.row(UIKit.S)
+	inner.add_child(head)
+	card_title = _label("", 44, Color.WHITE, "display")
+	card_title.autowrap_mode = TextServer.AUTOWRAP_OFF
+	card_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	UIKit.outlined(card_title, 10, Color("5a1210"))
+	var ribbon: PanelContainer = UIKit.panel("header", card_title)
+	ribbon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ribbon.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(ribbon)
+	var close: TextureButton = TextureButton.new()
+	close.texture_normal = UIKit.texture("close")
+	close.texture_pressed = UIKit.texture("close_pressed")
+	close.ignore_texture_size = true
+	close.stretch_mode = TextureButton.STRETCH_KEEP_ASPECT_CENTERED
+	close.custom_minimum_size = Vector2(84, 90)
+	close.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	close.focus_mode = Control.FOCUS_NONE
+	close.pressed.connect(func(): _open_tab("floor"))
+	head.add_child(close)
+	inner.add_child(UIKit.kilim())
+	content_scroll = ScrollContainer.new()
+	content_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	content_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	inner.add_child(content_scroll)
+	var inset: MarginContainer = MarginContainer.new()
+	inset.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	inset.add_theme_constant_override("margin_right", UIKit.S)
+	inset.add_theme_constant_override("margin_top", UIKit.XS)
+	inset.add_theme_constant_override("margin_bottom", UIKit.L)
+	content_scroll.add_child(inset)
+	body = UIKit.column(UIKit.GAP)
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.mouse_filter = Control.MOUSE_FILTER_PASS
+	inset.add_child(body)
+
+## Bottom: map, the music (the main action) and upgrades, as big round buttons.
 func _build_nav(column: VBoxContainer) -> void:
-	var nav: HBoxContainer = UIKit.row(UIKit.XS)
-	nav_panel = UIKit.panel("plank", nav)
-	var nav_box: StyleBoxTexture = nav_panel.get_theme_stylebox("panel")
-	nav_box.content_margin_left = 16
-	nav_box.content_margin_right = 16
-	nav_box.content_margin_top = 12
-	nav_box.content_margin_bottom = 20
-	column.add_child(nav_panel)
-	for key in TABS:
-		var button: Button = Button.new()
-		button.text = _t("nav_" + key)
-		button.icon = UIKit.glyph("nav_" + key)
-		button.expand_icon = true
-		button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		button.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
-		button.clip_text = true
-		button.focus_mode = Control.FOCUS_NONE
-		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		button.custom_minimum_size = Vector2(0, 128)
-		button.add_theme_font_override("font", UIKit.font("label"))
-		button.add_theme_font_size_override("font_size", 22)
-		button.add_theme_constant_override("icon_max_width", 56)
-		button.pressed.connect(_open_tab.bind(key))
-		nav.add_child(button)
-		nav_buttons[key] = button
+	var nav: HBoxContainer = UIKit.row(0)
+	nav.alignment = BoxContainer.ALIGNMENT_CENTER
+	nav_panel = nav
+	column.add_child(nav)
+	var specs: Array = [["venues", "map", "gold", 136, _t("nav_map")], ["music", "note", "red", 168, _t("nav_music")], ["upgrades", "nav_upgrades", "gold", 136, _t("nav_upgrades")]]
+	for spec in specs:
+		var key: String = spec[0]
+		var action: Callable = _toggle_map if key == "venues" else (func(): _show_songs(-1)) if key == "music" else _open_tab.bind(key)
+		var holder: Control = UIKit.round_button(spec[1], action, spec[2], spec[3], spec[4])
+		holder.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		nav.add_child(holder)
+		nav_buttons[key] = holder
+		if key == "music":
+			music_button = holder.get_meta("button")
+
+## Right edge: the band and the drinks menu.
+func _build_side() -> void:
+	side_column = UIKit.column(UIKit.M)
+	side_column.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
+	side_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(side_column)
+	for spec in [["band", "nav_band", _t("nav_band")], ["menu", "nav_menu", _t("nav_menu")]]:
+		var holder: Control = UIKit.round_button(spec[1], _open_tab.bind(spec[0]), "cream", 100, spec[2])
+		side_column.add_child(holder)
+		nav_buttons[spec[0]] = holder
+
+func _toggle_map() -> void:
+	if active_tab != "floor":
+		_open_tab("floor")
+	if floor_view.view_width >= floor_view.MAP_ZOOM:
+		floor_view.show_venue()
+	else:
+		floor_view.show_map()
 
 func _style_nav() -> void:
-	for key in nav_buttons:
-		var button: Button = nav_buttons[key]
-		var active: bool = key == active_tab
-		var color: Color = UIKit.INK if active else Color(UIKit.CREAM, 0.82)
-		for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color",
-				"icon_normal_color", "icon_hover_color", "icon_pressed_color", "icon_focus_color", "icon_hover_pressed_color"]:
-			button.add_theme_color_override(state, color)
-		var style: StyleBox = UIKit.box("tab_active")
-		if not active:
-			style = StyleBoxEmpty.new()
-			style.content_margin_top = 10
-			style.content_margin_bottom = 14
-		for state in ["normal", "hover", "pressed", "focus", "hover_pressed"]:
-			button.add_theme_stylebox_override(state, style)
+	var on_floor: bool = active_tab == "floor"
+	if is_instance_valid(side_column):
+		side_column.visible = on_floor
 
 func _safe_area() -> void:
 	var left: int = UIKit.GUTTER
@@ -416,13 +447,16 @@ func _safe_area() -> void:
 	_fit_floor.call_deferred()
 
 func _fit_floor() -> void:
-	# The world camera keeps the playable area between the HUD and the navigation bar.
+	# The camera keeps the venue between the HUD and the round buttons; the side buttons hug the right edge.
 	if is_instance_valid(floor_view) and is_instance_valid(nav_panel) and is_instance_valid(hud_panel):
 		var top: float = hud_panel.get_global_rect().end.y
 		var bottom: float = get_viewport_rect().size.y - nav_panel.get_global_rect().position.y
 		floor_view.set_insets(top, bottom)
+		if is_instance_valid(side_column):
+			side_column.reset_size()
+			side_column.position = Vector2(get_viewport_rect().size.x - side_column.size.x - shell.get_theme_constant("margin_right") + 4, top + 40)
 
-func _open_tab(key: String) -> void:
+func _open_tab(key: String, focus: String = "") -> void:
 	active_tab = key
 	_clear(body)
 	purchase_buttons.clear()
@@ -431,33 +465,28 @@ func _open_tab(key: String) -> void:
 	floor_spacer.visible = on_floor
 	sheet.visible = not on_floor
 	dim_backdrop.visible = not on_floor
-	var night: bool = key == "venues"
-	sheet.add_theme_stylebox_override("panel", UIKit.box("night_sheet" if night else "sheet"))
-	sheet_stars.visible = night
 	_style_nav()
 	match key:
 		"floor": floor_view.refresh()
 		"band": _band()
 		"menu": _menu()
 		"upgrades": _upgrades()
-		"venues": _venues()
+		"venues": _venues(focus)
 		"settings": _settings()
 		"leaderboard":
 			_draw_board()
 			ApiClient.request_leaderboard()
 	_refresh()
 
-func _heading(title: String, subtitle: String, night: bool = false) -> void:
-	var head: VBoxContainer = UIKit.column(UIKit.XS)
-	body.add_child(head)
-	head.add_child(_label(title, UIKit.TITLE, UIKit.BRASS_LIGHT if night else UIKit.INK, "display"))
+func _heading(title: String, subtitle: String, _night: bool = false) -> void:
+	card_title.text = title
 	if not subtitle.is_empty():
-		head.add_child(_label(subtitle, 34 if night else UIKit.SMALL, UIKit.CREAM if night else UIKit.MUTED, "script" if night else "body"))
-	var strip: TextureRect = UIKit.kilim()
-	head.add_child(strip)
+		var line: Label = _label(subtitle, UIKit.SMALL, UIKit.MUTED, "bold")
+		line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		body.add_child(line)
 
-func _section(title: String, night: bool = false) -> void:
-	var label: Label = _label(title.to_upper(), UIKit.SMALL, UIKit.BRASS if night else UIKit.BRASS_DARK, "label")
+func _section(title: String, _night: bool = false) -> void:
+	var label: Label = _label(title.to_upper(), UIKit.SMALL, UIKit.RED, "label")
 	body.add_child(label)
 
 # --------------------------------------------------------------------------------------------
@@ -473,9 +502,9 @@ func _refresh() -> void:
 	var unhappy: bool = mood < float(mood_rules.unhappy_below)
 	mood_icon.texture = _icon("mood_happy" if happy else "mood_unhappy" if unhappy else "mood_neutral")
 	mood_bar.value = mood
-	UIKit.set_bar_color(mood_bar, Color("4fae6a") if happy else UIKit.RED if unhappy else UIKit.BRASS)
+	UIKit.set_bar_color(mood_bar, Color("5bd16a") if happy else Color("ff5a4a") if unhappy else UIKit.GOLD)
 	guest_label.text = str(GameState.guest_count())
-	venue_label.text = DataCatalog.localized(GameState.venue().name).to_upper()
+	venue_label.text = DataCatalog.localized(GameState.venue().name)
 	var next: Dictionary = _next_venue()
 	goal_button.visible = not next.is_empty()
 	if not next.is_empty():
@@ -484,7 +513,11 @@ func _refresh() -> void:
 		goal_label.text = _t("goal_ready" if goal_ready else "goal_next", {"name": DataCatalog.localized(next.name)})
 		goal_bar.max_value = cost
 		goal_bar.value = minf(cost, float(GameState.save.money))
-		UIKit.set_bar_color(goal_bar, Color("4fae6a") if goal_ready else UIKit.BRASS)
+		UIKit.set_bar_color(goal_bar, Color("5bd16a") if goal_ready else UIKit.GOLD)
+	# Red badges on the buttons whose screens hold something affordable.
+	_badge("upgrades", _any_allowed("upgrades"))
+	_badge("band", _any_allowed("band_levels"))
+	_badge("venues", goal_ready)
 	for entry in purchase_buttons:
 		if is_instance_valid(entry.button): entry.button.disabled = not entry.allowed.call()
 	for button in song_buttons:
@@ -492,6 +525,16 @@ func _refresh() -> void:
 	if modal_kind == "event" and is_instance_valid(event_timer):
 		if GameState.simulation.active_event.is_empty(): _close_modal()
 		else: event_timer.text = _t("event_timeout", {"seconds": ceili(GameState.simulation.event_remaining)})
+
+func _any_allowed(collection: String) -> bool:
+	for item in DataCatalog.items(collection):
+		if GameState.purchase_reason(collection, item.id).is_empty():
+			return true
+	return false
+
+func _badge(key: String, show: bool) -> void:
+	if nav_buttons.has(key) and is_instance_valid(nav_buttons[key]):
+		nav_buttons[key].get_meta("badge").visible = show
 
 func _next_venue() -> Dictionary:
 	for venue in DataCatalog.items("venues"):
@@ -546,30 +589,18 @@ func _purchase(kind: String, id: String) -> void:
 	_open_tab(active_tab)
 	content_scroll.set_deferred("scroll_vertical", scroll_position)
 
-func _lineup_strip(level_id: String, height: float) -> HBoxContainer:
-	var strip: HBoxContainer = UIKit.row(-int(height * 0.18))
-	strip.alignment = BoxContainer.ALIGNMENT_CENTER
-	var lineup: Array = WorldData.people.band_lineups.get(level_id, ["accordion"]) if not WorldData.people.is_empty() else []
-	for member in lineup:
-		var portrait: TextureRect = UIKit.picture(WorldData.portrait(str(WorldData.people.musicians[member]), 1, 4), height)
-		portrait.custom_minimum_size = Vector2(height * 0.69, height)
-		strip.add_child(portrait)
-	return strip
-
 func _band() -> void:
-	WorldData.ensure_loaded()
 	_heading(_t("nav_band"), _t("band_hint"))
 	for band in DataCatalog.items("band_levels"):
 		var current: bool = band.id == GameState.save.band_level
 		var owned: bool = band.order <= GameState.band().order
-		var card: VBoxContainer = _card(body, "paper_brass" if current else "paper")
+		var card: VBoxContainer = _card(body)
 		var top: HBoxContainer = UIKit.row(UIKit.M)
 		card.add_child(top)
-		var stage: PanelContainer = UIKit.panel("chip", _lineup_strip(str(band.id), 118))
-		stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		stage.custom_minimum_size = Vector2(300, 0)
+		var stage: TextureRect = UIKit.picture(load("res://assets/ui/bands/%s.png" % str(band.id)), 0)
+		stage.custom_minimum_size = Vector2(300, 225)
 		if not owned and not current:
-			stage.modulate = Color(1, 1, 1, 0.55)
+			stage.modulate = Color(0.55, 0.55, 0.62, 0.9)
 		top.add_child(stage)
 		var info: VBoxContainer = UIKit.column(UIKit.XS)
 		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -622,7 +653,7 @@ func _band() -> void:
 
 func _menu() -> void:
 	_heading(_t("nav_menu"), _t("menu_hint"))
-	var card: VBoxContainer = _card(body, "paper_brass")
+	var card: VBoxContainer = _card(body)
 	card.add_theme_constant_override("separation", UIKit.M)
 	for kind in ["drink", "food"]:
 		var heading: Label = _label(_t(kind), UIKit.NAME, UIKit.RED, "label")
@@ -695,9 +726,10 @@ func _upgrades() -> void:
 			purchase_buttons.append({"button": button, "allowed": func(): return GameState.purchase_reason("upgrades", upgrade.id).is_empty()})
 			line.add_child(button)
 
-## The road from birtija to splav: each venue a stop, the next one with its price and progress.
-func _venues() -> void:
-	_heading(_t("nav_venues"), _t("venues_hint"), true)
+## The road from the birtija to the splav: every venue as a card with its building, the next one
+## with its price and progress. `focus` scrolls to a venue tapped on the map.
+func _venues(focus: String = "") -> void:
+	_heading(_t("nav_venues"), _t("venues_hint"))
 	var venues: Array = DataCatalog.items("venues").duplicate()
 	venues.sort_custom(func(a, b): return int(a.order) < int(b.order))
 	var here: int = int(GameState.venue().order)
@@ -708,58 +740,60 @@ func _venues() -> void:
 		if index > 0:
 			var road: Road = Road.new()
 			road.from_left = index % 2 == 1
-			road.custom_minimum_size = Vector2(0, 70)
+			road.custom_minimum_size = Vector2(0, 54)
 			road.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			if state == "locked": road.modulate = Color(1, 1, 1, 0.35)
 			body.add_child(road)
 		var stop: Control = _venue_stop(venue, state, index % 2 == 0)
-		if state == "next" or (state == "current" and order == venues.size()):
+		if (focus.is_empty() and (state == "next" or (state == "current" and order == venues.size()))) or str(venue.id) == focus:
 			_scroll_to.call_deferred(stop)
 
 ## Brings the stop that matters next into view, a little below the top edge.
 func _scroll_to(target: Control) -> void:
 	await get_tree().process_frame
 	if is_instance_valid(target) and target.is_inside_tree():
-		content_scroll.scroll_vertical = maxi(0, int(target.position.y) - 140)
+		content_scroll.scroll_vertical = maxi(0, int(target.position.y) - 60)
 
 func _venue_stop(venue: Dictionary, state: String, art_left: bool) -> Control:
-	var paper: bool = state == "next"
 	var column: VBoxContainer = UIKit.column(UIKit.S)
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var panel: PanelContainer = UIKit.panel("paper_brass" if paper else "chip", column)
+	var panel: PanelContainer = UIKit.panel("row", column)
+	if state == "current":
+		var frame: StyleBoxTexture = UIKit.box("row")
+		frame.modulate_color = Color("fff1c8")
+		panel.add_theme_stylebox_override("panel", frame)
 	body.add_child(panel)
 	var line: HBoxContainer = UIKit.row(UIKit.M)
 	column.add_child(line)
-	var art: TextureRect = UIKit.picture(load("res://assets/world/vignettes/%s.svg" % str(venue.id)), 0)
-	art.custom_minimum_size = Vector2(330, 250)
+	var art: TextureRect = UIKit.picture(load("res://assets/ui/venues/%s.png" % str(venue.id)), 0)
+	art.custom_minimum_size = Vector2(340, 255)
 	if state == "locked":
-		art.modulate = Color(0.25, 0.3, 0.5, 0.9)
+		art.modulate = Color(0.35, 0.38, 0.55, 0.9)
 	var info: VBoxContainer = UIKit.column(UIKit.XS)
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.alignment = BoxContainer.ALIGNMENT_CENTER
-	var ink: Color = UIKit.INK if paper else UIKit.CREAM
-	var soft: Color = UIKit.MUTED if paper else Color(UIKit.CREAM, 0.72)
-	var numeral: Label = _label(UIKit.roman(int(venue.order)), UIKit.SMALL, UIKit.BRASS_DARK if paper else UIKit.BRASS, "label")
+	var numeral: Label = _label(UIKit.roman(int(venue.order)), UIKit.SMALL, UIKit.RED, "label")
 	info.add_child(numeral)
-	info.add_child(_label(DataCatalog.localized(venue.name), 46, ink, "display"))
-	info.add_child(_label(DataCatalog.localized(venue.description), UIKit.SMALL, soft))
-	info.add_child(_label(_venue_stats(venue), UIKit.TINY, soft))
+	info.add_child(_label(DataCatalog.localized(venue.name), 46, UIKit.INK, "display"))
+	info.add_child(_label(DataCatalog.localized(venue.description), UIKit.SMALL, UIKit.MUTED))
+	info.add_child(_label(_venue_stats(venue), UIKit.TINY, UIKit.MUTED))
 	if art_left:
 		line.add_child(art)
 		line.add_child(info)
 	else:
 		line.add_child(info)
 		line.add_child(art)
+	var actions: HBoxContainer = UIKit.row(UIKit.S)
 	match state:
 		"current":
-			column.add_child(_stamp("check", _t("venue_here"), UIKit.BRASS_LIGHT))
+			actions.add_child(_stamp("check", _t("venue_here"), UIKit.GREEN))
 		"past":
-			column.add_child(_stamp("check", _t("owned"), Color(UIKit.CREAM, 0.7)))
+			actions.add_child(_stamp("check", _t("owned"), UIKit.MUTED))
 		"next":
 			var price: float = maxf(1.0, float(venue.unlock_cost))
 			var progress: HBoxContainer = UIKit.row(UIKit.S)
 			column.add_child(progress)
-			var meter: ProgressBar = UIKit.bar(UIKit.BRASS, 22, true)
+			var meter: ProgressBar = UIKit.bar(UIKit.GOLD, 22, true)
 			meter.max_value = price
 			meter.value = minf(price, float(GameState.save.money))
 			meter.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -771,10 +805,26 @@ func _venue_stop(venue: Dictionary, state: String, art_left: bool) -> Control:
 			var button: Button = UIKit.make_button(_t("open_venue", {"name": DataCatalog.localized(venue.name)}), _purchase.bind("venue", venue.id), "red", 32)
 			button.disabled = not GameState.purchase_reason("venues", venue.id).is_empty()
 			purchase_buttons.append({"button": button, "allowed": func(): return GameState.purchase_reason("venues", venue.id).is_empty()})
-			column.add_child(button)
+			actions.add_child(button)
 		"locked":
-			column.add_child(_stamp("lock", _t("locked"), Color(UIKit.CREAM, 0.6)))
+			actions.add_child(_stamp("lock", _t("locked"), UIKit.MUTED))
+	var look: Button = UIKit.make_button(_t("show_on_map"), _show_on_map.bind(str(venue.id)), "paper", 24)
+	look.custom_minimum_size = Vector2(230, 84)
+	look.size_flags_horizontal = Control.SIZE_SHRINK_END
+	if state in ["current", "past", "locked"]:
+		var gap: Control = Control.new()
+		gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		actions.add_child(gap)
+	actions.add_child(look)
+	column.add_child(actions)
 	return panel
+
+func _show_on_map(id: String) -> void:
+	_open_tab("floor")
+	if id == str(GameState.save.venue):
+		floor_view.show_venue()
+	else:
+		floor_view.show_lot(id)
 
 func _settings() -> void:
 	_heading(_t("settings"), "")
@@ -794,7 +844,7 @@ func _settings() -> void:
 	body.add_child(languages)
 	for locale in ["sr", "en"]:
 		var current: bool = DataCatalog.locale == locale
-		var button: Button = UIKit.make_button(_t("locale_" + locale), func(): SaveSystem.set_setting("language", locale), "brass" if current else "paper", 28)
+		var button: Button = UIKit.make_button(_t("locale_" + locale), func(): SaveSystem.set_setting("language", locale), "gold" if current else "paper", 28)
 		languages.add_child(button)
 	_section(_t("save_section"))
 	var storage: VBoxContainer = _card(body)
@@ -823,7 +873,7 @@ func _draw_board() -> void:
 		card.add_child(UIKit.tinted("trophy", 72, UIKit.BRASS))
 		card.add_child(_label(_t("leaderboard_offline"), UIKit.BODY, UIKit.MUTED))
 		return
-	var mine: VBoxContainer = _card(body, "paper_brass")
+	var mine: VBoxContainer = _card(body)
 	mine.add_child(_label(_t("leaderboard_me", {"score": UIKit.amount(int(board.me.score), DataCatalog.locale)}), UIKit.NAME, UIKit.INK, "display"))
 	var list: VBoxContainer = _card(body)
 	var first: bool = true
@@ -859,22 +909,32 @@ func _new_modal(kind: String, title: String, picture: Texture2D = null) -> void:
 	add_child(modal)
 	var shade: ColorRect = ColorRect.new()
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.color = Color(UIKit.NIGHT, 0.72)
+	shade.color = Color(UIKit.NIGHT, 0.62)
 	modal.add_child(shade)
 	var margin: MarginContainer = MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	for side in ["left", "right"]: margin.add_theme_constant_override("margin_" + side, maxi(48, shell.get_theme_constant("margin_" + side) + UIKit.L))
+	for side in ["left", "right"]: margin.add_theme_constant_override("margin_" + side, maxi(40, shell.get_theme_constant("margin_" + side) + UIKit.M))
 	for side in ["top", "bottom"]: margin.add_theme_constant_override("margin_" + side, maxi(96, shell.get_theme_constant("margin_" + side)))
 	modal.add_child(margin)
-	var panel: PanelContainer = UIKit.panel("sheet")
+	var panel: PanelContainer = UIKit.panel("card")
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	margin.add_child(panel)
+	var frame: VBoxContainer = UIKit.column(UIKit.S)
+	panel.add_child(frame)
+	var heading: Label = _label(title, 40, Color.WHITE, "display")
+	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	heading.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	UIKit.outlined(heading, 10, Color("5a1210"))
+	var ribbon: PanelContainer = UIKit.panel("header", heading)
+	ribbon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	frame.add_child(ribbon)
+	frame.add_child(UIKit.kilim())
 	var scroll: ScrollContainer = ScrollContainer.new()
 	modal_scroll = scroll
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	scroll.custom_minimum_size.y = minf(get_viewport_rect().size.y - 240, 1150)
-	panel.add_child(scroll)
+	scroll.custom_minimum_size.y = minf(get_viewport_rect().size.y - 360, 1100)
+	frame.add_child(scroll)
 	modal_body = UIKit.column(UIKit.GAP)
 	modal_body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	modal_body.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -883,16 +943,12 @@ func _new_modal(kind: String, title: String, picture: Texture2D = null) -> void:
 		var art: Control = UIKit.framed(picture, 150, "ring_paper", 0.17)
 		art.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		modal_body.add_child(art)
-	var heading: Label = _label(title, UIKit.HEADING, UIKit.INK, "display")
-	if picture != null: heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	modal_body.add_child(heading)
-	modal_body.add_child(UIKit.kilim())
 	_fit_modal.call_deferred()
 
 func _fit_modal() -> void:
 	await get_tree().process_frame
 	if is_instance_valid(modal_scroll) and is_instance_valid(modal_body):
-		modal_scroll.custom_minimum_size.y = minf(modal_body.get_combined_minimum_size().y, get_viewport_rect().size.y - 280)
+		modal_scroll.custom_minimum_size.y = minf(modal_body.get_combined_minimum_size().y, get_viewport_rect().size.y - 420)
 
 func _close_modal(next: bool = true) -> void:
 	if is_instance_valid(modal):
@@ -917,10 +973,10 @@ func _show_songs(index: int) -> void:
 		var table: Dictionary = GameState.simulation.tables[index]
 		var party: HBoxContainer = UIKit.row(UIKit.M)
 		modal_body.add_child(party)
-		WorldData.ensure_loaded()
-		var looks: Array = WorldData.people.guests.get(str(table.guest_type), [])
-		if not looks.is_empty():
-			var face: Control = UIKit.framed(WorldData.portrait(str(looks[index % looks.size()]), 19, 20), 128, "ring_paper", 0.06)
+		var portrait_path: String = "res://assets/ui/guests/%s.png" % str(table.guest_type)
+		if ResourceLoader.exists(portrait_path):
+			var face: TextureRect = UIKit.picture(load(portrait_path), 0)
+			face.custom_minimum_size = Vector2(200, 150)
 			party.add_child(face)
 		var about: VBoxContainer = UIKit.column(UIKit.XS)
 		about.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -973,7 +1029,7 @@ func _show_songs(index: int) -> void:
 			GameState.play_song(song.id)
 			_close_modal()
 			_refresh()
-		, "brass" if count > 0 else "paper", 28)
+		, "gold" if count > 0 else "paper", 28)
 		button.custom_minimum_size.y = 124
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.disabled = GameState.simulation.song_remaining > 0
@@ -1029,7 +1085,7 @@ func _show_event(event: Dictionary) -> void:
 		var cost: int = GameState.event_choice_cost(choice)
 		var label: String = DataCatalog.localized(choice.label)
 		if cost > 0: label = _t("choice_cost", {"label": label, "amount": UIKit.amount(cost, DataCatalog.locale)})
-		var button: Button = UIKit.make_button(label, func(): GameState.choose_event(choice.id), "brass" if first else "paper", 28)
+		var button: Button = UIKit.make_button(label, func(): GameState.choose_event(choice.id), "gold" if first else "paper", 28)
 		first = false
 		button.custom_minimum_size.y = 112
 		button.disabled = GameState.save.money < cost
@@ -1107,28 +1163,29 @@ func _celebrate(venue_id: String) -> void:
 	center.offset_left = 72
 	center.offset_right = -72
 	celebration.add_child(center)
-	var stamp: Label = _label(_t("venue_opened"), UIKit.SMALL, UIKit.CREAM, "label")
+	var stamp: Label = _label(_t("venue_opened"), 30, Color.WHITE, "label")
 	stamp.autowrap_mode = TextServer.AUTOWRAP_OFF
 	stamp.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var ribbon: PanelContainer = UIKit.panel("ribbon", stamp)
+	UIKit.outlined(stamp, 8, Color("5a1210"))
+	var ribbon: PanelContainer = UIKit.panel("header", stamp)
 	ribbon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	center.add_child(ribbon)
-	var art: TextureRect = UIKit.picture(load("res://assets/world/vignettes/%s.svg" % venue_id), 0)
+	var art: TextureRect = UIKit.picture(load("res://assets/ui/venues/%s.png" % venue_id), 0)
 	art.custom_minimum_size = Vector2(0, 560)
 	art.pivot_offset = Vector2(get_viewport_rect().size.x / 2.0 - 72, 280)
 	center.add_child(art)
-	var title: Label = _label(DataCatalog.localized(venue.get("name", {})), 110, UIKit.BRASS_LIGHT, "display")
+	var title: Label = _label(DataCatalog.localized(venue.get("name", {})), 120, UIKit.GOLD, "display")
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_color_override("font_outline_color", UIKit.INK)
-	title.add_theme_constant_override("outline_size", 14)
+	UIKit.outlined(title, 18)
 	center.add_child(title)
-	var line: Label = _label(_t("venue_opened_body", {"name": DataCatalog.localized(venue.get("name", {}))}), 40, UIKit.CREAM, "script")
+	var line: Label = _label(_t("venue_opened_body", {"name": DataCatalog.localized(venue.get("name", {}))}), 34, Color.WHITE, "bold")
+	UIKit.outlined(line, 8)
 	line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	center.add_child(line)
 	var stats: Label = _label(_venue_stats(venue), UIKit.SMALL, Color(UIKit.CREAM, 0.7))
 	stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	center.add_child(stats)
-	var enter: Button = UIKit.make_button(_t("enter_venue"), _end_celebration, "red", 36)
+	var enter: Button = UIKit.make_button(_t("enter_venue"), _end_celebration, "gold", 38)
 	enter.custom_minimum_size = Vector2(520, 116)
 	enter.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	center.add_child(enter)
