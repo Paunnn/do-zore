@@ -483,6 +483,10 @@
     "sr": "Najviši nivo je dostignut.",
     "en": "Maximum level reached."
   },
+  "floor_left_angry": {
+    "sr": "Otišli ljuti!",
+    "en": "Left angry!"
+  },
   "data.band_levels.solo_harmonikas.name": {
     "sr": "Solo harmonikaš",
     "en": "Solo accordionist"

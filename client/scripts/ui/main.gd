@@ -7,8 +7,18 @@ const MUTED = Color("9fb3ad")
 const GOLD = Color("eab575")
 const GREEN = Color("72cbb6")
 const RED = Color("ed8c7a")
+const FloorView = preload("res://scripts/ui/floor_view.gd")
+const SPRITES = "res://assets/sprites/"
+const GENRE_COLORS = {"starogradske": Color("eab575"), "tamburica": Color("72cbb6"), "izvorna": Color("ed8c7a"), "narodnjaci": Color("c49be8")}
 var shell: MarginContainer
 var body: VBoxContainer
+var floor_view: Control
+var floor_spacer: Control
+var dim_backdrop: TextureRect
+var mood_icon: TextureRect
+var hud_panel: PanelContainer
+var nav_panel: PanelContainer
+var toast_panel: PanelContainer
 var content_scroll: ScrollContainer
 var money_label: Label
 var mood_label: Label
@@ -20,12 +30,6 @@ var toast: Label
 var toast_seconds: float = 0.0
 var active_tab: String = "floor"
 var nav_buttons: Dictionary = {}
-var table_widgets: Array = []
-var table_grid: GridContainer
-var stage_song: Label
-var stage_remaining: Label
-var stage_band: Label
-var night_label: Label
 var modal: Control
 var modal_body: VBoxContainer
 var modal_scroll: ScrollContainer
@@ -123,61 +127,108 @@ func _t(key: String, args: Dictionary = {}) -> String:
 func _name(collection: String, id: String, field: String = "name") -> String:
 	return DataCatalog.localized(DataCatalog.get_item(collection, id).get(field, {}))
 
+func _icon(name: String) -> Texture2D:
+	return load(SPRITES + "icons/" + name + ".svg")
+
+func _icon_rect(name: String, side: float) -> TextureRect:
+	var rect: TextureRect = TextureRect.new()
+	rect.texture = _icon(name)
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	rect.custom_minimum_size = Vector2(side, side)
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return rect
+
+func _icon_button(name: String, action: Callable) -> Button:
+	var button: Button = Button.new()
+	button.icon = _icon(name)
+	button.expand_icon = true
+	button.custom_minimum_size = Vector2(104, 96)
+	button.focus_mode = Control.FOCUS_NONE
+	var style: StyleBoxFlat = _box(PANEL.lightened(0.04), 20, PANEL.lightened(0.17))
+	style.set_content_margin_all(16)
+	button.add_theme_stylebox_override("normal", style)
+	button.pressed.connect(action)
+	return button
+
+func _glass(alpha: float) -> StyleBoxFlat:
+	var style: StyleBoxFlat = _box(Color(PANEL, alpha), 28, Color(GOLD, 0.28))
+	style.content_margin_top = 16
+	style.content_margin_bottom = 16
+	return style
+
 func _build_shell() -> void:
 	var backdrop: ColorRect = ColorRect.new()
 	backdrop.color = BG
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(backdrop)
+	dim_backdrop = TextureRect.new()
+	dim_backdrop.texture = load("res://assets/art/kafana_room.jpg")
+	dim_backdrop.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	dim_backdrop.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	dim_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dim_backdrop.modulate = Color(0.24, 0.27, 0.29)
+	dim_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(dim_backdrop)
+	floor_view = FloorView.new()
+	add_child(floor_view)
+	floor_view.table_tapped.connect(_on_table_tapped)
+	floor_view.stage_tapped.connect(func(): _show_songs(-1))
 	shell = MarginContainer.new()
 	shell.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shell.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(shell)
 	var column: VBoxContainer = VBoxContainer.new()
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_theme_constant_override("separation", 14)
 	shell.add_child(column)
+	hud_panel = PanelContainer.new()
+	hud_panel.add_theme_stylebox_override("panel", _glass(0.88))
+	column.add_child(hud_panel)
+	var hud: VBoxContainer = VBoxContainer.new()
+	hud.add_theme_constant_override("separation", 10)
+	hud_panel.add_child(hud)
 	var top: HBoxContainer = HBoxContainer.new()
-	column.add_child(top)
+	top.add_theme_constant_override("separation", 12)
+	hud.add_child(top)
 	var brand: VBoxContainer = VBoxContainer.new()
 	brand.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	brand.add_theme_constant_override("separation", 0)
 	top.add_child(brand)
-	brand.add_child(_label(_t("app_title"), 52, GOLD))
-	brand.add_child(_label(_t("tagline"), 20, MUTED))
-	var ranking: Button = _button(_t("leaderboard"), func(): _open_tab("leaderboard"))
-	ranking.custom_minimum_size.x = 210
-	ranking.add_theme_font_size_override("font_size", 25)
-	ranking.size_flags_horizontal = Control.SIZE_SHRINK_END
-	top.add_child(ranking)
-	var settings_button: Button = _button(_t("settings"), func(): _open_tab("settings"))
-	settings_button.custom_minimum_size.x = 240
-	settings_button.add_theme_font_size_override("font_size", 25)
-	settings_button.size_flags_horizontal = Control.SIZE_SHRINK_END
-	top.add_child(settings_button)
-	var hud: VBoxContainer = _panel(column)
-	var venue_row: HBoxContainer = HBoxContainer.new()
-	hud.add_child(venue_row)
-	venue_label = _label("", 26, GOLD)
-	venue_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	venue_row.add_child(venue_label)
-	status_label = _label("", 22, MUTED)
-	status_label.custom_minimum_size.x = 410
+	brand.add_child(_label(_t("app_title"), 40, GOLD))
+	venue_label = _label("", 22, INK)
+	brand.add_child(venue_label)
+	status_label = _label("", 20, MUTED)
+	status_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	venue_row.add_child(status_label)
+	status_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	top.add_child(status_label)
+	top.add_child(_icon_button("trophy", func(): _open_tab("leaderboard")))
+	top.add_child(_icon_button("gear", func(): _open_tab("settings")))
 	var stats: HBoxContainer = HBoxContainer.new()
+	stats.add_theme_constant_override("separation", 14)
 	hud.add_child(stats)
 	for key in ["money", "mood", "guests"]:
-		var group: VBoxContainer = VBoxContainer.new()
+		var group: HBoxContainer = HBoxContainer.new()
 		group.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		group.add_theme_constant_override("separation", 6)
+		group.size_flags_stretch_ratio = 1.4 if key == "money" else 1.0
+		group.add_theme_constant_override("separation", 10)
 		stats.add_child(group)
-		group.add_child(_label(_t(key), 21, MUTED))
-		var number: Label = _label("", 38, GOLD if key == "money" else INK)
+		var icon: TextureRect = _icon_rect({"money": "coin", "mood": "mood_neutral", "guests": "guests"}[key], 58)
+		group.add_child(icon)
+		var number: Label = _label("", 36, GOLD if key == "money" else INK)
+		number.autowrap_mode = TextServer.AUTOWRAP_OFF
+		number.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		group.add_child(number)
 		match key:
 			"money": money_label = number
-			"mood": mood_label = number
+			"mood":
+				mood_label = number
+				mood_icon = icon
 			"guests": guest_label = number
 	mood_bar = ProgressBar.new()
-	mood_bar.custom_minimum_size.y = 14
+	mood_bar.custom_minimum_size.y = 12
 	mood_bar.show_percentage = false
 	mood_bar.min_value = DataCatalog.data.economy.mood.min
 	mood_bar.max_value = DataCatalog.data.economy.mood.max
@@ -189,28 +240,54 @@ func _build_shell() -> void:
 	body = VBoxContainer.new()
 	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	content_scroll.add_child(body)
-	toast = _label("", 24, GOLD)
-	toast.custom_minimum_size.y = 32
-	column.add_child(toast)
+	floor_spacer = Control.new()
+	floor_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	floor_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(floor_spacer)
+	toast_panel = PanelContainer.new()
+	toast_panel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	toast_panel.add_theme_stylebox_override("panel", _glass(0.92))
+	toast_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	toast_panel.visible = false
+	column.add_child(toast_panel)
+	toast = _label("", 26, GOLD)
+	toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	toast_panel.add_child(toast)
+	nav_panel = PanelContainer.new()
+	var nav_style: StyleBoxFlat = _glass(0.92)
+	nav_style.set_content_margin_all(10)
+	nav_panel.add_theme_stylebox_override("panel", nav_style)
+	column.add_child(nav_panel)
 	var nav: HBoxContainer = HBoxContainer.new()
-	nav.add_theme_constant_override("separation", 8)
-	column.add_child(nav)
+	nav.add_theme_constant_override("separation", 6)
+	nav_panel.add_child(nav)
 	for key in ["floor", "band", "menu", "upgrades", "venues"]:
 		var button: Button = _button(_t("nav_" + key), _open_tab.bind(key))
-		button.custom_minimum_size.y = 132
-		button.add_theme_font_size_override("font_size", 22)
-		var nav_style: StyleBoxFlat = _box(PANEL, 20, PANEL.lightened(0.17))
-		nav_style.content_margin_left = 10
-		nav_style.content_margin_right = 10
-		button.add_theme_stylebox_override("normal", nav_style)
+		button.icon = _icon("nav_" + key)
+		button.expand_icon = true
+		button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		button.vertical_icon_alignment = VERTICAL_ALIGNMENT_TOP
+		button.autowrap_mode = TextServer.AUTOWRAP_OFF
+		button.clip_text = true
+		button.focus_mode = Control.FOCUS_NONE
+		button.custom_minimum_size = Vector2(0, 128)
+		button.add_theme_font_size_override("font_size", 21)
+		button.add_theme_constant_override("icon_max_width", 54)
+		var flat: StyleBoxFlat = _box(Color(0, 0, 0, 0), 20)
+		flat.set_content_margin_all(8)
+		button.add_theme_stylebox_override("normal", flat)
+		button.add_theme_stylebox_override("hover", flat)
+		var pressed: StyleBoxFlat = _box(Color(GOLD, 0.16), 20)
+		pressed.set_content_margin_all(8)
+		button.add_theme_stylebox_override("pressed", pressed)
 		nav.add_child(button)
 		nav_buttons[key] = button
 
 func _safe_area() -> void:
-	var left: int = 36
-	var right: int = 36
-	var top: int = 32
-	var bottom: int = 30
+	var left: int = 28
+	var right: int = 28
+	var top: int = 26
+	var bottom: int = 24
 	if OS.has_feature("mobile"):
 		var safe: Rect2i = DisplayServer.get_display_safe_area()
 		var screen: Vector2i = DisplayServer.screen_get_size()
@@ -224,6 +301,13 @@ func _safe_area() -> void:
 	shell.add_theme_constant_override("margin_right", right)
 	shell.add_theme_constant_override("margin_top", top)
 	shell.add_theme_constant_override("margin_bottom", bottom)
+	_fit_floor.call_deferred()
+
+func _fit_floor() -> void:
+	# Leave room under the floating navigation so the last row of tables can scroll into view.
+	if is_instance_valid(floor_view) and is_instance_valid(nav_panel):
+		floor_view.bottom_padding = nav_panel.size.y + shell.get_theme_constant("margin_bottom") + 60.0
+		floor_view._layout()
 
 func _clear(node: Node) -> void:
 	for child in node.get_children():
@@ -234,13 +318,19 @@ func _open_tab(key: String) -> void:
 	active_tab = key
 	_clear(body)
 	purchase_buttons.clear()
-	table_widgets.clear()
-	stage_song = null
 	content_scroll.scroll_vertical = 0
+	var on_floor: bool = key == "floor"
+	floor_view.visible = on_floor
+	floor_spacer.visible = on_floor
+	content_scroll.visible = not on_floor
+	dim_backdrop.visible = not on_floor
 	for nav in nav_buttons:
-		nav_buttons[nav].add_theme_color_override("font_color", GOLD if key == nav else MUTED)
+		var color: Color = GOLD if key == nav else MUTED
+		nav_buttons[nav].add_theme_color_override("font_color", color)
+		for state in ["icon_normal_color", "icon_hover_color", "icon_pressed_color", "icon_focus_color"]:
+			nav_buttons[nav].add_theme_color_override(state, color)
 	match key:
-		"floor": _floor()
+		"floor": floor_view.refresh()
 		"band": _band()
 		"menu": _menu()
 		"upgrades": _upgrades()
@@ -255,82 +345,30 @@ func _heading(title: String, subtitle: String) -> void:
 	body.add_child(_label(title, 44))
 	body.add_child(_label(subtitle, 27, MUTED))
 
-func _floor() -> void:
-	_heading(_t("floor_title"), _t("floor_hint"))
-	var stage: VBoxContainer = _panel(body, Color("352b25"))
-	stage.add_child(_label(_t("stage"), 21, GOLD))
-	stage_band = _label("", 37)
-	stage.add_child(stage_band)
-	stage_song = _label("", 30, GOLD)
-	stage.add_child(stage_song)
-	stage_remaining = _label("", 24, MUTED)
-	stage.add_child(stage_remaining)
-	stage.add_child(_button(_t("choose_song"), func(): _show_songs(-1), true))
-	night_label = _label(_t("night_status"), 22, GREEN)
-	body.add_child(night_label)
-	table_grid = GridContainer.new()
-	table_grid.columns = int(GameState.simulation.rules.floor_columns)
-	table_grid.add_theme_constant_override("h_separation", 18)
-	table_grid.add_theme_constant_override("v_separation", 18)
-	body.add_child(table_grid)
-	_create_tables()
-
-func _create_tables() -> void:
-	_clear(table_grid)
-	table_widgets.clear()
-	for index in GameState.simulation.tables.size():
-		var button: Button = _button("", _show_songs.bind(index))
-		button.custom_minimum_size = Vector2(0, 330)
-		table_grid.add_child(button)
-		var margin: MarginContainer = MarginContainer.new()
-		margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		for side in ["left", "right", "top", "bottom"]: margin.add_theme_constant_override("margin_" + side, 24)
-		margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		button.add_child(margin)
-		var content: VBoxContainer = VBoxContainer.new()
-		content.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		content.add_theme_constant_override("separation", 12)
-		margin.add_child(content)
-		var title: Label = _label(_t("table_number", {"number": index + 1}), 22, GOLD)
-		content.add_child(title)
-		var party: Label = _label("", 30)
-		content.add_child(party)
-		var mood: Label = _label("", 27, GREEN)
-		content.add_child(mood)
-		var request: Label = _label("", 24, MUTED)
-		content.add_child(request)
-		var order: Label = _label("", 24, GOLD)
-		content.add_child(order)
-		table_widgets.append({"button": button, "party": party, "mood": mood, "request": request, "order": order})
+func _on_table_tapped(index: int) -> void:
+	if index >= GameState.simulation.tables.size(): return
+	var table: Dictionary = GameState.simulation.tables[index]
+	if str(table.get("guest_type", "")).is_empty(): return
+	if str(table.get("order_status", "")) == "waiting":
+		if GameState.serve_table(index): _notice("notice_serving", {})
+		return
+	_show_songs(index)
 
 func _refresh() -> void:
 	if not is_instance_valid(money_label): return
 	money_label.text = _t("money_amount", {"amount": int(GameState.save.money)})
-	mood_label.text = _t("mood_value", {"value": roundi(GameState.room_mood())})
+	var mood: float = GameState.room_mood()
+	mood_label.text = str(roundi(mood))
+	var mood_rules: Dictionary = DataCatalog.data.economy.mood
+	mood_icon.texture = _icon("mood_happy" if mood >= float(mood_rules.happy_at_or_above) else "mood_unhappy" if mood < float(mood_rules.unhappy_below) else "mood_neutral")
 	guest_label.text = str(GameState.guest_count())
-	mood_bar.value = GameState.room_mood()
-	venue_label.text = DataCatalog.localized(GameState.venue().name).to_upper()
+	mood_bar.value = mood
+	venue_label.text = DataCatalog.localized(GameState.venue().name).to_upper() + " · " + DataCatalog.localized(GameState.band().name)
 	status_label.text = _t("sync_" + ApiClient.status)
 	for entry in purchase_buttons:
 		if is_instance_valid(entry.button): entry.button.disabled = not entry.allowed.call()
 	for button in song_buttons:
 		if is_instance_valid(button): button.disabled = GameState.simulation.song_remaining > 0
-	if active_tab == "floor" and is_instance_valid(stage_song):
-		stage_band.text = DataCatalog.localized(GameState.band().name)
-		stage_song.text = _name("songs", GameState.simulation.current_song, "title") if not GameState.simulation.current_song.is_empty() else _t("song_idle")
-		stage_remaining.text = _t("song_remaining", {"seconds": ceili(GameState.simulation.song_remaining)}) if GameState.simulation.song_remaining > 0 else _t("known_songs")
-		night_label.text = _t("venue_closed", {"seconds": ceili(GameState.simulation.closed_remaining)}) if GameState.simulation.closed_remaining > 0 else _t("night_status")
-		if table_widgets.size() != GameState.simulation.tables.size(): _create_tables()
-		for index in table_widgets.size():
-			var table: Dictionary = GameState.simulation.tables[index]
-			var widgets: Dictionary = table_widgets[index]
-			var empty: bool = str(table.get("guest_type", "")).is_empty()
-			widgets.button.disabled = empty
-			widgets.party.text = _t("table_empty") if empty else _t("table_party", {"name": _name("guest_types", table.guest_type), "count": table.party_size})
-			widgets.mood.text = "" if empty else _table_mood(table)
-			widgets.mood.add_theme_color_override("font_color", RED if table.get("mood", 0) < DataCatalog.data.economy.mood.unhappy_below else GREEN)
-			widgets.request.text = _t("table_waiting") if empty else _request_text(table)
-			widgets.order.text = "" if empty else _order_text(table)
 	if modal_kind == "event" and is_instance_valid(event_timer):
 		if GameState.simulation.active_event.is_empty(): _close_modal()
 		else: event_timer.text = _t("event_timeout", {"seconds": ceili(GameState.simulation.event_remaining)})
@@ -391,7 +429,17 @@ func _band() -> void:
 func _menu() -> void:
 	_heading(_t("nav_menu"), _t("menu_hint"))
 	for item in DataCatalog.items("drinks"):
-		var card: VBoxContainer = _panel(body)
+		var row: HBoxContainer = HBoxContainer.new()
+		_panel(body).add_child(row)
+		var picture: TextureRect = TextureRect.new()
+		picture.texture = load(SPRITES + "drinks/%s.svg" % str(item.id))
+		picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		picture.custom_minimum_size = Vector2(150, 150)
+		row.add_child(picture)
+		var card: VBoxContainer = VBoxContainer.new()
+		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(card)
 		card.add_child(_label(_t(item.kind), 20, GOLD))
 		card.add_child(_label(DataCatalog.localized(item.name), 36))
 		card.add_child(_label(_t("menu_price", {"price": int(item.price), "cost": int(item.cost), "seconds": int(item.prep_seconds)}), 26, MUTED))
@@ -521,13 +569,18 @@ func _show_songs(index: int) -> void:
 	if index >= 0:
 		var table: Dictionary = GameState.simulation.tables[index]
 		modal_body.add_child(_label(_t("table_party", {"name": _name("guest_types", table.guest_type), "count": table.party_size}), 31))
+		modal_body.add_child(_label(_table_mood(table), 29, RED if table.mood < DataCatalog.data.economy.mood.unhappy_below else GREEN))
 		modal_body.add_child(_label(_request_text(table), 31, GREEN))
 		modal_body.add_child(_label(_order_text(table), 27, MUTED))
 		if table.get("order_status") == "waiting":
-			modal_body.add_child(_button(_t("serve"), func():
+			var serve: Button = _button(_t("serve"), func():
 				if GameState.serve_table(index): _notice("notice_serving", {})
 				_show_songs(index)
-			, true))
+			, true)
+			serve.icon = load(SPRITES + "drinks/%s.svg" % str(table.get("order_item", "")))
+			serve.expand_icon = true
+			serve.add_theme_constant_override("icon_max_width", 84)
+			modal_body.add_child(serve)
 	modal_body.add_child(_label(_t("song_popup_hint"), 27, MUTED))
 	modal_body.add_child(_label(_t("known_songs"), 23, GOLD))
 	for song in GameState.known_songs():
@@ -538,6 +591,13 @@ func _show_songs(index: int) -> void:
 		, true)
 		button.custom_minimum_size.y = 140
 		button.disabled = GameState.simulation.song_remaining > 0
+		var genre_color: Color = GENRE_COLORS.get(str(song.genre), GOLD)
+		button.icon = _icon("note")
+		button.expand_icon = true
+		button.add_theme_constant_override("icon_max_width", 48)
+		for state in ["icon_normal_color", "icon_hover_color", "icon_pressed_color", "icon_focus_color"]:
+			button.add_theme_color_override(state, genre_color)
+		button.add_theme_color_override("icon_disabled_color", Color(genre_color, 0.4))
 		song_buttons.append(button)
 		modal_body.add_child(button)
 	modal_body.add_child(_button(_t("close"), func(): _close_modal()))
@@ -617,7 +677,8 @@ func _confirm_reset() -> void:
 
 func _notice(key: String, args: Dictionary) -> void:
 	toast.text = _t(key, args)
-	toast_seconds = 5.0
+	toast_panel.visible = true
+	toast_seconds = 4.0
 
 func _silent_audio_hook(_cue: String) -> void:
 	# Replace with pooled AudioStreamPlayers. No recordings ship in this slice.
@@ -640,7 +701,9 @@ func _process(delta: float) -> void:
 		_refresh()
 	if toast_seconds > 0:
 		toast_seconds -= delta
-		if toast_seconds <= 0: toast.text = ""
+		if toast_seconds <= 0:
+			toast.text = ""
+			toast_panel.visible = false
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:

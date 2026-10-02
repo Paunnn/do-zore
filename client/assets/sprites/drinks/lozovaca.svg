@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 120 120">
+<defs><linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbe7a0"/><stop offset="1" stop-color="#d9b04a"/></linearGradient>
+<clipPath id="ck2"><path d="M53 14 L67 14 L64 44 Q84 60 80 84 Q78 102 60 102 Q42 102 40 84 Q36 60 56 44 Z"/></clipPath></defs>
+<ellipse cx="60" cy="108" rx="40" ry="6" fill="#000" opacity="0.22"/>
+<g fill="#7fae4f" stroke="#4f7a2f" stroke-width="1.5"><circle cx="90" cy="70" r="7"/><circle cx="102" cy="70" r="7"/><circle cx="96" cy="81" r="7"/><circle cx="108" cy="81" r="6"/><circle cx="90" cy="92" r="7"/><circle cx="102" cy="93" r="7"/><circle cx="96" cy="103" r="6"/></g>
+<path d="M96 62 q4 -10 12 -12" stroke="#5a3a22" stroke-width="3" fill="none"/><path d="M100 56 q14 -8 18 4 q-12 6 -18 -4 Z" fill="#4f9a6a"/>
+<g clip-path="url(#ck2)"><rect x="30" y="10" width="60" height="100" fill="#dfeff0" opacity="0.2"/><rect x="30" y="64" width="60" height="44" fill="url(#gold)"/></g>
+<path d="M53 14 L67 14 L64 44 Q84 60 80 84 Q78 102 60 102 Q42 102 40 84 Q36 60 56 44 Z" fill="none" stroke="#cfe3e0" stroke-width="3" stroke-linejoin="round"/>
+<path d="M47 72 Q46 86 52 94" stroke="#fff" stroke-opacity="0.55" stroke-width="4" stroke-linecap="round" fill="none"/>
+</svg>

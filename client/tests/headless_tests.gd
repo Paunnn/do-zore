@@ -273,11 +273,32 @@ func _test_ui() -> void:
 		for tab: String in ["floor", "band", "menu", "upgrades", "venues", "settings", "leaderboard"]:
 			ui._open_tab(tab)
 			await process_frame
-			check(str(ui.active_tab) == tab and ui.body.get_child_count() > 0, "UI route " + locale + "/" + tab)
+			var shown: bool = ui.floor_view.visible and ui.floor_view.table_views.size() == game.simulation.tables.size() if tab == "floor" else ui.body.get_child_count() > 0
+			check(str(ui.active_tab) == tab and shown, "UI route " + locale + "/" + tab)
 	ui._open_tab("floor")
 	ui._show_songs(-1)
 	check(str(ui.modal_kind) == "song" and ui.modal_body.get_child_count() > 1, "song picker popup opens")
 	ui._close_modal(false)
+	ui.floor_view.stage_tapped.emit()
+	check(str(ui.modal_kind) == "song", "tapping the stage opens the song picker")
+	ui._close_modal(false)
+	game.simulation.closed_remaining = 0.0
+	var free_table: int = -1
+	for table_index in range(game.simulation.tables.size()):
+		if str(game.simulation.tables[table_index].guest_type).is_empty():
+			free_table = table_index
+			break
+	check(free_table >= 0 and game.simulation.spawn_guest("penzioner", free_table), "floor test guest arrives")
+	ui.floor_view.refresh()
+	var view = ui.floor_view.table_views[free_table]
+	check(view.occupied and view.back_guests[0].visible and view.order_bubble.visible and view.waiting, "seated guest and pending order are drawn")
+	var money_before_tap: int = int(game.save.money)
+	ui.floor_view.table_tapped.emit(free_table)
+	check(str(game.simulation.tables[free_table].order_status) == "preparing" and int(game.save.money) < money_before_tap, "tapping a waiting table serves it")
+	ui.floor_view.table_tapped.emit(free_table)
+	check(str(ui.modal_kind) == "song" and int(ui.modal_table) == free_table, "tapping a served table opens its details")
+	ui._close_modal(false)
+	game.simulation.depart(free_table)
 	ui._show_offline({"granted_amount": 0, "away_seconds": 3600, "counted_seconds": 3600, "cap_hours": 2.0, "capped": false, "source": "local"})
 	check(str(ui.modal_kind) == "offline", "offline earnings popup opens")
 	ui._close_modal(false)

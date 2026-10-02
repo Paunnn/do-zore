@@ -1,7 +1,9 @@
-# Do Zore balance tools
+# Do Zore tools
 
-These standard-library Python tools read the canonical `/data` directory. They
-never edit it or the contracts. Run from the repository root with Python 3.10+.
+The balance tools are standard-library Python that read the canonical `/data`
+directory; they never edit it or the contracts. The art tools in `tools/art` need
+the packages in `tools/art/requirements.txt`. Run everything from the repository
+root with Python 3.10+.
 
 ## Build the Godot bundle
 
@@ -55,6 +57,21 @@ tuning. No ads, purchases, network requests or live events are simulated.
 The assumptions are included in every report. Suggested numbers are experimental
 benchmarks, not approved balance changes. Longer multi-seed runs can take several
 minutes, depending on timestep and upgrades.
+
+## Rebuild the art
+
+```sh
+pip install -r tools/art/requirements.txt
+python tools/art/build_painted.py   # painted room, floor tile, table layers, musician frames
+python tools/art/build_sprites.py   # SVG guests, drinks and UI icons
+```
+
+`build_painted.py` cuts `client/art_source/painted` into the layers in
+`client/assets/art` and writes `layout.json` (see `client/art_source/README.md`).
+`build_sprites.py` writes every vector sprite into `client/assets/sprites`; edit the
+guest, drink or icon definitions there rather than the generated SVG files. After
+either script, run the Godot import step (`run_checks.py` does it) so the new
+`.import` files exist.
 
 ## Tests
 
