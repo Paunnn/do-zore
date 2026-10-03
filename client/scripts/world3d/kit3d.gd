@@ -106,15 +106,17 @@ uniform vec4 sparkle : source_color = vec4(1.0, 0.86, 0.55, 1.0);
 varying vec3 world;
 void vertex() {
 	world = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
-	VERTEX.y += sin(world.x * 0.7 + TIME * 1.2) * 0.04 + cos(world.z * 0.6 + TIME * 0.9) * 0.04;
+	VERTEX.y += sin(world.x * 0.7 + TIME * 1.2) * 0.03 + cos(world.z * 0.6 + TIME * 0.9) * 0.03;
 }
 void fragment() {
-	float waves = sin(world.x * 1.7 + TIME * 1.4 + sin(world.z * 0.8)) * sin(world.z * 1.3 - TIME * 1.1);
-	float ripple = sin((world.x + world.z) * 4.0 + TIME * 2.5) * 0.5 + 0.5;
-	ALBEDO = mix(deep.rgb, shallow.rgb, 0.5 + 0.35 * waves);
-	ROUGHNESS = 0.12;
-	SPECULAR = 0.9;
-	EMISSION = sparkle.rgb * smoothstep(0.93, 1.0, waves * ripple) * 0.8;
+	// A calm surface: a slow swell in the colour and thin moving ripples catching the lights.
+	float swell = sin(world.x * 0.33 + TIME * 0.4) * sin(world.z * 0.29 - TIME * 0.3);
+	float ripple = sin((world.x + world.z) * 2.6 + TIME * 1.5 + sin(world.x * 0.8 - world.z * 0.6) * 1.6);
+	ALBEDO = mix(deep.rgb, shallow.rgb, 0.5 + 0.14 * swell);
+	ROUGHNESS = 0.2;
+	SPECULAR = 0.6;
+	float patch = sin(world.x * 0.21 + TIME * 0.25) * sin(world.z * 0.17 - TIME * 0.2);
+	EMISSION = sparkle.rgb * smoothstep(0.99, 1.0, ripple) * smoothstep(0.25, 0.8, patch) * 0.3;
 }
 """
 	var water: ShaderMaterial = ShaderMaterial.new()

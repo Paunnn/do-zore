@@ -8,13 +8,20 @@ reasoning and the reference games are in `research.md`.
 
 - One night city is the map. The road from the birtija to the splav runs up the screen through
   the village edge, the old town, the centre and the river quay (`scripts/world3d/city3d.gd`).
-- Lit low-poly 3D seen through an orthographic camera pitched 40° and turned 45°. Moonlight is
-  cool and casts the only shadows; interiors, windows and street lamps are warm.
+- Lit low-poly 3D seen through an orthographic camera pitched 46° and turned 45°, zoomed so the
+  venue fills the screen edge to edge.
+- One night runs from a warm dusk through deep night to dawn ("do zore") in 20 minutes and opens
+  again at dusk with every new venue (`SKIES` in `scripts/ui/floor_view.gd`). The sun, then the
+  moon, casts the only shadows; interiors, windows and street lamps are always warm.
 - Shapes are simple primitives with vertex colours; surfaces that need grain (wood, cloth,
   cobbles, plaster, roof tiles) use the world-mapped textures from `tools/art/build_textures.py`.
 - The played venue is a roofless cut-away with low front walls; nothing between it and the
-  camera rises above one storey.
-- Characters are chibi: big heads, short limbs, a readable silhouette per guest type
+  camera rises above one storey. Nothing hangs over the tables either: the room is lit by lights
+  alone, and the lamps you see are sconces on the back walls and shaded pendants over the bar.
+- Keep the floor quiet: only the next table to buy is marked, tables stand on soft contact
+  shadows, and floor textures are low-contrast.
+- Characters are chibi at 1.3× life size so they read on a phone (cars and trees are scaled to
+  them): big heads, short limbs, a readable silhouette per guest type
   (šajkača and moustache for penzioneri, hoodies for studenti, black for ožalošćeni, suits and
   dresses for svatovi, suits and ties for biznismeni).
 
@@ -22,7 +29,7 @@ reasoning and the reference games are in `research.md`.
 
 | Role | Colour |
 | --- | --- |
-| Night background | `#0e1428` |
+| Sky | dusk `#2b2546`, night `#0e1830`, dawn `#3b3658` (background); sun `#ffb47e`, moon `#a9c2ff` |
 | Ink, outlines | `#2b1d14`; text outline `#3a1d0e` |
 | Primary action (gold) | `#ffd95a` → `#ffbf2e` → `#f0a01c`, lip `#a8620c` |
 | Decisive action (red) | `#de5246` → `#b8302f`, lip `#6a1916` |
@@ -46,9 +53,14 @@ Sizes on the 1080-wide design canvas: title 56, heading 40, name 32, body 28, sm
 
 ## Components (`scripts/ui/ui_kit.gd`, art from `tools/art/build_ui.py`)
 
-- **HUD pill** (`pill_dark`) for counters; the coin overlaps its left end.
+- **HUD**: one row (venue ribbon, money, the room chip with mood and guests, settings) and a slim
+  strip under it with the road to the next venue. Counters sit on `pill_dark`; the coin
+  overlaps the money pill. Now playing is a small chip just above the music button.
+- **Badges**: one red badge at a time, on the single most useful next step (open the next venue,
+  then an affordable upgrade, then the band).
 - **Round buttons** (`round_cream` small with an ink glyph; `round_gold` / `round_red` large
-  with a white glyph) with a Titan One caption and a red `!` badge slot.
+  with a white glyph) with a Titan One caption and a red `!` badge slot. Bottom: Mapa, Pesma,
+  Unapređenja; right edge: Bend, Piće, Rang.
 - **Lipped buttons** (`button_gold`, `button_red`, `button_paper`; a grey face when disabled);
   the face drops 7 px when pressed.
 - **Card** (`card`) with a red **header** ribbon, a round **close** button and the

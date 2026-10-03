@@ -10,8 +10,12 @@ signal arrived
 
 const Builder = preload("res://scripts/world3d/builder.gd")
 const Kit = preload("res://scripts/world3d/kit3d.gd")
-const WALK_SPEED = 2.1
+const WALK_SPEED = 2.4
 const HIP = 0.52
+## Characters are drawn a little larger than life so they read on a phone screen.
+const SIZE = 1.3
+## Height of a chair seat: a seated character's hips rest here whatever its size.
+const SEAT_HEIGHT = 0.5
 const SKIN = ["f6d3b3", "efc29c", "e0a77e", "c58a62", "8d5b3d"]
 ## Who plays in each band level, left to right on the stage.
 const BAND_LINEUPS = {
@@ -345,7 +349,7 @@ static func _prop_mesh(kind: String) -> ArrayMesh:
 func setup(new_look: Dictionary) -> void:
 	look = new_look
 	var build: float = float(look.build)
-	scale = Vector3.ONE * (1.0 + (build - 1.0) * 0.5)
+	scale = Vector3.ONE * SIZE * (1.0 + (build - 1.0) * 0.5)
 	rest = rest_positions(look)
 	skeleton = Skeleton3D.new()
 	var parents: Array = [-1, ROOT, BODY, BODY, BODY, BODY, BODY]
@@ -548,7 +552,7 @@ func _pose() -> void:
 	var legs: Vector2 = Vector2(swing, -swing)
 	if sit:
 		legs = Vector2(-1.45, -1.45)
-		bob = -0.02
+		bob = SEAT_HEIGHT / scale.y - HIP
 	var arm_l: Vector3 = Vector3(arms.x, 0, -spread)
 	var arm_r: Vector3 = Vector3(arms.y, 0, spread)
 	if instrument != null:

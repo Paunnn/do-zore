@@ -309,6 +309,7 @@ func _house(b: Builder, at: Vector3, size: Vector3, colour: Color, porch: bool) 
 		b.quad(Vector3(at.x + size.x * 0.5 + 0.7, 0.03, at.z + size.z + 1.2), Vector2(4.5, 4.5), Color(1, 1, 1, 0.55), "add:pool")
 
 func _tree(b: Builder, at: Vector3, size: float, kind: String) -> void:
+	size *= 0.85
 	b.cylinder(at, 0.16 * size, 1.6 * size, Color("4a3020"), "vc", 6)
 	match kind:
 		"fruit":
@@ -393,6 +394,7 @@ func _traffic() -> void:
 
 func _car(colour: Color) -> Node3D:
 	var node: Node3D = Node3D.new()
+	node.scale = Vector3.ONE * 0.85
 	var b: Builder = Builder.new()
 	b.box(Vector3(0, 0.3, 0), Vector3(1.7, 0.6, 3.8), colour, "vc_gloss")
 	b.box(Vector3(0, 0.9, -0.2), Vector3(1.5, 0.55, 2.0), colour.lightened(0.1), "vc_gloss")
@@ -498,7 +500,7 @@ func _bridge(b: Builder) -> void:
 
 func _far_bank(b: Builder) -> void:
 	var far_t: float = -RIVER_FAR / sqrt(2.0)
-	_diag_box(b, far_t + 18.0, 0.0, Vector3(320, 0.5, 40.0), Color("2a2f3a"), "vc", -0.3)
+	_diag_box(b, far_t + 18.0, 0.0, Vector3(320, 0.5, 40.0), Color("44493f"), "vc", -0.3)
 	var dir_up: Vector3 = Vector3(-1, 0, -1).normalized()
 	var dir_right: Vector3 = Vector3(1, 0, -1).normalized()
 	var u: float = -140.0
@@ -508,7 +510,10 @@ func _far_bank(b: Builder) -> void:
 		var t: float = far_t + rng.randf_range(10, 22)
 		var at: Vector3 = dir_up * t + dir_right * u
 		var basis: Basis = Basis(dir_right, Vector3.UP, -dir_up)
-		b.box_xf(Transform3D(basis, at), Vector3(w, h, 10), Color("1d2438"), "vc")
+		# Muted blocks across the water: lit by the sky at dusk, silhouettes by night.
+		var facade: Color = [Color("4c536b"), Color("5b5a6e"), Color("665d6a"), Color("4f5b6c")][rng.randi() % 4]
+		b.box_xf(Transform3D(basis, at), Vector3(w, h, 10), facade, "vc")
+		b.box_xf(Transform3D(basis, at + Vector3(0, h, 0)), Vector3(w + 0.4, 0.5, 10.4), facade.darkened(0.3), "vc")
 		for row in range(int(h / 3.0)):
 			for col in range(int(w / 2.2)):
 				if rng.randf() < 0.4:

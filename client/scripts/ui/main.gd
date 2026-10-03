@@ -254,84 +254,83 @@ func _build_shell() -> void:
 	_build_nav(column)
 	_build_side()
 
+## One row at the top (venue, money, mood and guests, settings) and a slim strip under it with
+## the road to the next venue.
 func _build_hud(column: VBoxContainer) -> void:
-	var hud: VBoxContainer = UIKit.column(UIKit.S)
+	var hud: VBoxContainer = UIKit.column(UIKit.XS)
 	hud_panel = hud
 	column.add_child(hud)
 	var top: HBoxContainer = UIKit.row(UIKit.S)
 	hud.add_child(top)
-	# Money: a big coin over the left end of a dark pill; earnings fly to it.
-	var money: HBoxContainer = UIKit.row(UIKit.XS)
-	money_icon = UIKit.picture(_icon("coin"), 64)
-	money.add_child(money_icon)
-	money_label = _label("", 42, Color.WHITE, "number")
-	money_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	money_label.clip_text = true
-	money_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	UIKit.outlined(money_label, 10)
-	money.add_child(money_label)
-	_counter(top, money, 1.9)
-	var mood: HBoxContainer = UIKit.row(UIKit.XS)
-	mood_icon = UIKit.picture(_icon("mood_neutral"), 50)
-	mood.add_child(mood_icon)
-	mood_bar = UIKit.bar(UIKit.GOLD, 18)
-	mood_bar.min_value = DataCatalog.data.economy.mood.min
-	mood_bar.max_value = DataCatalog.data.economy.mood.max
-	mood_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	mood_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	mood.add_child(mood_bar)
-	_counter(top, mood, 1.1)
-	top.add_child(UIKit.round_button("trophy", func(): _open_tab("leaderboard"), "cream", 90))
-	top.add_child(UIKit.round_button("gear", func(): _open_tab("settings"), "cream", 90))
-	# The venue's name on a red ribbon, guests in the room, and the road to the next venue.
-	var second: HBoxContainer = UIKit.row(UIKit.S)
-	hud.add_child(second)
-	venue_label = _label("", 34, Color.WHITE, "display")
+	venue_label = _label("", 32, Color.WHITE, "display")
 	venue_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	venue_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	UIKit.outlined(venue_label, 9, Color("5a1210"))
 	var ribbon: PanelContainer = UIKit.panel("header", venue_label)
 	ribbon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ribbon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	second.add_child(ribbon)
-	var guests: HBoxContainer = UIKit.row(UIKit.XS)
-	guests.add_child(UIKit.tinted("people", 40, Color.WHITE))
+	top.add_child(ribbon)
+	# Money: a big coin over the left end of a dark pill; earnings fly to it.
+	var money: HBoxContainer = UIKit.row(UIKit.XS)
+	money_icon = UIKit.picture(_icon("coin"), 60)
+	money.add_child(money_icon)
+	money_label = _label("", 40, Color.WHITE, "number")
+	money_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	money_label.clip_text = true
+	money_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	UIKit.outlined(money_label, 10)
+	money.add_child(money_label)
+	_counter(top, money, 1.0)
+	# The room in one chip: its mood face over a thin bar, and the guests in it.
+	var room: HBoxContainer = UIKit.row(UIKit.XS)
+	var face: VBoxContainer = UIKit.column(2)
+	face.alignment = BoxContainer.ALIGNMENT_CENTER
+	mood_icon = UIKit.picture(_icon("mood_neutral"), 44)
+	face.add_child(mood_icon)
+	mood_bar = UIKit.bar(UIKit.GOLD, 8)
+	mood_bar.min_value = DataCatalog.data.economy.mood.min
+	mood_bar.max_value = DataCatalog.data.economy.mood.max
+	mood_bar.custom_minimum_size = Vector2(48, 8)
+	face.add_child(mood_bar)
+	room.add_child(face)
+	room.add_child(UIKit.tinted("people", 34, Color.WHITE))
 	guest_label = _label("", 32, Color.WHITE, "number")
 	guest_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	guest_label.custom_minimum_size = Vector2(44, 0)
 	UIKit.outlined(guest_label, 8)
-	guests.add_child(guest_label)
-	var guest_pill: PanelContainer = UIKit.panel("pill_dark", guests)
-	guest_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	guest_pill.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	second.add_child(guest_pill)
+	room.add_child(guest_label)
+	var room_pill: PanelContainer = UIKit.panel("pill_dark", room)
+	room_pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	room_pill.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	top.add_child(room_pill)
+	top.add_child(UIKit.round_button("gear", func(): _open_tab("settings"), "cream", 84))
+	# The road to the next venue: a slim progress strip; tap it for Lokali.
 	goal_button = Button.new()
 	goal_button.focus_mode = Control.FOCUS_NONE
-	goal_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	goal_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	goal_button.custom_minimum_size = Vector2(0, 76)
+	goal_button.custom_minimum_size = Vector2(0, 52)
 	for state in ["normal", "hover", "pressed", "focus", "hover_pressed"]:
-		goal_button.add_theme_stylebox_override(state, UIKit.box("pill_dark"))
+		goal_button.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	goal_button.pressed.connect(func(): _open_tab("venues"))
-	second.add_child(goal_button)
-	var goal: HBoxContainer = UIKit.row(UIKit.S)
+	hud.add_child(goal_button)
+	goal_bar = UIKit.bar(UIKit.GOLD, 40)
+	goal_bar.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	goal_bar.offset_left = 150
+	goal_bar.offset_right = -150
+	goal_bar.offset_top = 6
+	goal_bar.offset_bottom = -6
+	goal_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	goal_button.add_child(goal_bar)
+	var goal: HBoxContainer = UIKit.row(UIKit.XS)
+	goal.alignment = BoxContainer.ALIGNMENT_CENTER
 	goal.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	goal.offset_left = 18
-	goal.offset_right = -24
-	goal.offset_top = 6
-	goal.offset_bottom = -12
-	goal_button.add_child(goal)
-	goal.add_child(UIKit.tinted("map", 40, UIKit.GOLD))
-	var goal_text: VBoxContainer = UIKit.column(3)
-	goal_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	goal_text.alignment = BoxContainer.ALIGNMENT_CENTER
-	goal.add_child(goal_text)
+	goal.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	goal_bar.add_child(goal)
+	goal.add_child(UIKit.tinted("map", 28, Color.WHITE))
 	goal_label = _label("", UIKit.TINY, Color.WHITE, "label")
 	goal_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	goal_label.clip_text = true
-	UIKit.outlined(goal_label, 6, UIKit.OUTLINE, false)
-	goal_text.add_child(goal_label)
-	goal_bar = UIKit.bar(UIKit.GOLD, 14)
-	goal_text.add_child(goal_bar)
+	goal_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	UIKit.outlined(goal_label, 7, UIKit.OUTLINE, false)
+	goal.add_child(goal_label)
 
 func _counter(parent: HBoxContainer, content: Control, ratio: float) -> void:
 	var chip: PanelContainer = UIKit.panel("pill_dark", content)
@@ -402,14 +401,14 @@ func _build_nav(column: VBoxContainer) -> void:
 		if key == "music":
 			music_button = holder.get_meta("button")
 
-## Right edge: the band and the drinks menu.
+## Right edge: the band, the drinks menu and the leaderboard.
 func _build_side() -> void:
-	side_column = UIKit.column(UIKit.M)
+	side_column = UIKit.column(UIKit.S)
 	side_column.set_anchors_preset(Control.PRESET_CENTER_RIGHT)
 	side_column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(side_column)
-	for spec in [["band", "nav_band", _t("nav_band")], ["menu", "nav_menu", _t("nav_menu")]]:
-		var holder: Control = UIKit.round_button(spec[1], _open_tab.bind(spec[0]), "cream", 100, spec[2])
+	for spec in [["band", "nav_band", _t("nav_band")], ["menu", "nav_menu", _t("nav_menu")], ["leaderboard", "trophy", _t("nav_board")]]:
+		var holder: Control = UIKit.round_button(spec[1], _open_tab.bind(spec[0]), "cream", 92, spec[2])
 		side_column.add_child(holder)
 		nav_buttons[spec[0]] = holder
 
@@ -510,14 +509,15 @@ func _refresh() -> void:
 	if not next.is_empty():
 		var cost: float = maxf(1.0, float(next.unlock_cost))
 		goal_ready = float(GameState.save.money) >= cost
-		goal_label.text = _t("goal_ready" if goal_ready else "goal_next", {"name": DataCatalog.localized(next.name)})
+		goal_label.text = _t("goal_ready", {"name": DataCatalog.localized(next.name)}) if goal_ready else \
+			_t("goal_next", {"name": DataCatalog.localized(next.name)}) + "  ·  " + _t("goal_share", {"have": UIKit.amount(int(GameState.save.money), DataCatalog.locale), "need": UIKit.amount(int(cost), DataCatalog.locale)})
 		goal_bar.max_value = cost
 		goal_bar.value = minf(cost, float(GameState.save.money))
 		UIKit.set_bar_color(goal_bar, Color("5bd16a") if goal_ready else UIKit.GOLD)
-	# Red badges on the buttons whose screens hold something affordable.
-	_badge("upgrades", _any_allowed("upgrades"))
-	_badge("band", _any_allowed("band_levels"))
-	_badge("venues", goal_ready)
+	# One red badge, on the single most useful thing to do next.
+	var best: String = "venues" if goal_ready else "upgrades" if _any_allowed("upgrades") else "band" if _any_allowed("band_levels") else ""
+	for key in ["venues", "upgrades", "band"]:
+		_badge(key, key == best)
 	for entry in purchase_buttons:
 		if is_instance_valid(entry.button): entry.button.disabled = not entry.allowed.call()
 	for button in song_buttons:

@@ -9,15 +9,26 @@ signal slot_tapped(index: int)
 signal venue_tapped(id: String)
 
 const City = preload("res://scripts/world3d/city3d.gd")
+const Kit = preload("res://scripts/world3d/kit3d.gd")
 const VenueWorld = preload("res://scripts/world3d/venue_world.gd")
 const UIKit = preload("res://scripts/ui/ui_kit.gd")
 const WorldData = preload("res://scripts/world/world_data.gd")
 const TAP_SLOP = 18.0
-const PITCH = -40.0
+const PITCH = -46.0
 const YAW = 45.0
 const CLOSE = 13.0
 const FAR = 150.0
 const MAP_ZOOM = 46.0
+## One night takes this long: warm evening, deep night, then dawn ("do zore"), and round again.
+const NIGHT_SECONDS = 1200.0
+## Sky keyframes over the night (0..1): background, ambient light, the sun/moon and the river.
+const SKIES = [
+	{"at": 0.0, "bg": Color("2b2546"), "ambient": Color("948ac0"), "ambient_energy": 0.66, "sun": Color("ffb47e"), "sun_energy": 1.0, "pitch": -42.0, "yaw": 58.0, "deep": Color("1f2b55"), "shallow": Color("3c4a80")},
+	{"at": 0.35, "bg": Color("0e1830"), "ambient": Color("50639a"), "ambient_energy": 0.62, "sun": Color("a9c2ff"), "sun_energy": 0.5, "pitch": -58.0, "yaw": 40.0, "deep": Color("0d1a33"), "shallow": Color("1f375e")},
+	{"at": 0.7, "bg": Color("0e1830"), "ambient": Color("50639a"), "ambient_energy": 0.62, "sun": Color("a9c2ff"), "sun_energy": 0.5, "pitch": -58.0, "yaw": 40.0, "deep": Color("0d1a33"), "shallow": Color("1f375e")},
+	{"at": 0.88, "bg": Color("3b3658"), "ambient": Color("a99fca"), "ambient_energy": 0.7, "sun": Color("ffc9ad"), "sun_energy": 0.92, "pitch": -40.0, "yaw": 30.0, "deep": Color("25335f"), "shallow": Color("4a5588")},
+	{"at": 1.0, "bg": Color("2b2546"), "ambient": Color("948ac0"), "ambient_energy": 0.66, "sun": Color("ffb47e"), "sun_energy": 1.0, "pitch": -42.0, "yaw": 58.0, "deep": Color("1f2b55"), "shallow": Color("3c4a80")},
+]
 const INK = Color("2b1d14")
 
 var viewport_container: SubViewportContainer
@@ -64,6 +75,8 @@ var flight: Tween
 ## release_flight() so the player sees the glide across the city.
 var hold_flight: bool = false
 var held_focus: Array = []
+## Where we are in the night (see SKIES); every new venue opens at dusk.
+var night_clock: float = 0.03
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -140,18 +153,18 @@ func _build_environment() -> void:
 func _build_song_bar() -> void:
 	# Now playing: a dark inset plaque with the genre note and a brass progress line.
 	var line: HBoxContainer = UIKit.row(UIKit.S)
-	song_note = UIKit.tinted("note", 44, UIKit.LAMP)
+	song_note = UIKit.tinted("note", 36, UIKit.LAMP)
 	song_note.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	line.add_child(song_note)
 	var column: VBoxContainer = UIKit.column(4)
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	line.add_child(column)
-	song_title = UIKit.label("", "label", 26, Color.WHITE)
+	song_title = UIKit.label("", "label", 23, Color.WHITE)
 	UIKit.outlined(song_title, 6, UIKit.OUTLINE, false)
 	song_title.autowrap_mode = TextServer.AUTOWRAP_OFF
 	song_title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	column.add_child(song_title)
-	song_progress = UIKit.bar(UIKit.GOLD, 14)
+	song_progress = UIKit.bar(UIKit.GOLD, 10)
 	column.add_child(song_progress)
 	song_bar = UIKit.panel("pill_dark", line)
 	song_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -195,8 +208,11 @@ func _on_resized() -> void:
 func _place_overlays() -> void:
 	if song_bar == null:
 		return
-	song_bar.size = Vector2(minf(size.x - 120, 760), 0)
-	song_bar.position = Vector2((size.x - song_bar.size.x) / 2, top_inset + UIKit.S)
+	# Now playing sits just above the music button, out of the way of the room.
+	song_bar.size = Vector2(minf(size.x - 280, 620), 0)
+	song_bar.reset_size()
+	song_bar.size.x = minf(size.x - 280, 620)
+	song_bar.position = Vector2((size.x - song_bar.size.x) / 2, size.y - bottom_inset - song_bar.size.y - UIKit.XS)
 
 # --------------------------------------------------------------------------------------------
 # World and map
@@ -225,19 +241,49 @@ func _ensure_world() -> void:
 	world.build(venue, int(max_tables.get(venue, 6)))
 	_build_pins()
 	var focus: Vector3 = world.focus_point()
-	var width: float = clampf((world.lay.w + world.lay.d) * 0.56, 17.0, 27.0)
+	var width: float = venue_width()
 	if previous.is_empty() or not city.lots.has(previous):
 		target = focus
 		view_width = width
 		_apply_camera()
-	elif hold_flight:
-		var old: Dictionary = city.lots[previous]
-		target = old.origin + Vector3(old.lay.w * 0.5, 0, old.lay.d * 0.5)
-		_apply_camera()
-		held_focus = [focus, width]
 	else:
-		fly_to(focus, width, city.lots[previous].origin)
+		# A new venue: a new night, and the camera glides over from the old one.
+		night_clock = 0.03
+		if hold_flight:
+			var old: Dictionary = city.lots[previous]
+			target = old.origin + Vector3(old.lay.w * 0.5, 0, old.lay.d * 0.5)
+			_apply_camera()
+			held_focus = [focus, width]
+		else:
+			fly_to(focus, width, city.lots[previous].origin)
 	world.sync(GameState.simulation, GameState.save)
+
+## The default zoom on the venue being played: the room fills the screen edge to edge.
+func venue_width() -> float:
+	return clampf((world.lay.w + world.lay.d) * 0.5, 12.5, 23.0)
+
+## The sky at a point of the night, blended between its keyframes.
+static func sky_at(clock: float) -> Dictionary:
+	for i in range(SKIES.size() - 1):
+		var a: Dictionary = SKIES[i]
+		var b: Dictionary = SKIES[i + 1]
+		if clock <= b.at:
+			var t: float = smoothstep(a.at, b.at, clock)
+			var result: Dictionary = {}
+			for key in a:
+				result[key] = a[key].lerp(b[key], t) if a[key] is Color else lerpf(a[key], b[key], t)
+			return result
+	return SKIES[0]
+
+func _apply_sky(sky: Dictionary) -> void:
+	environment.background_color = sky.bg
+	environment.ambient_light_color = sky.ambient
+	moon.light_color = sky.sun
+	moon.light_energy = sky.sun_energy
+	moon.rotation_degrees = Vector3(sky.pitch, sky.yaw, 0)
+	var water: ShaderMaterial = Kit.material("water")
+	water.set_shader_parameter("deep", sky.deep)
+	water.set_shader_parameter("shallow", sky.shallow)
 
 ## Glide across the map: out over the city, then down into the new venue.
 func fly_to(point: Vector3, width: float, from: Vector3 = Vector3.INF) -> void:
@@ -426,7 +472,10 @@ func _process(delta: float) -> void:
 	if touches.is_empty() and velocity.length() > 5.0:
 		_pan(velocity * delta)
 		velocity = velocity.lerp(Vector2.ZERO, clampf(delta * 5.0, 0.0, 1.0))
-	environment.ambient_light_energy = lerpf(environment.ambient_light_energy, 0.62 - 0.25 * world.darkness, clampf(delta * 3.0, 0.0, 1.0))
+	night_clock = fmod(night_clock + delta / NIGHT_SECONDS, 1.0)
+	var sky: Dictionary = sky_at(night_clock)
+	_apply_sky(sky)
+	environment.ambient_light_energy = lerpf(environment.ambient_light_energy, sky.ambient_energy * (1.0 - 0.4 * world.darkness), clampf(delta * 3.0, 0.0, 1.0))
 	_update_overlay()
 
 # --------------------------------------------------------------------------------------------
@@ -506,7 +555,7 @@ func _tap(screen_point: Vector2) -> void:
 		var pin_hit: bool = map_pins.has(id) and map_pins[id].visible and map_pins[id].get_rect().has_point(screen_point)
 		if rect.has_point(Vector2(ground.x, ground.z)) or pin_hit:
 			if id == venue_id and view_width >= MAP_ZOOM:
-				fly_to(world.focus_point(), clampf((world.lay.w + world.lay.d) * 0.56, 17.0, 27.0))
+				fly_to(world.focus_point(), venue_width())
 			elif id != venue_id:
 				venue_tapped.emit(id)
 			return
@@ -530,7 +579,7 @@ func show_lot(id: String) -> void:
 	fly_to(lot.origin + Vector3(lot.lay.w * 0.5, 0, lot.lay.d * 0.5), clampf((lot.lay.w + lot.lay.d) * 0.9, 24.0, 44.0))
 
 func show_venue() -> void:
-	fly_to(world.focus_point(), clampf((world.lay.w + world.lay.d) * 0.56, 17.0, 27.0))
+	fly_to(world.focus_point(), venue_width())
 
 # --------------------------------------------------------------------------------------------
 # Payouts and music notes

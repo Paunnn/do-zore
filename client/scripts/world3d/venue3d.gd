@@ -149,7 +149,7 @@ static func _room(b: Builder, lay: Dictionary, t: Dictionary, rng: RandomNumberG
 	var trim: Color = Color(t.trim)
 	var white: Color = Color.WHITE
 	# Floor slab with a darker plinth showing at the cut edges.
-	b.box(Vector3(w / 2.0, -0.25, d / 2.0), Vector3(w + 0.6, 0.25, d + 0.6), Color("8d8a86"), "tex:sidewalk:0.4")
+	b.box(Vector3(w / 2.0, -0.28, d / 2.0), Vector3(w + 0.6, 0.25, d + 0.6), Color("8d8a86"), "tex:sidewalk:0.4")
 	b.box(Vector3(w / 2.0, -0.02, d / 2.0), Vector3(w, 0.02, d), white, t.floor)
 	# Back walls with a wainscot, a skirting board and a cornice.
 	b.box(Vector3(w / 2.0, 0, -0.15), Vector3(w + 0.3, WALL_H, 0.3), Color(t.wall_tint), t.wall)
@@ -253,7 +253,9 @@ static func _stage(b: Builder, lay: Dictionary, t: Dictionary, rng: RandomNumber
 			b.cylinder(Vector3(0.12, 0.35, z), 0.17, WALL_H - 0.35, curtain.darkened(0.18 * (k % 2)), "vc", 8)
 		b.box(Vector3(s.x / 2.0, WALL_H - 0.3, 0.2), Vector3(s.x, 0.4, 0.25), Color("d9a531"), "vc_metal")
 
-## Pendant lamps over the floor with real warm lights; returns the lights for flicker and dimming.
+## Warm lights over the floor (lights only: nothing hangs between the camera and the tables),
+## sconces on the back walls and shaded pendants over the bar. Returns the lights for flicker
+## and dimming.
 static func _lamps(root: Node3D, lay: Dictionary, t: Dictionary) -> Array:
 	var b: Builder = Builder.new()
 	var lights: Array = []
@@ -264,29 +266,46 @@ static func _lamps(root: Node3D, lay: Dictionary, t: Dictionary) -> Array:
 	for r in range(rows):
 		for c in range(cols):
 			spots.append(Vector3(lay.w * (c + 1.0) / (cols + 1.0), 2.6, lay.top + (lay.d - lay.top) * (r + 0.5) / rows))
-	spots.append(Vector3((lay.bar_from + lay.bar_to) / 2.0, 2.7, 1.8))
+	spots.append(Vector3((lay.bar_from + lay.bar_to) / 2.0, 2.4, 1.9))
 	spots.append(Vector3(lay.stage.x / 2.0, 2.8, lay.stage.y / 2.0 + 0.6))
 	for spot in spots:
 		var pos: Vector3 = spot
 		if lay.id == "splav":
 			pos.y = 3.0
-		else:
-			b.cylinder(pos + Vector3(0, 0.25, 0), 0.012, WALL_H + 2.0 - pos.y, Color("1d1d22"), "vc", 4)
-		match lay.id:
-			"kafana", "restoran":
-				# Chandelier: brass ring with candle bulbs.
-				b.cylinder(pos, 0.42, 0.05, Color("d9a531"), "vc_metal", 16)
-				for k in range(6):
-					var a: float = k * TAU / 6.0
-					b.sphere(pos + Vector3(cos(a) * 0.42, 0.12, sin(a) * 0.42), 0.07, Color.WHITE, "glow:%s:3.0" % t.lamp.to_lower())
-			"birtija":
-				b.cylinder(pos + Vector3(0, 0.05, 0), 0.25, 0.18, Color("3a3a2a"), "vc_metal", 12, 0.3)
-				b.sphere(pos, 0.1, Color.WHITE, "glow:ffbf6a:3.5")
-			_:
-				b.sphere(pos, 0.09, Color.WHITE, "glow:ffd890:3.0")
 		lights.append(Kit.omni(root, pos - Vector3(0, 0.15, 0), colour, 1.6, 6.5))
+	if lay.id != "splav":
+		var lamp: String = t.lamp.to_lower()
+		for k in range(int(lay.w / 4.0)):
+			var x: float = 4.6 + k * 4.0
+			if x < lay.w - 1.0 and (x < lay.bar_from - 0.4 or x > lay.bar_to + 0.4) and x > lay.stage.x + 0.4:
+				_sconce(b, Vector3(x, 2.2, 0.0), 0.0, lamp, lay.id)
+		for k in range(int((lay.d - lay.top) / 4.0)):
+			var z: float = lay.top + 4.0 + k * 4.0
+			if z < lay.d - 1.0:
+				_sconce(b, Vector3(0.0, 2.2, z), PI / 2.0, lamp, lay.id)
+		var length: float = lay.bar_to - lay.bar_from
+		var count: int = maxi(2, int(length / 2.4))
+		for k in range(count):
+			_pendant(b, Vector3(lay.bar_from + (k + 0.5) * length / count, 2.45, 1.45), lamp, lay.id)
 	b.commit(root, false)
 	return lights
+
+## A wall lamp: a small plate and a glowing shade standing off the wall.
+static func _sconce(b: Builder, at: Vector3, turn: float, lamp: String, id: String) -> void:
+	var xf: Transform3D = Transform3D(Basis(Vector3.UP, turn), at)
+	var metal: Color = Color("d9a531") if id in ["kafana", "restoran"] else Color("3a3a32")
+	b.box_xf(xf * Transform3D(Basis.IDENTITY, Vector3(0, -0.12, 0.03)), Vector3(0.12, 0.26, 0.04), metal, "vc_metal")
+	b.box_xf(xf * Transform3D(Basis.IDENTITY, Vector3(0, -0.05, 0.1)), Vector3(0.04, 0.04, 0.14), metal, "vc_metal")
+	b.cylinder_xf(xf * Transform3D(Basis.IDENTITY, Vector3(0, -0.04, 0.18)), 0.1, 0.2, Color.WHITE, "glow:%s:1.6" % lamp, 10, 0.7)
+
+## A lamp over the bar under an opaque shade, so from above it reads as a lamp and not a glare.
+static func _pendant(b: Builder, at: Vector3, lamp: String, id: String) -> void:
+	var shade: Color = {"birtija": Color("2f4a3a"), "kafana": Color("b8862a"), "restoran": Color("f4efe4")}.get(id, Color("2f4a3a"))
+	var key: String = "vc_metal" if id == "kafana" else "vc_gloss"
+	b.cylinder(at + Vector3(0, 0.22, 0), 0.012, WALL_H + 0.2 - at.y, Color("1d1d22"), "vc", 4)
+	b.cylinder(at, 0.26, 0.24, shade, key, 14, 0.3)
+	b.cylinder(at - Vector3(0, 0.01, 0), 0.25, 0.02, Color.WHITE, "glow:%s:1.2" % lamp, 14)
+	b.sphere(at - Vector3(0, 0.03, 0), 0.07, Color.WHITE, "glow:%s:2.2" % lamp, Vector3.ONE, 8)
 
 static func _dining_set(b: Builder, id: String, t: Dictionary, rng: RandomNumberGenerator) -> void:
 	var wood: Color = Color(t.table)
@@ -448,8 +467,18 @@ static func _splav_decor(b: Builder, lay: Dictionary, rng: RandomNumberGenerator
 		b.box(Vector3(x, 0.35, lay.stage.y - 0.4), Vector3(0.6, 1.4, 0.5), Color("1d1d22"), "vc_gloss")
 		b.cylinder_xf(Transform3D(Basis(Vector3.RIGHT, PI / 2.0), Vector3(x, 0.8, lay.stage.y - 0.14)), 0.2, 0.03, Color("3a3a44"), "vc", 12)
 	for z in [lay.top + 3.0, lay.top + 11.0]:
-		b.cylinder_xf(Transform3D(Basis(Vector3.FORWARD, PI / 2.0), Vector3(w + 0.55, 0.8, z)), 0.3, 0.08, Color("f4f1ea"), "vc_gloss", 14)
+		b.cylinder_xf(Transform3D(Basis(Vector3.FORWARD, PI / 2.0), Vector3(w + 0.55, 0.8, z)), 0.3, 0.08, Color("f26a2a"), "vc_gloss", 14)
+		for a in [0.0, PI / 2.0, PI, PI * 1.5]:
+			b.box(Vector3(w + 0.6, 0.8 + sin(a) * 0.26, z + cos(a) * 0.26), Vector3(0.1, 0.1, 0.1), Color("f4f1ea"), "vc")
 	b.add(Kit.unit("quad"), Transform3D(Basis(Vector3.UP, PI / 2.0) * Basis.from_scale(Vector3(2.6, 1, 4.2)), Vector3(lay.stage.x / 2.0 + 0.5, 0.01, lay.stage.y + 1.5)), Color.WHITE, "uv:rug_blue")
+
+## A thin cord between two points (string lights).
+static func _cord(b: Builder, from: Vector3, to: Vector3) -> void:
+	var along: Vector3 = to - from
+	var up: Vector3 = along.normalized()
+	var side: Vector3 = up.cross(Vector3.FORWARD if absf(up.dot(Vector3.FORWARD)) < 0.9 else Vector3.RIGHT).normalized()
+	var basis: Basis = Basis(side, up, side.cross(up))
+	b.cylinder_xf(Transform3D(basis, from), 0.012, along.length(), Color("1d1d22"), "vc", 4)
 
 ## The splav: a deck on pontoons, railings all round and a canopy frame of string lights.
 static func _raft(b: Builder, lay: Dictionary, rng: RandomNumberGenerator) -> void:
@@ -457,7 +486,7 @@ static func _raft(b: Builder, lay: Dictionary, rng: RandomNumberGenerator) -> vo
 	var d: float = lay.d
 	for k in range(int(w / 3.0) + 1):
 		b.box(Vector3(1.0 + k * 3.0 - 0.5, -0.9, d / 2.0), Vector3(1.6, 0.8, d + 0.6), Color("c9ced6"), "vc_gloss")
-	b.box(Vector3(w / 2.0, -0.2, d / 2.0), Vector3(w + 0.8, 0.22, d + 0.8), Color("6e5a44"), "vc")
+	b.box(Vector3(w / 2.0, -0.26, d / 2.0), Vector3(w + 0.8, 0.22, d + 0.8), Color("6e5a44"), "vc")
 	b.box(Vector3(w / 2.0, -0.02, d / 2.0), Vector3(w + 0.6, 0.02, d + 0.6), Color.WHITE, "tex:planks_deck:0.4")
 	var rail: Color = Color("f4f1ea")
 	var x: float = -0.2
@@ -485,14 +514,34 @@ static func _raft(b: Builder, lay: Dictionary, rng: RandomNumberGenerator) -> vo
 			posts.append(Vector3(px, 0, pz))
 	for post in posts:
 		b.cylinder(post, 0.07, 3.2, Color("e8e2d6"), "vc_gloss", 8)
-	for k in range(int(w / 0.8)):
-		for zz in [lay.top - 0.5, (lay.top - 0.5 + d) / 2.0, d]:
-			var bx: float = k * 0.8 + 0.4
-			var sag: float = sin(bx / w * PI) * 0.35
-			b.sphere(Vector3(bx, 3.1 - sag, zz), 0.05, Color.WHITE, "glow:ffd890:4.0", Vector3.ONE, 6)
-	# The back wall of the splav is the bar hut with a canvas roof over the bar.
-	b.box(Vector3((lay.bar_from + lay.bar_to) / 2.0, 0, -0.1), Vector3(lay.bar_to - lay.bar_from + 0.6, 2.6, 0.2), Color("6e5a44"), "tex:planks_deck:0.5")
-	b.prism(Vector3((lay.bar_from + lay.bar_to) / 2.0, 2.6, 1.0), Vector3(lay.bar_to - lay.bar_from + 1.0, 0.7, 2.6), Color("f4f1ea"))
+	# String lights: bulbs on a sagging cord between the posts.
+	for zz in [lay.top - 0.5, d]:
+		var previous: Vector3 = Vector3(0, 3.1, zz)
+		var steps: int = int(w / 0.8)
+		for k in range(1, steps + 1):
+			var bx: float = w * k / steps
+			var point: Vector3 = Vector3(bx, 3.1 - sin(bx / w * PI) * 0.45, zz)
+			_cord(b, previous, point)
+			b.sphere(point - Vector3(0, 0.06, 0), 0.06, Color.WHITE, "glow:ffd890:2.4", Vector3.ONE, 6)
+			previous = point
+	# The back wall of the splav is the bar hut under a striped canvas awning, like its roof on the map.
+	var mid: float = (lay.bar_from + lay.bar_to) / 2.0
+	var span: float = lay.bar_to - lay.bar_from + 1.0
+	b.box(Vector3(mid, 0, -0.1), Vector3(span - 0.4, 2.6, 0.2), Color("6e5a44"), "tex:planks_deck:0.5")
+	var stripes: int = int(span / 0.5)
+	var slope: float = atan2(0.6, 2.6)
+	for k in range(stripes):
+		var sx: float = lay.bar_from - 0.5 + (k + 0.5) * span / stripes
+		var stripe: Color = Color("c0322c") if k % 2 == 0 else Color("f4f1ea")
+		b.box_xf(Transform3D(Basis(Vector3.RIGHT, slope), Vector3(sx, 2.65, 1.25)), Vector3(span / stripes + 0.01, 0.06, 2.7), stripe, "vc")
+		b.box(Vector3(sx, 2.15, 2.55), Vector3(span / stripes + 0.01, 0.25, 0.04), stripe, "vc")
+	for px in [lay.bar_from - 0.4, lay.bar_to + 0.4]:
+		b.cylinder(Vector3(px, 0, 2.5), 0.05, 2.3, Color("e8e2d6"), "vc_gloss", 8)
+	# Planters along the rail.
+	for px in [w * 0.25, w * 0.75]:
+		b.box(Vector3(px, 0, d - 0.1), Vector3(1.4, 0.45, 0.45), Color("6e5a44"), "tex:planks_deck:0.6")
+		for k in range(4):
+			b.sphere(Vector3(px - 0.5 + k * 0.33, 0.6, d - 0.1), 0.22, Color("4f8a46").darkened(0.12 * (k % 2)), "vc", Vector3.ONE, 8)
 
 # ---------------------------------------------------------------------------------------------
 # Exterior: the venue as a building on the map
@@ -526,7 +575,7 @@ static func build_exterior(root: Node3D, lay: Dictionary, state: String) -> void
 	var storeys: int = int(t.storeys)
 	var height: float = 3.4 * storeys
 	var wall: Color = Color(t.facade_tint)
-	b.box(Vector3(w / 2.0, -0.25, d / 2.0), Vector3(w + 0.6, 0.25, d + 0.6), Color("8d8a86"), "tex:sidewalk:0.4")
+	b.box(Vector3(w / 2.0, -0.28, d / 2.0), Vector3(w + 0.6, 0.25, d + 0.6), Color("8d8a86"), "tex:sidewalk:0.4")
 	b.box(Vector3(w / 2.0, 0, d / 2.0), Vector3(w, height, d), wall, t.facade if id != "birtija" else "tex:plaster_warm:0.25")
 	b.box(Vector3(w / 2.0, 0, d / 2.0), Vector3(w + 0.12, 0.7, d + 0.12), wall.darkened(0.3), "tex:stone_wall:0.5")
 	for s in range(1, storeys + 1):

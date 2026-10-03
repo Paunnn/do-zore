@@ -28,10 +28,12 @@ The vertical slice intentionally does not make real network requests.
   happy tables get up to dance. Leaving guests pay; the coins fly to the money counter.
 - Matching music improves table mood and eventual bakšiš. Mismatches and long waits reduce
   mood. Nearby unhappy groups can trigger a fight.
-- The HUD floats over the city: money and room mood at the top with the leaderboard and
-  settings, the venue on its red ribbon with the guest count and the road to the next venue
-  (tap it for **Lokali**). **Bend** and **Piće** sit on the right; **Mapa**, **Pesma** and
-  **Unapređenja** at the bottom. A red badge means something there is affordable.
+- The HUD floats over the city in one row: the venue on its red ribbon, money, the room's mood
+  and guests, and settings; under it a slim strip shows the road to the next venue (tap it for
+  **Lokali**). **Bend**, **Piće** and **Rang** sit on the right; **Mapa**, **Pesma** and
+  **Unapređenja** at the bottom, with the song playing just above **Pesma**. One red badge
+  marks the most useful next step.
+- The night turns from a warm dusk to deep night and on to dawn; every new venue opens at dusk.
 - **Mapa** pulls the camera out over the whole city: the birtija at the village edge, the
   kafana in the old town, the restoran on the central square and the splav on the river. The
   next venue shows its price; tap a venue to see it in **Lokali**. Buying it plays a short
@@ -63,8 +65,9 @@ clouds, coins and notes over their 3D anchors.
   `kit3d.gd` holds the shared materials (vertex colours, world-mapped textures, one glow shader
   for every lamp and window, the river shader).
 
-Budget, measured with a full venue at 1080×1920: about 500 draw calls at venue zoom and under
-1000 with the whole map in view (one draw per character; contact shadows are one MultiMesh).
+Budget, measured with a full venue: 400–550 draw calls at venue zoom and under 1000 with the
+whole map in view (one draw per character; the contact shadows under people and tables are one
+MultiMesh).
 
 The interface is the modern-kafana kit in `scripts/ui/ui_kit.gd` (floating pills, glossy round
 and lipped buttons, cream cards with a red header over a tablecloth trim); see
@@ -170,7 +173,7 @@ The read-only Python progression simulator and its assumptions are documented in
 ## TODO / explicit stubs
 
 - Add a kitchen/cook for the kuhinja upgrade and characters for the inspection and VIP events.
-- Add pedestrians to the city streets and a day/dawn lighting pass for the end of the night.
+- Add pedestrians to the city streets.
 - Attach licensed music and sound to the silent hooks; settings already expose
   the intended controls.
 - Add real HTTP/auth/cloud integration after the offline slice. Mock behavior

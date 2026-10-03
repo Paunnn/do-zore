@@ -93,8 +93,8 @@ def parquet(name: str, base: str, seed: int) -> None:
     """Basket-weave parquet: blocks of three slats, alternating direction."""
     rng = np.random.default_rng(seed)
     out = np.zeros((N, N, 3), np.float32)
-    block = 64
-    slat = block / 3
+    block = 128
+    slat = block / 4
     fine = noise(N, 32, seed, 3)
     y, x = np.mgrid[0:N, 0:N].astype(np.float32)
     bx, by = (x // block).astype(int), (y // block).astype(int)
@@ -102,7 +102,7 @@ def parquet(name: str, base: str, seed: int) -> None:
     local = np.where(horizontal, y % block, x % block)
     along = np.where(horizontal, x, y)
     slat_id = (local // slat).astype(int) + bx * 7 + by * 13
-    tones = rng.uniform(0.82, 1.12, size=200)
+    tones = rng.uniform(0.92, 1.06, size=200)
     level = tones[slat_id % 200] * (0.9 + 0.1 * np.sin(along * 0.08 + fine * 6)) * (0.94 + 0.1 * fine)
     out = shade(rgb(base), level)
     edge = (local % slat < 1.6) | (x % block < 1.6) | (y % block < 1.6)
@@ -200,8 +200,8 @@ def slabs(name: str, base: str, cell: int, seed: int) -> None:
 def grass(name: str) -> None:
     n = noise(N, 8, 21, 5)
     blades = noise(N, 128, 22, 2)
-    out = shade(rgb("#3f7a3a"), 0.75 + 0.35 * n + 0.15 * blades)
-    out[..., 0] *= 0.9 + 0.2 * noise(N, 4, 23, 2)
+    out = shade(rgb("#5f8748"), 0.88 + 0.16 * n + 0.07 * blades)
+    out[..., 0] *= 0.95 + 0.1 * noise(N, 4, 23, 2)
     save(name, out)
 
 
@@ -415,10 +415,10 @@ def main() -> None:
     planks("planks_walnut", "#7a4a2a", 32, 2, "#2a160c", 0.14)
     planks("planks_deck", "#9a8468", 64, 3, "#2e261e", 0.12, weathered=True)
     planks("planks_honey", "#b98250", 32, 4, "#4a2c18", 0.1)
-    parquet("parquet", "#a86a3c", 5)
+    parquet("parquet", "#8e6a4c", 5)
     checker_marble("marble_checker")
-    gingham("cloth_red", "#c0322c")
-    gingham("cloth_blue", "#2f5fa8")
+    gingham("cloth_red", "#c0322c", cell=64)
+    gingham("cloth_blue", "#1f4f9a", cell=64)
     linen("linen", "#f7f3ea")
     voronoi_stones("cobble", "#6e6a66", "#2c2a28", 260, 7)
     voronoi_stones("stone_wall", "#9a9184", "#5a544c", 90, 8, 0.15)

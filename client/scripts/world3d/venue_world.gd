@@ -156,10 +156,15 @@ func _person(kind: String, variant: int):
 	people.append(person)
 	return person
 
+## Soft contact shadows under every person and every open table set, in one draw call.
 func _update_shadows() -> void:
 	var multimesh: MultiMesh = shadows.multimesh
 	var count: int = 0
 	var alive: Array = []
+	for slot in slots:
+		if not slot.locked and count < multimesh.instance_count:
+			multimesh.set_instance_transform(count, Transform3D(Basis.from_scale(Vector3(3.4, 1, 3.4)), Vector3(slot.center.x, 0.012, slot.center.y)))
+			count += 1
 	for person in people:
 		if not is_instance_valid(person) or person.is_queued_for_deletion():
 			continue
@@ -208,6 +213,8 @@ func sync(simulation, save: Dictionary) -> void:
 		if slot.locked == open:
 			_set_locked(slot, not open)
 		slot.plus.visible = index == count and count < slots.size()
+		# Only the next table to buy is drawn on the floor; the rest of the room stays clean.
+		slot.marker.visible = slot.locked and index == count
 		if not open:
 			continue
 		var table: Dictionary = simulation.tables[index]
