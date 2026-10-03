@@ -22,17 +22,16 @@ reasoning and the reference games are in `research.md`.
   alone, and the lamps you see are sconces on the back walls and shaded pendants over the bar.
 - Keep the floor quiet: only the next table to buy is marked, tables stand on soft contact
   shadows, and floor textures are low-contrast.
-- Characters are chibi at 1.3× life size so they read on a phone (cars and trees are scaled to
-  them): the head is about 40 % of the height, with dark oval eyes and a highlight, brows, rosy
-  cheeks and a small smile; a rounded body, short limbs, round hands and shoes; hair as a cap
-  with a fringe. Clothes and hair carry fabric textures from one atlas (knit cardigans, denim,
-  plaid and striped shirts, pinstripe and tweed suits, satin dresses, a lace veil, a floral
-  marama, hair strands), so each character is still one material and one draw call. Their
-  shader raises the weave as gentle relief, shades toward the feet and adds a rim of the sky's
-  light (warm at dusk, cool by night) so people stand out from the floor. A readable silhouette per guest type
-  (šajkača and moustache for penzioneri, a marama for their wives, hoodies for studenti, black
-  for ožalošćeni, suits and dresses for svatovi, suits and ties for biznismeni, the long white
-  apron for konobari).
+- Characters are Kenney's blocky chibi "Mini Characters" (CC0), drawn at about 1.45 m so they
+  read on a phone (cars and trees are scaled to them). Each role picks fitting models and
+  repaints their palette cells: bald and bearded penzioneri in muted cardigans with a šajkača
+  or flat cap, grey-haired grandmothers with a dark headband; studenti in bright tops and
+  denim; svatovi in dark suits with a flower and bright dresses; biznismeni in navy and grey
+  with glasses; ožalošćeni all in black; konobari in white shirts, black waistcoats and a long
+  white apron; a bearded barmen with a bow tie; the izbacivač in black with sunglasses; the band
+  in matching suits. Hats and extras are built onto the bones and merged with the body, so a
+  character is one mesh, one material and one draw call; a soft rim light lifts them off the
+  floor.
 - The city has life: guests walk to the door along the pavement, townspeople stroll round the
   nearby blocks.
 

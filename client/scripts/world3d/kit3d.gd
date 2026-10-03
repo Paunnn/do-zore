@@ -17,7 +17,6 @@ extends RefCounted
 ##   "add:NAME"      unshaded additive (light pools, glows)
 ##   "blend:NAME"    unshaded alpha blend (contact shadows)
 ##   "water"         animated river surface
-##   "people"        vertex-coloured characters over the fabric/hair/skin atlas
 const TEX = "res://assets/textures/"
 
 static var _materials: Dictionary = {}
@@ -41,8 +40,6 @@ static func material(key: String) -> Material:
 			result = _water()
 		"glowvc":
 			result = _glow()
-		"people":
-			result = _people()
 		"add", "blend":
 			var unshaded: StandardMaterial3D = StandardMaterial3D.new()
 			unshaded.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -113,49 +110,6 @@ void fragment() {
 	var glow: ShaderMaterial = ShaderMaterial.new()
 	glow.shader = shader
 	return glow
-
-## The characters: the fabric atlas tinted by vertex colour, with the weave raised as relief
-## (bump from the atlas itself, no tangents needed), a little shade toward the feet and a rim
-## of light round the silhouette so people stand out from the floor. The rim's colour follows
-## the sky (set_shader_parameter("rim", ...)).
-static func _people() -> ShaderMaterial:
-	var shader: Shader = Shader.new()
-	shader.code = """
-shader_type spatial;
-render_mode diffuse_burley, specular_schlick_ggx;
-uniform sampler2D atlas : source_color, filter_linear_mipmap_anisotropic;
-uniform vec4 rim : source_color = vec4(1.0, 0.82, 0.62, 1.0);
-uniform float rim_strength = 0.2;
-uniform float relief = 0.08;
-varying float height;
-void vertex() {
-	height = VERTEX.y;
-}
-void fragment() {
-	vec3 cloth = texture(atlas, UV).rgb;
-	// The relief reads a softer mip so the weave shows as gentle ridges, not glitter.
-	float h = dot(textureLod(atlas, UV, 2.5).rgb, vec3(0.3333));
-	vec3 tint = COLOR.rgb;
-	float shade = mix(0.72, 1.0, smoothstep(0.0, 0.55, height));
-	ALBEDO = cloth * tint * shade;
-	ROUGHNESS = 0.78;
-	SPECULAR = 0.35;
-	// Bump from the atlas brightness with screen-space derivatives (surface gradient).
-	vec3 dpdx = dFdx(VERTEX);
-	vec3 dpdy = dFdy(VERTEX);
-	vec3 r1 = cross(dpdy, NORMAL);
-	vec3 r2 = cross(NORMAL, dpdx);
-	float det = dot(dpdx, r1);
-	vec3 grad = sign(det) * (dFdx(h) * r1 + dFdy(h) * r2);
-	NORMAL = normalize(abs(det) * NORMAL - relief * grad);
-	float edge = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 4.0);
-	EMISSION = rim.rgb * edge * rim_strength;
-}
-"""
-	var people: ShaderMaterial = ShaderMaterial.new()
-	people.shader = shader
-	people.set_shader_parameter("atlas", texture("people_atlas"))
-	return people
 
 static func _water() -> ShaderMaterial:
 	var shader: Shader = Shader.new()

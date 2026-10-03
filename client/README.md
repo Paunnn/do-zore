@@ -64,22 +64,25 @@ clouds, coins and notes over their 3D anchors.
 - `scripts/world3d/venue_world.gd` turns simulation state into people and props: parties walk
   in from the street along an A* grid, sit, order, drink, dance and leave paying; waiters carry
   trays from the bar; the band plays; konobar, ozvučenje, dekor, izbacivač and sef levels show.
-- `scripts/world3d/people3d.gd` builds each character from a look (guest type, staff or
-  musician) as one skinned mesh with a procedural skeleton and poses it in code.
+- `scripts/world3d/people3d.gd` dresses each character from a look (guest type, staff or
+  musician): one of Kenney's rigged "Mini Characters" (`assets/people`, CC0) with its palette
+  repainted per role, our hats, glasses and clothing extras built onto its bones, all merged
+  into one skinned mesh; Kenney's walk, idle, sit and hold clips play underneath the drinking,
+  dancing, cheering, arguing and playing poses set in code.
 - `scripts/world3d/builder.gd` merges primitives per material and per spatial chunk;
   `kit3d.gd` holds the shared materials (vertex colours, world-mapped photo-scanned textures
-  with relief and shine maps, one glow shader for every lamp and window, the river shader and
-  the character shader: a fabric atlas with relief from the weave, shade toward the feet and a
-  rim of the sky's light).
+  with relief and shine maps, one glow shader for every lamp and window, the river shader).
 
-Budget, measured with a full venue: 360–540 draw calls and 320–360 k triangles at venue zoom,
-660–880 draw calls and under 540 k triangles with the whole map in view (one draw per character;
+Budget, measured with a full venue: 360–545 draw calls and 220–240 k triangles at venue zoom,
+655–890 draw calls and under 360 k triangles with the whole map in view (one draw per character;
 the contact shadows under people and tables are one MultiMesh, the walkers' another).
 
 The interface is the modern-kafana kit in `scripts/ui/ui_kit.gd` (floating pills, glossy round
 and lipped buttons, cream cards with a red header over a tablecloth trim); see
 `design/README.md`. Fonts: Shrikhand, Titan One and Nunito (SIL Open Font License, licences in
-`assets/fonts`). All art is generated from code: see `tools/README.md`. The venue, band and
+`assets/fonts`). The characters are Kenney's Mini Characters (CC0, `assets/people`); the
+large surfaces are Poly Haven scans (CC0, `assets/textures/SCANNED.md`); everything else is
+generated from code: see `tools/README.md`. The venue, band and
 guest pictures in `assets/ui/{venues,bands,guests}` are renders of the 3D models made with
 `tests/render_venue_cards.gd`.
 

@@ -1,6 +1,6 @@
-"""Painted textures for the 3D city and venues: cloths, wallpapers, logs, rugs, paintings, signs,
-light pools and the characters' fabric atlas. Floors, streets, grass, plaster, stone, brick and
-roof tiles are photo scans written by fetch_scanned_textures.py.
+"""Painted textures for the 3D city and venues: cloths, wallpapers, logs, rugs, paintings, signs
+and light pools. Floors, streets, grass, plaster, stone, brick and roof tiles are photo scans
+written by fetch_scanned_textures.py.
 
 Tiling textures are seamless 512x512 PNGs; the game maps them in world space (triplanar), so one
 texture covers floors of any size. Rugs, paintings, signs and light pools are single images
@@ -242,115 +242,6 @@ def slot_marker(name: str) -> None:
     img.save(OUT / f"{name}.png", optimize=True)
 
 
-# ---------------------------------------------------------------------------------------------
-# People: one atlas of fabrics, hair, skin and leather for the characters
-# ---------------------------------------------------------------------------------------------
-
-PEOPLE_CELL = 256
-# Cell order, left to right and top to bottom; client/scripts/world3d/people3d.gd names them.
-PEOPLE_CELLS = [
-    "skin", "cotton", "knit", "denim",
-    "wool", "pinstripe", "hair", "leather",
-    "fleece", "satin", "linen", "floral",
-    "plaid", "stripes", "felt", "lace",
-]
-
-
-def _people_cell(kind: str, seed: int) -> np.ndarray:
-    """A greyscale detail map (about 0.6..1.0) that the character's vertex colour tints.
-
-    Every cell wraps left to right, so the seam at the back of a body or a head does not show.
-    """
-    n = PEOPLE_CELL
-    y, x = np.mgrid[0:n, 0:n].astype(np.float32)
-    soft = noise(n, 8, seed, 4)
-    fine = noise(n, 64, seed + 1, 2)
-    two_pi = 2 * math.pi
-    if kind == "skin":
-        out = 0.95 + 0.04 * soft + 0.015 * fine
-    elif kind == "cotton":
-        weave = 0.5 + 0.25 * np.sin(x * two_pi / 4) + 0.25 * np.sin(y * two_pi / 4)
-        creases = noise(n, 4, seed + 5, 3)
-        out = 0.8 + 0.05 * weave + 0.13 * creases + 0.03 * fine
-    elif kind == "knit":
-        # Vertical ribs of V stitches.
-        rib = np.abs(((x / 16.0) % 1.0) - 0.5) * 2
-        stitch = np.abs((((y + np.abs((x % 16) - 8)) / 12.0) % 1.0) - 0.5) * 2
-        out = 0.68 + 0.2 * (1 - rib) + 0.08 * (1 - stitch) + 0.05 * soft
-    elif kind == "denim":
-        twill = 0.5 + 0.5 * np.sin((x + y * 2) * two_pi / 8)
-        seam = np.exp(-(((x % 128) - 64) / 2.5) ** 2)
-        out = 0.72 + 0.08 * twill + 0.16 * soft + 0.04 * fine + 0.12 * seam
-    elif kind == "wool":
-        # Fine herringbone.
-        band = (x // 16).astype(int) % 2
-        slope = np.where(band == 0, x + y, y - x)
-        out = 0.8 + 0.1 * (0.5 + 0.5 * np.sin(slope * two_pi / 10)) + 0.06 * soft + 0.03 * fine
-    elif kind == "pinstripe":
-        stripe = (np.abs(((x / 16.0) % 1.0) - 0.5) < 0.05).astype(np.float32)
-        out = 0.82 + 0.06 * soft + 0.03 * fine + 0.18 * stripe
-    elif kind == "hair":
-        # Strands run down the head (along v), with a soft shine band near the crown.
-        streak = np.tile(noise(n, 32, seed + 4, 2)[:1], (n, 1))
-        shine = np.exp(-((y - n * 0.3) / (n * 0.08)) ** 2)
-        out = 0.66 + 0.26 * streak + 0.12 * shine * streak + 0.04 * soft
-    elif kind == "leather":
-        out = 0.86 + 0.08 * soft + 0.05 * np.exp(-((y - n * 0.35) / (n * 0.1)) ** 2)
-    elif kind == "fleece":
-        out = 0.84 + 0.1 * soft + 0.05 * fine
-    elif kind == "satin":
-        # A soft sheen with a small damask flower repeat.
-        cx = (x % 64) - 32
-        cy = (y % 64) - 32
-        r = np.sqrt(cx * cx + cy * cy)
-        petals = np.cos(np.arctan2(cy, cx) * 5) * 4
-        flower = ((r < 12 + petals) & (r > 3)).astype(np.float32)
-        out = 0.84 + 0.06 * np.sin(y * two_pi / n * 2) + 0.08 * flower + 0.03 * soft
-    elif kind == "linen":
-        weave = 0.5 + 0.25 * np.sin(x * two_pi / 3) + 0.25 * np.sin(y * two_pi / 3)
-        folds = 0.5 + 0.5 * np.sin(x * two_pi / 64 + soft * 2)
-        out = 0.86 + 0.05 * weave + 0.07 * folds + 0.02 * fine
-    elif kind == "floral":
-        # A folk-print headscarf: light flowers with darker leaves on a mid ground.
-        out = 0.7 + 0.04 * soft
-        for cx0, cy0, size in [(32, 32, 24), (96, 96, 18), (160, 32, 24), (224, 96, 18),
-                               (32, 160, 18), (96, 224, 24), (160, 160, 18), (224, 224, 24)]:
-            dx = (x - cx0 + n / 2) % n - n / 2
-            dy = (y - cy0 + n / 2) % n - n / 2
-            r = np.sqrt(dx * dx + dy * dy)
-            angle = np.arctan2(dy, dx)
-            petal = r < size * (0.7 + 0.3 * np.cos(angle * 5))
-            leaf = (np.abs(dx - size) < size * 0.4) & (np.abs(dy + size * 0.4) < size * 0.2)
-            out = np.where(leaf, 0.45, out)
-            out = np.where(petal, 1.0, out)
-            out = np.where(r < size * 0.25, 0.8, out)
-    elif kind == "plaid":
-        vx = ((x // 16).astype(int) % 4 == 0).astype(np.float32)
-        vy = ((y // 16).astype(int) % 4 == 0).astype(np.float32)
-        thin_x = (np.abs((x % 64) - 40) < 2).astype(np.float32)
-        thin_y = (np.abs((y % 64) - 40) < 2).astype(np.float32)
-        out = 0.95 - 0.16 * vx - 0.16 * vy - 0.1 * thin_x - 0.1 * thin_y + 0.03 * fine
-    elif kind == "stripes":
-        out = np.where((y // 16).astype(int) % 2 == 0, 1.0, 0.72) + 0.03 * soft
-    elif kind == "felt":
-        out = 0.8 + 0.12 * fine + 0.06 * soft
-    else:  # lace
-        cx = (x % 32) - 16
-        cy = (y % 32) - 16
-        r = np.sqrt(cx * cx + cy * cy)
-        out = np.where((r > 6) & (r < 9), 1.0, 0.62) + 0.08 * ((np.abs(cx) < 1) | (np.abs(cy) < 1))
-    return np.clip(out, 0.0, 1.0)
-
-
-def people_atlas() -> None:
-    n = PEOPLE_CELL
-    atlas = np.zeros((n * 4, n * 4, 3), np.float32)
-    for index, kind in enumerate(PEOPLE_CELLS):
-        row, col = divmod(index, 4)
-        atlas[row * n:(row + 1) * n, col * n:(col + 1) * n] = _people_cell(kind, 100 + index * 7)[..., None] * 255.0
-    save("people_atlas", atlas)
-
-
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     gingham("cloth_red", "#c0322c", cell=64)
@@ -369,7 +260,6 @@ def main() -> None:
     sign("sign_restoran", "Restoran", "#1d2433", "#f3e8cf", "#0e1428")
     sign("sign_splav", "Splav", "#0f3346", "#ffffff", "#0b1d2a")
     slot_marker("slot")
-    people_atlas()
     radial("glow", 128, (255, 214, 140), 1.8)
     radial("pool", 256, (255, 196, 110), 1.3)
     radial("shadow", 128, (0, 0, 0), 1.2)
