@@ -9,6 +9,8 @@ uniform sampler2D albedo_tex : source_color, filter_linear_mipmap_anisotropic, r
 uniform int mode = 0;
 uniform float tex_scale = 0.5;
 uniform float gloss = 0.0;
+// The broad soft sheen (none on cloth).
+uniform float sheen = 0.12;
 uniform float metal = 0.0;
 uniform vec3 shade_color : source_color = vec3(0.46, 0.4, 0.58);
 uniform float band = 0.12;
@@ -52,6 +54,6 @@ void light() {
 	float nh = dot(NORMAL, h);
 	// A broad soft sheen where the light glances back at the camera (moonlit roofs, lamplit
 	// floors), and a small hard highlight on glossy things.
-	float shine = smoothstep(0.8, 0.97, nh) * 0.12 + smoothstep(0.93, 0.96, nh) * gloss;
+	float shine = smoothstep(0.8, 0.97, nh) * sheen + smoothstep(0.93, 0.96, nh) * gloss;
 	SPECULAR_LIGHT += LIGHT_COLOR * ATTENUATION * shine * lit;
 }

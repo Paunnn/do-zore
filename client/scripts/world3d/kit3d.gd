@@ -8,6 +8,7 @@ extends RefCounted
 ##
 ## Material keys:
 ##   "vc"            matte, vertex-coloured
+##   "vc_matte"      cloth: no sheen at all (hats, scarves, bags)
 ##   "vc_gloss"      glossy (varnished wood, bottles, cars)
 ##   "vc_metal"      brass and steel
 ##   "glow:RRGGBB:E" emissive colour E times (lamps, lit windows)
@@ -65,6 +66,8 @@ static func material(key: String) -> Material:
 			var toon: ShaderMaterial = ShaderMaterial.new()
 			toon.shader = WORLD_SHADER
 			match parts[0]:
+				"vc_matte":
+					toon.set_shader_parameter("sheen", 0.0)
 				"vc_gloss":
 					toon.set_shader_parameter("gloss", 0.8)
 				"vc_metal":

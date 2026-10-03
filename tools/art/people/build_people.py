@@ -28,6 +28,7 @@ import bpy
 import numpy as np
 from mathutils import Vector
 from mathutils.bvhtree import BVHTree
+from mathutils.kdtree import KDTree
 
 CACHE = os.environ.get("DO_ZORE_ART_CACHE", os.path.expanduser("~/.cache/do-zore-art"))
 MPFB_DATA = os.path.join(CACHE, "mpfb2/src/mpfb/data")
@@ -64,28 +65,50 @@ MAN = {"gender": 1.0, "age": 0.5, "weight": 0.5, "muscle": 0.5, "height": 0.55}
 WOMAN = {"gender": 0.0, "age": 0.5, "weight": 0.5, "muscle": 0.45, "height": 0.5}
 SHOES_M, SHOES_W = ("clothes", "shoes03", "shoes", True), ("clothes", "shoes04", "shoes", True)
 LOOKS = {
-    # Guests
-    "deda": {"macro": dict(MAN, age=0.85, weight=0.72, muscle=0.45, height=0.4), "hair": "short02",
-             "parts": [("clothes", "toigo_fisherman_sweater", "top", False),
+    # Guests. Penzioneri: a deda in a flat cap and a knitted sweater, one in an old suit and a fedora, a
+    # village one in overalls (he gets a šajkača in the game); a baba with a bun in a long-sleeved dress
+    # and one in a tiered dress (she gets a headscarf).
+    "deda": {"macro": dict(MAN, age=0.95, weight=0.8, muscle=0.35, height=0.35), "hair": "short02",
+             "parts": [("clothes", "jujube_newsboy_cap", "hat", False), ("clothes", "toigo_fisherman_sweater", "top", False),
                        ("clothes", "toigo_wool_pants", "bottom", False), ("clothes", "shoes01", "shoes", True)]},
-    "deda2": {"macro": dict(MAN, age=0.9, weight=0.6, height=0.45), "hair": "short01",
-              "parts": [("clothes", "male_casualsuit05", "top", True), ("clothes", "shoes01", "shoes", True)]},
-    "baba": {"style": {"leg_slim": 0.8}, "macro": dict(WOMAN, age=0.85, weight=0.75, muscle=0.4, height=0.35), "hair": "toigo_curled_under_bob",
-             "parts": [("clothes", "toigo_shift_dress", "top", False), SHOES_W]},
-    "student": {"macro": dict(MAN, age=0.45, weight=0.45), "hair": "short04",
-                "parts": [("clothes", "elvs_crude_t-shirt_male", "top", False),
-                          ("clothes", "cortu_cargo_pants", "bottom", False), ("clothes", "shoes06", "shoes", True)]},
-    "studentkinja": {"macro": dict(WOMAN, age=0.45, weight=0.45), "hair": "ponytail01",
-                     "parts": [("clothes", "toigo_basic_tucked_t-shirt", "top", False),
-                               ("clothes", "toigo_wool_pants", "bottom", False), ("clothes", "shoes05", "shoes", True)]},
+    "deda2": {"macro": dict(MAN, age=0.95, weight=0.7, height=0.4), "hair": "short01",
+              "parts": [("clothes", "fedora01", "hat", False), ("clothes", "toigo_male_suit_3", "top", True),
+                        ("clothes", "shoes01", "shoes", True)]},
+    "deda3": {"macro": dict(MAN, age=0.95, weight=0.75, muscle=0.4, height=0.38), "hair": "short02",
+              "parts": [("clothes", "male_worksuit01", "top", True), ("clothes", "shoes02", "shoes", True)]},
+    "baba": {"style": {"leg_slim": 0.8}, "macro": dict(WOMAN, age=0.95, weight=0.8, muscle=0.35, height=0.32),
+             "hair": "rehmanpolanski_hair_bun_brown", "parts": [("clothes", "toigo_cut_out_dress", "top", False), SHOES_W]},
+    "baba2": {"style": {"leg_slim": 0.8}, "macro": dict(WOMAN, age=0.95, weight=0.85, muscle=0.35, height=0.3),
+              "hair": "short02", "parts": [("clothes", "toigo_dress_with_tiered_skirt", "top", False), SHOES_W]},
+    # Studenti, the classic kind: logo t-shirt, jeans and white trainers (a backpack in the game), or a
+    # t-shirt or a knitted sweater over jeans.
+    "student": {"macro": dict(MAN, age=0.4, weight=0.45), "hair": "cortu_short_messy_hair",
+                "parts": [("clothes", "male_casualsuit04", "top", True), ("clothes", "shoes05", "shoes", True)]},
+    "student2": {"macro": dict(MAN, age=0.4, weight=0.5), "hair": "short04",
+                 "parts": [("clothes", "elvs_crude_t-shirt_male", "top", False),
+                           ("clothes", "toigo_wool_pants", "bottom", False), ("clothes", "shoes06", "shoes", True)]},
+    "studentkinja": {"macro": dict(WOMAN, age=0.4, weight=0.45), "hair": "ponytail01",
+                     "parts": [("clothes", "female_casualsuit01", "top", True), ("clothes", "shoes05", "shoes", True)]},
+    "studentkinja2": {"macro": dict(WOMAN, age=0.4, weight=0.45), "hair": "long01",
+                      "parts": [("clothes", "toigo_fisherman_sweater", "top", False),
+                                ("clothes", "toigo_wool_pants", "bottom", False), ("clothes", "shoes05", "shoes", True)]},
+    # Svatovi: the groom, a guest in a bright suit (a šajkača in the game), the bride (veil in the game)
+    # and a guest in a dress (flower wreath).
     "svat": {"macro": dict(MAN, age=0.5), "hair": "short01",
              "parts": [("clothes", "toigo_male_suit_tie_and_jacket", "top", True), SHOES_M]},
-    "svatica": {"style": {"leg_slim": 0.8}, "macro": dict(WOMAN, age=0.5), "hair": "toigo_curled_under_bob_with_bangs",
+    "svat2": {"macro": dict(MAN, age=0.7, weight=0.7), "hair": "short02",
+              "parts": [("clothes", "toigo_male_double-breasted_suit", "top", False), SHOES_M]},
+    "mlada": {"style": {"leg_slim": 0.8}, "macro": dict(WOMAN, age=0.45), "hair": "rehmanpolanski_hair_bun_brown",
+              "parts": [("clothes", "toigo_dress_with_tiered_skirt", "top", False), SHOES_W]},
+    "svatica": {"style": {"leg_slim": 0.8}, "macro": dict(WOMAN, age=0.5), "hair": "toigo_curled_under_bob",
                 "parts": [("clothes", "toigo_halter_dress_knee_length", "top", False), SHOES_W]},
-    "biznismen": {"macro": dict(MAN, age=0.62, weight=0.65), "hair": "short03",
+    # Biznismeni: a sharp suit and slicked hair; a bald one with a belly (gold chain in the game).
+    "biznismen": {"macro": dict(MAN, age=0.62, weight=0.65), "hair": "short04",
                   "parts": [("clothes", "toigo_male_suit_3", "top", True), SHOES_M]},
+    "biznismen2": {"macro": dict(MAN, age=0.7, weight=0.95, muscle=0.4), "hair": "",
+                   "parts": [("clothes", "toigo_male_double-breasted_suit", "top", True), SHOES_M]},
     "biznismenka": {"macro": dict(WOMAN, age=0.55), "hair": "toigo_inverted_bob",
-                    "parts": [("clothes", "female_elegantsuit01", "top", True), SHOES_W]},
+                    "parts": [("clothes", "toigo_female_suit", "top", True), SHOES_W]},
     "ozaloscen": {"macro": dict(MAN, age=0.6, weight=0.55), "hair": "short01",
                   "parts": [("clothes", "toigo_male_double-breasted_suit", "top", False), SHOES_M]},
     "ozaloscena": {"style": {"leg_slim": 0.8}, "macro": dict(WOMAN, age=0.65, weight=0.6), "hair": "toigo_curled_under_bob",
@@ -405,6 +428,40 @@ def load_pixels(image, size):
     return px[ys.astype(int)][:, xs.astype(int)]
 
 
+def tops_over_bottoms(meshes, parts):
+    """Untucked tops hang over the trousers: wherever the waistband comes out through the top, the top is
+    pushed out past it (after decimation, which moves vertices)."""
+    tops = [o for o in meshes if parts.get(o.name, ("",))[0] == "top" and "tucked" not in o.name.lower()]
+    bottoms = [o for o in meshes if parts.get(o.name, ("",))[0] == "bottom"]
+    if not (tops and bottoms):
+        return
+    points = []
+    for obj in bottoms:
+        co = np.empty(len(obj.data.vertices) * 3, np.float32)
+        obj.data.vertices.foreach_get("co", co)
+        points.append(co.reshape(-1, 3))
+    points = np.concatenate(points)
+    tree = KDTree(len(points))
+    for i, point in enumerate(points):
+        tree.insert(point, i)
+    tree.balance()
+    for obj in tops:
+        obj.data.update()
+        n = len(obj.data.vertices)
+        co = np.empty(n * 3, np.float32)
+        obj.data.vertices.foreach_get("co", co)
+        nor = np.empty(n * 3, np.float32)
+        obj.data.vertices.foreach_get("normal", nor)
+        co, nor = co.reshape(-1, 3), nor.reshape(-1, 3)
+        for i in range(n):
+            out = max((float(np.dot(np.array(found) - co[i], nor[i])) for found, _, _ in tree.find_range(co[i], 0.045)),
+                      default=-1.0)
+            if out > -0.008:
+                co[i] += nor[i] * (out + 0.008)
+        obj.data.vertices.foreach_set("co", co.reshape(-1))
+        obj.data.update()
+
+
 def finish(bm, parts, face, path):
     armature = bm.parent
     meshes = [o for o in bpy.data.objects if o.type == 'MESH']
@@ -437,7 +494,10 @@ def finish(bm, parts, face, path):
                 keep = np.maximum(keep, group_mask(obj, bone))
             co -= nor * (0.005 * (1.0 - keep))[:, None]
         elif parts.get(obj.name, ("", True))[0] in ("top", "bottom"):
-            co += nor * 0.004
+            # Tops hang over the trousers (tucked-in shirts go under them).
+            region = parts[obj.name][0]
+            tucked = "tucked" in obj.name.lower()
+            co += nor * (0.003 if region == "bottom" else (0.002 if tucked else 0.007))
         obj.data.vertices.foreach_set("co", co.reshape(-1))
         obj.data.update()
     eye_l, eye_r, lips = face["eye_l"], face["eye_r"], face["lips"]
@@ -504,6 +564,7 @@ def finish(bm, parts, face, path):
         face_uv = mesh.uv_layers.new(name="Face")
         face_uv.data.foreach_set("uv", np.stack([cu[loops], 1.0 - cv[loops]], axis=1).reshape(-1).astype(np.float32))
         decimate(obj, BUDGET.get(cell, 2000))
+    tops_over_bottoms(meshes, parts)
     # One mesh, one material.
     bones = {b.name for b in armature.data.bones}
     for obj in meshes:

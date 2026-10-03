@@ -14,6 +14,7 @@ extends Node3D
 signal arrived
 
 const Builder = preload("res://scripts/world3d/builder.gd")
+const Kit = preload("res://scripts/world3d/kit3d.gd")
 const MODELS = "res://assets/people/"
 const PERSON_SHADER = preload("res://shaders/person.gdshader")
 const INK_SHADER = preload("res://shaders/ink.gdshader")
@@ -85,6 +86,8 @@ static var _library: AnimationLibrary
 static var _materials: Dictionary = {}
 static var _meshes: Dictionary = {}
 static var _measures: Dictionary = {}
+static var _prop_ink: ShaderMaterial
+static var _front_sign: float = 0.0
 
 var look: Dictionary = {}
 var model: Node3D
@@ -130,14 +133,19 @@ var sip_in: float = 2.0
 # Looks
 # ---------------------------------------------------------------------------------------------
 
-## A look for a guest type (or "waiter", "bartender", "bouncer", "musician:<instrument>").
+## A look for a guest type (or "waiter", "bartender", "bouncer", "musician:<instrument>"): the model,
+## the palette, the face's style and age, and the props (a cap, a scarf, a backpack...). The cast
+## follows the guest types: penzioneri with flat caps, šajkače, headscarves and moustaches; classic
+## students with backpacks; wedding guests with the bride in her veil; businessmen in suits.
 static func make_look(kind: String, variant: int) -> Dictionary:
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = hash(kind) + variant * 7919
 	var pick: Callable = func(options: Array) -> String: return options[rng.randi() % options.size()]
 	var female: bool = variant % 2 == 1
+	var second: bool = (variant / 2) % 2 == 1
 	var look: Dictionary = {"kind": kind, "variant": variant, "female": female, "model": "student", "hat": "",
-		"extra": "", "instrument": "", "build": 1.0, "mood": "smile",
+		"extra": "", "instrument": "", "build": 1.0, "mood": "smile", "props": [], "age": Vector4.ZERO,
+		"hunch": 0.0, "pace": 1.0,
 		"pal": {"col_skin": pick.call(SKIN), "col_hair": pick.call(HAIR), "col_eye": pick.call(EYES),
 			"col_top": pick.call(BRIGHT), "col_bottom": pick.call(DENIM), "col_shoes": "3a2a1e", "col_hat": "5e5d40"},
 		"style": Vector4(1, 0.85, 0.5, 0) if female else Vector4(0, 1.25, 0, 0)}
@@ -145,38 +153,82 @@ static func make_look(kind: String, variant: int) -> Dictionary:
 		"penzioner":
 			look.pal.col_hair = pick.call(GREY_HAIR)
 			look.mood = "smile"
+			look.hunch = 0.16
+			look.pace = 0.8
+			look.age = Vector4(1.0, 0, 0, 0.9)
 			if female:
-				look.model = "baba"
-				look.pal.col_top = pick.call(["3a4a6a", "6a2a3a", "5a6a4a", "4a3a5a", "6e5a44"])
-				look.style = Vector4(1, 0.9, 0.35, 0)
+				look.model = "baba2" if second else "baba"
+				look.pal.col_top = pick.call(["3a4a6a", "6a2a3a", "5a6a4a", "4a3a5a", "6e5a44", "7a3a4a"])
+				look.style = Vector4(1, 0.9, 0.35, 1.0 if rng.randf() < 0.6 else 0.0)
+				if second:
+					look.props.append(["marama", pick.call(["b84a5a", "3e5f8a", "4f7a4a", "8a5aa0", "c98a3a"])])
 			else:
-				look.model = "deda" if variant % 4 != 0 else "deda2"
-				look.pal.col_top = pick.call(["8a5a36", "6e5a44", "5a6a4a", "7a6a52", "4a5568"])
+				look.model = ["deda", "deda2", "deda3"][(variant / 2) % 3]
+				look.pal.col_top = pick.call(["8a5a36", "6e5a44", "5a6a4a", "7a6a52", "4a5568", "8a3a32"])
 				look.pal.col_bottom = pick.call(["4f5357", "5a4a3a", "3a3a40"])
-				look.hat = "sajkaca" if rng.randf() < 0.6 else ""
-				look.style.w = 1.0 if rng.randf() < 0.3 else 0.0
+				look.pal.col_hat = pick.call(["4a4a50", "5a4a3a", "3a3a40", "6a6458"])
+				look.age.y = 2.0 if rng.randf() < 0.6 else 1.0
+				look.style.w = 1.0 if rng.randf() < 0.35 else 0.0
+				if look.model == "deda3":
+					look.props.append(["sajkaca", "7d7b5c"])
 		"studenti":
-			look.model = "studentkinja" if female else "student"
 			look.mood = "grin"
+			if female:
+				look.model = "studentkinja2" if second else "studentkinja"
+				look.style.w = 1.0 if second or rng.randf() < 0.2 else 0.0
+			else:
+				look.model = "student2" if second else "student"
+				look.style.w = 1.0 if rng.randf() < 0.25 else 0.0
+				look.age.z = 0.3 if rng.randf() < 0.3 else 0.0
+				if second and rng.randf() < 0.5:
+					look.props.append(["beanie", pick.call(["d8423a", "3e6fb0", "f2b83a", "2b2f45", "4fae6a"])])
+			if rng.randf() < 0.65:
+				look.props.append(["backpack", pick.call(["d8423a", "3e8ed0", "f2b83a", "2fb5a8", "9a5ad0", "2b2f45"])])
 		"svatovi":
-			look.model = "svatica" if female else "svat"
-			look.pal.col_top = pick.call(["d9536a", "f2b83a", "4aa8c9", "b05ad0", "f4f1ea", "e88aa8"])
-			look.extra = "" if female else "flower"
 			look.mood = "laugh"
+			if female:
+				if variant % 8 == 1:
+					look.model = "mlada"
+					look.pal.col_top = "f8f6f2"
+					look.props.append(["veil", "fbfaf7"])
+				else:
+					look.model = "svatica"
+					look.pal.col_top = pick.call(["d9536a", "f2b83a", "4aa8c9", "b05ad0", "e88aa8", "3f9d6a"])
+					look.props.append(["wreath", ""])
+			else:
+				look.model = "svat2" if second else "svat"
+				look.extra = "flower"
+				if second:
+					look.pal.col_top = pick.call(["7a2a3a", "2f4a7a", "5a3a6a", "3a5a3a"])
+					look.props.append(["sajkaca", "6a6a58"])
+					look.age = Vector4(0.6, 1, 0, 0.4)
 		"biznismen":
-			look.model = "biznismenka" if female else "biznismen"
-			look.style.w = 1.0 if rng.randf() < 0.4 else 0.0
 			look.mood = "neutral"
+			if female:
+				look.model = "biznismenka"
+				look.style.w = 2.0 if rng.randf() < 0.3 else 0.0
+			else:
+				look.model = "biznismen2" if second else "biznismen"
+				look.style.w = 2.0 if rng.randf() < 0.45 else 0.0
+				if second:
+					look.props.append(["chain", ""])
+					look.age = Vector4(0.4, 1, 0, 0.3)
 		"ozalosceni":
 			look.model = "ozaloscena" if female else "ozaloscen"
 			look.pal.col_top = "26262c"
 			look.pal.col_hair = pick.call(["2b1d14", "1a1a1e", "4a3020", "9a948a"])
 			look.style.z = 0.0
 			look.mood = "sad"
+			if female and rng.randf() < 0.5:
+				look.props.append(["marama", "1d1d22"])
+			elif not female:
+				look.age = Vector4(0.3, 1.0 if rng.randf() < 0.5 else 0.0, 0.0, 0.2)
 		"waiter":
 			look.model = "konobarica" if female else "konobar"
 			look.pal.col_top = "f4f1ea"
 			look.pal.col_bottom = "1d1d22"
+			if female:
+				look.props.append(["apron", ""])
 		"bartender":
 			look.model = "sanker"
 			look.female = false
@@ -185,6 +237,7 @@ static func make_look(kind: String, variant: int) -> Dictionary:
 			look.pal.col_hair = "3a2416"
 			look.extra = "bowtie"
 			look.style = Vector4(0, 1.3, 0, 0)
+			look.age = Vector4(0.3, 1, 0, 0.2)
 			look.mood = "neutral"
 		"bouncer":
 			look.model = "izbacivac"
@@ -192,6 +245,7 @@ static func make_look(kind: String, variant: int) -> Dictionary:
 			look.pal.col_top = "1d1d22"
 			look.pal.col_bottom = "2b2b30"
 			look.style = Vector4(0, 1.5, 0, 2)
+			look.age = Vector4(0, 0, 0.5, 0)
 			look.mood = "neutral"
 		_:
 			if kind.begins_with("musician:"):
@@ -210,6 +264,8 @@ static func make_look(kind: String, variant: int) -> Dictionary:
 					look.extra = "bowtie"
 					look.style = Vector4(0, 1.25, 0, 0)
 					look.mood = "blissful"
+					if look.instrument == "accordion" or rng.randf() < 0.4:
+						look.age = Vector4(0.3, 2.0 if look.instrument == "accordion" else 1.0, 0, 0.3)
 	return look
 
 # ---------------------------------------------------------------------------------------------
@@ -327,6 +383,9 @@ static func _measure(model_name: String, skeleton: Skeleton3D, mesh: Mesh, skin:
 	var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR] if arrays[Mesh.ARRAY_COLOR] != null else PackedColorArray()
 	var head_box: AABB = AABB(head_rest, Vector3.ZERO)
 	var chest_front: float = neck.z
+	var chest_back: float = neck.z
+	var hips_at: Vector3 = _bind(skeleton, skin, "Hips").affine_inverse().origin
+	var waist_front: float = hips_at.z
 	var mouth: Vector3 = head_rest + Vector3(0, 0.05, 0.15)
 	var mouth_d: float = -1e9
 	for i in range(verts.size()):
@@ -335,13 +394,17 @@ static func _measure(model_name: String, skeleton: Skeleton3D, mesh: Mesh, skin:
 			head_box = head_box.expand(v)
 		elif v.y > neck.y - 0.16 and v.y < neck.y - 0.04 and absf(v.x) < 0.06:
 			chest_front = maxf(chest_front, v.z)
+			chest_back = minf(chest_back, v.z)
+		if absf(v.y - hips_at.y - 0.06) < 0.03 and absf(v.x) < 0.08:
+			waist_front = maxf(waist_front, v.z)
 		# The face plane is a projection, so the inside of the closed mouth maps there too: take the
 		# frontmost point near the mouth.
 		if i < face_uv.size() and i < colors.size() and colors[i].g > 0.5 and colors[i].r < 0.1:
 			if face_uv[i].distance_to(Vector2(0.5, 0.79)) < 0.06 and v.z > mouth_d:
 				mouth_d = v.z
 				mouth = v
-	_measures[model_name] = {"head": head_box, "neck": neck, "chest_front": chest_front,
+	_measures[model_name] = {"head": head_box, "neck": neck, "chest_front": chest_front, "chest_back": chest_back,
+		"waist": Vector3(0, hips_at.y + 0.06, waist_front),
 		"hips": skeleton.get_bone_global_rest(hips).origin.y, "sit_hips": sit_hips, "stand_hips": stand_hips,
 		"mouth": head_bind * mouth,
 		"stride": STRIDE * skeleton.motion_scale}
@@ -358,9 +421,64 @@ static func _mesh(kind: String) -> Mesh:
 		_meshes[kind] = b.mesh()
 	return _meshes[kind]
 
+## The ink outline drawn around props, hats and glasses, like around the people.
+static func _ink() -> ShaderMaterial:
+	if _prop_ink == null:
+		_prop_ink = ShaderMaterial.new()
+		_prop_ink.shader = INK_SHADER
+		_prop_ink.set_shader_parameter("width_px", 1.1)
+	return _prop_ink
+
+## A smooth surface through rows of points (all rows the same length), its faces turned to the
+## side the normals point to.
+static func _surface(b: Builder, rows: Array, color: Color, key: String) -> void:
+	if _front_sign == 0.0:
+		# Which way round Godot's own primitives wind their outward faces.
+		var probe: Array = Kit.unit("sphere", 8)
+		var pv: PackedVector3Array = probe[Mesh.ARRAY_VERTEX]
+		var pn: PackedVector3Array = probe[Mesh.ARRAY_NORMAL]
+		var pi: PackedInt32Array = probe[Mesh.ARRAY_INDEX]
+		for t in range(0, pi.size(), 3):
+			var g: Vector3 = (pv[pi[t + 1]] - pv[pi[t]]).cross(pv[pi[t + 2]] - pv[pi[t]])
+			if g.length() > 1e-6:
+				_front_sign = signf(g.dot(pn[pi[t]]))
+				break
+	var n_r: int = rows.size()
+	var n_c: int = (rows[0] as PackedVector3Array).size()
+	var verts: PackedVector3Array = PackedVector3Array()
+	var normals: PackedVector3Array = PackedVector3Array()
+	var indices: PackedInt32Array = PackedInt32Array()
+	for r in range(n_r):
+		for c in range(n_c):
+			verts.append(rows[r][c])
+	for r in range(n_r):
+		for c in range(n_c):
+			var du: Vector3 = rows[mini(r + 1, n_r - 1)][c] - rows[maxi(r - 1, 0)][c]
+			var dv: Vector3 = rows[r][mini(c + 1, n_c - 1)] - rows[r][maxi(c - 1, 0)]
+			var nn: Vector3 = du.cross(dv)
+			normals.append(nn.normalized() if nn.length() > 1e-7 else Vector3.UP)
+	for r in range(n_r - 1):
+		for c in range(n_c - 1):
+			var a: int = r * n_c + c
+			for tri in [[a, a + n_c, a + 1], [a + 1, a + n_c, a + n_c + 1]]:
+				var g: Vector3 = (verts[tri[1]] - verts[tri[0]]).cross(verts[tri[2]] - verts[tri[0]])
+				var nsum: Vector3 = normals[tri[0]] + normals[tri[1]] + normals[tri[2]]
+				if signf(g.dot(nsum)) != _front_sign:
+					tri = [tri[0], tri[2], tri[1]]
+				indices.append_array(PackedInt32Array(tri))
+	var arrays: Array = []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = verts
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_INDEX] = indices
+	b.add(arrays, Transform3D.IDENTITY, color, key)
+
 ## Adds a prop, hat or instrument to a builder (at the builder's offset).
-static func _accessory(b: Builder, kind: String) -> void:
+static func _accessory(b: Builder, full_kind: String) -> void:
 	var glass: Color = Color("e4f2f4")
+	# "kind:rrggbb" picks the colour of cloth props.
+	var kind: String = full_kind.get_slice(":", 0)
+	var tint: Color = Color(full_kind.get_slice(":", 1)) if full_kind.contains(":") else Color("5e5d40")
 	match kind:
 		# Drinks (their base at the origin, the handle on the drinker's right, -x).
 		"cup":
@@ -403,13 +521,75 @@ static func _accessory(b: Builder, kind: String) -> void:
 		"cloth":
 			b.box(Vector3(0, -0.02, 0), Vector3(0.14, 0.04, 0.11), Color("f4f1ea"))
 		"sajkaca":
-			# The Serbian šajkača (unit width): a grey-green cap, boat-shaped, pinched along the top and
-			# notched at the front.
-			var cloth: Color = Color("5e5d40")
-			b.sphere(Vector3(0, 0.0, 0), 0.5, cloth, "vc", Vector3(0.92, 0.38, 1.08), 14)
+			# The Serbian šajkača (unit head width): a soft wool cap shaped like a boat, peaked at the
+			# front and back, its top folded down into a crease along the middle.
+			var rows: Array = []
+			for i in range(15):
+				var u: float = lerpf(-1.0, 1.0, i / 14.0)
+				var half: float = 0.47 * sqrt(maxf(0.0, 1.0 - u * u)) + 0.004
+				var high: float = 0.27 + 0.17 * u * u + 0.04 * u
+				var crease: float = 0.075 * (1.0 - u * u)
+				var row: PackedVector3Array = PackedVector3Array()
+				for j in range(17):
+					var t: float = lerpf(-1.0, 1.0, j / 16.0)
+					var x: float = half * signf(t) * pow(absf(t), 0.7)
+					var y: float = high * (1.0 - pow(absf(t), 1.8)) - crease * exp(-pow(t / 0.2, 2.0))
+					row.append(Vector3(x, y - 0.05 * u * u * pow(absf(t), 4.0), u * 0.6))
+				rows.append(row)
+			_surface(b, rows, tint, "vc_matte")
+			b.sphere(Vector3(0, 0.004, 0), 0.5, tint.darkened(0.3), "vc_matte", Vector3(0.9, 0.015, 1.15), 14)
+			# The little cut at the front.
+			b.box(Vector3(0, 0.0, 0.575), Vector3(0.025, 0.1, 0.02), tint.darkened(0.45), "vc_matte")
+		"marama":
+			# A headscarf (unit head size), the babushka way: over the crown and the ears, framing the
+			# face, tied in a knot under the chin, with a little fringe of pattern along the edge.
+			b.sphere(Vector3(0, 0.08, -0.1), 0.5, tint, "vc_matte", Vector3(1.1, 0.96, 0.94), 16)
 			for side in [-1.0, 1.0]:
-				b.sphere(Vector3(side * 0.16, 0.1, 0), 0.5, cloth.darkened(0.06), "vc", Vector3(0.36, 0.26, 1.02), 10)
-			b.box(Vector3(0, 0.04, 0.52), Vector3(0.1, 0.14, 0.05), cloth.darkened(0.35))
+				b.sphere(Vector3(side * 0.4, -0.16, 0.06), 0.5, tint.darkened(0.05), "vc_matte", Vector3(0.22, 0.62, 0.42), 10)
+				b.sphere(Vector3(side * 0.2, -0.46, 0.2), 0.5, tint.darkened(0.08), "vc_matte", Vector3(0.3, 0.14, 0.16), 8)
+			b.sphere(Vector3(0, -0.5, 0.24), 0.07, tint.darkened(0.15), "vc_matte", Vector3(1.2, 0.9, 1.0), 8)
+			for k in range(9):
+				var a: float = lerpf(-1.2, 1.2, k / 8.0)
+				b.sphere(Vector3(sin(a) * 0.5, 0.3 * cos(a) - 0.02, cos(a) * 0.36 - 0.02), 0.035, tint.lightened(0.45), "vc_matte", Vector3.ONE, 6)
+		"beanie":
+			# A knitted cap (unit head size): a soft dome, a rolled-up rib band and a bobble.
+			b.sphere(Vector3(0, 0.04, -0.02), 0.5, tint, "vc_matte", Vector3(1.0, 0.92, 1.0), 14)
+			for k in range(24):
+				var a: float = k * TAU / 24.0
+				b.sphere(Vector3(sin(a) * 0.49, -0.06, cos(a) * 0.49 - 0.02), 0.08, tint.darkened(0.12), "vc_matte", Vector3(0.8, 1.1, 0.7), 6)
+			b.sphere(Vector3(0, 0.5, -0.04), 0.11, tint.lightened(0.45), "vc_matte", Vector3.ONE, 8)
+		"veil":
+			# The bride's veil: a white fall from a crown of little flowers at the back of the head.
+			for k in range(9):
+				var a: float = lerpf(-2.2, 2.2, k / 8.0)
+				b.sphere(Vector3(sin(a) * 0.42, 0.24, cos(a) * 0.42 - 0.04), 0.06, Color("fbfaf7") if k % 2 == 0 else Color("f6d6de"), "vc", Vector3.ONE, 6)
+			b.cylinder_xf(Transform3D(Basis(Vector3.RIGHT, -0.22) * Basis.from_scale(Vector3(0.5, 1.0, 0.3)), Vector3(0, -0.9, -0.36)), 0.55, 1.05, Color("f7f5f2"), "vc_matte", 14, 0.6)
+		"wreath":
+			# Venac: a ring of flowers and leaves round the crown.
+			var colours: Array = [Color("d8423a"), Color("fbfaf7"), Color("f2b83a"), Color("e88aa8")]
+			for k in range(14):
+				var a: float = k * TAU / 14.0
+				var at: Vector3 = Vector3(sin(a) * 0.47, 0.0, cos(a) * 0.47)
+				b.sphere(at, 0.07, colours[k % 4] if k % 2 == 0 else Color("4f8a3a"), "vc", Vector3(1, 0.7, 1) if k % 2 == 0 else Vector3(1.3, 0.4, 0.7), 6)
+		"backpack":
+			# A school backpack (metres, model scale): body, front pocket, top handle and straps.
+			b.box(Vector3(0, -0.17, -0.07), Vector3(0.24, 0.3, 0.13), tint, "vc_matte")
+			b.sphere(Vector3(0, 0.13, -0.07), 0.12, tint, "vc_matte", Vector3(1.0, 0.4, 0.55), 10)
+			b.box(Vector3(0, -0.15, -0.155), Vector3(0.17, 0.13, 0.05), tint.darkened(0.18), "vc_matte")
+			b.box(Vector3(0, -0.075, -0.18), Vector3(0.16, 0.012, 0.012), Color("d9d4c8"), "vc_matte")
+			for side in [-1.0, 1.0]:
+				b.box(Vector3(side * 0.075, -0.12, 0.0), Vector3(0.035, 0.3, 0.02), tint.darkened(0.3), "vc_matte")
+		"chain":
+			# A heavy gold chain with a medallion (metres, model scale).
+			for k in range(13):
+				var t: float = lerpf(-1.0, 1.0, k / 12.0)
+				b.sphere(Vector3(t * 0.075, -0.075 * (1.0 - t * t), 0.012 * (1.0 - t * t)), 0.011, Color("e8b832"), "vc_metal", Vector3.ONE, 6)
+			b.cylinder_xf(Transform3D(Basis(Vector3.RIGHT, PI / 2.0), Vector3(0, -0.1, 0.018)), 0.022, 0.008, Color("f2c84a"), "vc_metal", 10)
+		"apron":
+			# The waitress's apron: a white bib-less apron with a pocket, tied at the waist.
+			b.box(Vector3(0, 0.0, 0.0), Vector3(0.3, 0.03, 0.03), Color("f4f1ea"), "vc_matte")
+			b.box(Vector3(0, -0.3, 0.012), Vector3(0.28, 0.3, 0.012), Color("fbfaf7"), "vc_matte")
+			b.box(Vector3(0.06, -0.2, 0.022), Vector3(0.09, 0.07, 0.006), Color("e8e2d6"), "vc_matte")
 		"flower":
 			b.sphere(Vector3.ZERO, 0.03, Color("f4f1ea"), "vc", Vector3.ONE, 6)
 			b.sphere(Vector3(0, 0, 0.016), 0.014, Color("f3d27a"), "vc", Vector3.ONE, 5)
@@ -462,6 +642,7 @@ func setup(new_look: Dictionary) -> void:
 	for key in look.pal:
 		body.set_instance_shader_parameter(key, Color(str(look.pal[key])))
 	body.set_instance_shader_parameter("face_style", look.style)
+	body.set_instance_shader_parameter("face_age", look.get("age", Vector4.ZERO))
 	measure = _measure(model_name, skeleton, body.mesh, body.skin)
 	player = AnimationPlayer.new()
 	model.add_child(player)
@@ -476,6 +657,8 @@ func setup(new_look: Dictionary) -> void:
 	if str(look.hat) != "":
 		var hat: MeshInstance3D = _add_mesh(_holder("Head", Vector3(0, head_box.end.y - head_box.size.y * 0.11, head_box.get_center().z - 0.05)), _mesh(look.hat), Vector3.ZERO)
 		hat.scale = Vector3(1.0, 0.9, 1.12) * head_box.size.x
+	for prop in look.get("props", []):
+		_add_prop(str(prop[0]), str(prop[1]))
 	match str(look.extra):
 		"bowtie":
 			_add_mesh(_holder("UpperChest", Vector3(0, neck.y - 0.05, front + 0.01)), _mesh("bowtie"), Vector3.ZERO)
@@ -503,6 +686,37 @@ func setup(new_look: Dictionary) -> void:
 	face_now_values = FACES[mood].duplicate()
 	play("idle")
 
+## Puts on a prop from the look: hats and scarves sized to the head, the rest on the body.
+func _add_prop(kind: String, colour: String) -> void:
+	var head_box: AABB = measure.head
+	var size: Vector3 = head_box.size
+	var centre: Vector3 = head_box.get_center()
+	var mesh: Mesh = _mesh(kind + (":" + colour if colour != "" else ""))
+	var node: MeshInstance3D
+	match kind:
+		"sajkaca":
+			node = _add_mesh(_holder("Head", Vector3(0, head_box.end.y - size.y * 0.27, centre.z - size.z * 0.06)), mesh, Vector3.ZERO)
+			node.scale = Vector3(1.0, 0.9, 1.0) * size.x
+		"marama":
+			node = _add_mesh(_holder("Head", centre + Vector3(0, -size.y * 0.02, -size.z * 0.02)), mesh, Vector3.ZERO)
+			node.scale = Vector3(size.x * 1.1, size.y * 1.1, size.z * 1.06)
+		"beanie":
+			node = _add_mesh(_holder("Head", centre + Vector3(0, size.y * 0.1, -size.z * 0.04)), mesh, Vector3.ZERO)
+			node.scale = Vector3(size.x * 1.1, size.y * 1.02, size.z * 1.06)
+		"veil":
+			node = _add_mesh(_holder("Head", centre + Vector3(0, size.y * 0.18, -size.z * 0.12)), mesh, Vector3.ZERO)
+			node.scale = Vector3.ONE * size.x
+		"wreath":
+			node = _add_mesh(_holder("Head", Vector3(0, head_box.end.y - size.y * 0.24, centre.z - size.z * 0.04)), mesh, Vector3.ZERO)
+			node.scale = Vector3(size.x * 0.9, size.x, size.z * 0.9)
+		"backpack":
+			node = _add_mesh(_holder("UpperChest", Vector3(0, float(measure.neck.y) - 0.13, float(measure.chest_back) + 0.01)), mesh, Vector3.ZERO)
+			node.scale = Vector3.ONE * 1.3
+		"chain":
+			_add_mesh(_holder("UpperChest", Vector3(0, float(measure.neck.y) - 0.045, float(measure.chest_front) + 0.004)), mesh, Vector3.ZERO)
+		"apron":
+			_add_mesh(_holder("Hips", (measure.waist as Vector3) + Vector3(0, 0.17, 0.025)), mesh, Vector3.ZERO)
+
 ## The size a character is drawn at; broader for a big build.
 func full_scale() -> Vector3:
 	return Vector3.ONE * SIZE * (1.0 + (float(look.get("build", 1.0)) - 1.0) * 0.5)
@@ -527,6 +741,7 @@ func _add_mesh(parent: Node3D, mesh: Mesh, at: Vector3, turn: Vector3 = Vector3.
 	node.position = at
 	node.rotation = turn
 	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	node.material_overlay = _ink()
 	parent.add_child(node)
 	return node
 
@@ -914,14 +1129,14 @@ func _process(delta: float) -> void:
 		var target: Vector3 = path[0]
 		var offset: Vector3 = target - position
 		offset.y = 0.0
-		var step: float = WALK_SPEED * speed_scale * delta
+		var step: float = WALK_SPEED * speed_scale * float(look.get("pace", 1.0)) * delta
 		face(offset)
 		if seat_state in ["pulling", "stepping"]:
 			if clip != "Walk":
 				_clip("Walk", 0.2, true)
 		elif current not in ["walk", "carry", "angry"]:
 			play("carry" if holding == "tray" else "walk")
-		clip_rate = WALK_SPEED * speed_scale / maxf(0.3, float(measure.stride) * scale.x)
+		clip_rate = WALK_SPEED * speed_scale * float(look.get("pace", 1.0)) / maxf(0.3, float(measure.stride) * scale.x)
 		if offset.length() <= step:
 			position = Vector3(target.x, position.y, target.z)
 			path.remove_at(0)
@@ -962,6 +1177,11 @@ func _pose() -> void:
 	# at the table), and back again to drink.
 	var lift: float = HEAD_LIFT * (0.6 if current == "angry" else (1.6 if seat_state == "seated" else 1.0))
 	lift += _sip_amount() * 0.3
+	# The old stoop a little when standing and walking (the head comes back up to look ahead).
+	var hunch: float = float(look.get("hunch", 0.0))
+	if hunch > 0.0 and seat_state == "" and current not in ["dance", "play"]:
+		_turn("Spine", Vector3(hunch, 0, 0))
+		lift += hunch * 0.8
 	_turn("Head", Vector3(-lift, sin(t * 0.7 + phase) * 0.12 * (1.0 - _sip_amount()), 0))
 	match current:
 		"dance":

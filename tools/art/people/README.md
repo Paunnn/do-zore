@@ -17,7 +17,7 @@ animations. Everything they are built from is CC0 (credits in `client/assets/peo
      on it (`client/shaders/person.gdshader`);
    - hair and clothes fitted by MPFB, the game_engine rig (Unreal bone names) and its skin weights;
    - clothes standing a few millimetres off the body, the covered body shrunk a little, slimmer legs
-     under dresses, so nothing pokes through;
+     under dresses, and untucked tops pushed out over the trousers, so nothing pokes through;
    - one mesh and one material: the parts' cartoonised textures packed in a 1024 px atlas (UV), the face
      plane (UV2: eyes at (0.31, 0.41) and (0.69, 0.41), mouth at (0.5, 0.79)) and vertex colours for the
      shader (palette slot, face mask, keep-the-texture's-colours);
@@ -27,6 +27,14 @@ animations. Everything they are built from is CC0 (credits in `client/assets/peo
 4. `install_people.py --godot GODOT [OUT]` copies the looks into `client/assets/people`, writes the
    humanoid bone maps (`bone_maps.gd`) and gives every GLB the import options that retarget it to
    Godot's humanoid profile, so the one animation library plays on every body.
+
+The cast (`LOOKS`) follows the guest types: three dede (flat cap and knitted sweater; old suit and
+fedora; overalls, with a šajkača added in the game), two babe (grey bun; tiered dress under a
+headscarf), two students and two studentkinje (logo t-shirt and jeans; t-shirt or sweater over jeans),
+the groom, a wedding guest, the bride and a guest in a dress, two businessmen and a businesswoman,
+mourners, staff and the band. Hats, scarves, backpacks, veils, wreaths, chains and aprons that the
+MakeHuman packs don't have are made in the game (`people3d.gd`), and moustaches, beards and wrinkles
+are drawn by the face shader.
 
 To add a role, add a look to `LOOKS` (an asset folder and file from the MakeHuman packs per part, its
 palette slot, and whether it keeps its texture's colours or takes the person's palette), build it,

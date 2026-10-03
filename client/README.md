@@ -62,18 +62,27 @@ clouds, coins and notes over their 3D anchors.
   (floor, back walls with windows, bar, stage, themed decor, pendant lamps with real lights, a
   table set per slot); the others as closed buildings with their signs.
 - `scripts/world3d/venue_world.gd` turns simulation state into people and props: parties walk
-  in from the street along an A* grid, sit, order, drink, dance and leave paying; waiters carry
-  trays from the bar; the band plays; konobar, ozvučenje, dekor, izbacivač and sef levels show.
+  in from the street along an A* grid, pull out their chairs and sit down, order, drink, get up
+  to dance and leave paying; waiters carry trays from the bar; the band plays; konobar,
+  ozvučenje, dekor, izbacivač and sef levels show. The chairs are one MultiMesh per room so
+  each can slide out and back. A served order puts its bottle or dish in the middle of the
+  table and a cup or glass in front of every seated guest.
 - `scripts/world3d/people3d.gd` dresses each character from a look (guest type, staff or
   musician): one of the cartoon people in `assets/people` (built in Blender from MakeHuman bodies,
-  CC0; see `tools/art/people`) with a palette, a face style (lashes, brows, lipstick, glasses) and
-  a mood, plus hats, bow ties, flowers, instruments and props on its bones. The animation library
-  (`people_anims.glb`, Quaternius' Universal Animation Library, CC0) is retargeted on import through
-  Godot's humanoid profile, so it plays on every body; a few clips are put together from two at run
-  time (sitting legs with drinking, cheering or arguing arms; standing musicians). The face is drawn
-  by `shaders/person.gdshader` from four numbers per person (eyes, brows, mouth, extras), eased
-  towards the person's mood, with blinks, chatter and sips on top; `shaders/ink.gdshader` is the
-  outline.
+  CC0; see `tools/art/people`) with a palette, a face style (lashes, brows, lipstick, glasses), an
+  age (wrinkles, moustache, beard, bushy brows) and a mood. Props sit on its bones: šajkača,
+  headscarf, beanie, bridal veil, flower wreath, backpack, gold chain, apron, bow ties, flowers
+  and instruments. The cast follows the guest types: penzioneri in flat caps, fedoras, šajkače
+  and headscarves; classic students in logo t-shirts, jeans and trainers with backpacks; the
+  bride and the wedding guests; businessmen in suits; mourners in black. The animation library
+  (`people_anims.glb`, Quaternius' Universal Animation Library, CC0) is retargeted on import
+  through Godot's humanoid profile, so it plays on every body; a few clips are put together from
+  two at run time. Sitting down and getting up use the library's sit-down and stand-up clips with
+  the hips lifted onto the seat. Drinking is two-bone IK on the right arm: reach for the glass,
+  lift it to the lips, tip and sip, put it back. Props and the mouth are placed through the skin's
+  bind poses (the import's rest fixer moves the rests, not the mesh). The face is drawn by
+  `shaders/person.gdshader` from a few numbers per person, eased towards the person's mood, with
+  blinks, chatter and sips on top; `shaders/ink.gdshader` is the outline (also round the props).
 - `scripts/world3d/builder.gd` merges primitives per material and per spatial chunk;
   `kit3d.gd` holds the shared materials: the toon world shader (`shaders/world.gdshader`: vertex
   colours times painted textures mapped in world space or by UV, two-tone light, sheen), one glow

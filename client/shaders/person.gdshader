@@ -27,6 +27,9 @@ instance uniform vec4 face_mouth = vec4(0.2, 0.0, 0.0, 1.0);
 instance uniform vec4 face_extra = vec4(0.25, 0.0, 0.0, 0.0);
 // Face style: lashes (0 to 1), brow weight, lip colour, glasses (1 glasses, 2 sunglasses).
 instance uniform vec4 face_style = vec4(0.0, 1.0, 0.0, 0.0);
+// Age and whiskers: wrinkles (0 to 1), moustache (1 trim, 2 big brk), beard (0 to 1, stubble to
+// full), bushy brows (0 to 1).
+instance uniform vec4 face_age = vec4(0.0);
 
 varying vec4 vcol;
 
@@ -92,7 +95,7 @@ vec4 draw_eye(vec2 q, float side, vec3 base, float px) {
 	vec3 col = base;
 	float open = clamp(face_eyes.x - (side > 0.0 ? face_extra.w : 0.0), 0.0, 1.0);
 	float squint = face_eyes.y;
-	vec2 r = vec2(0.095, 0.122);
+	vec2 r = vec2(0.095, 0.122 * (1.0 - 0.12 * face_age.x));
 	float happy = face_extra.z;
 	if (open < 0.12 || happy > 0.5) {
 		// Closed: a lash stroke. Happy closed eyes arc upwards (^ ^), sleepy ones droop.
@@ -146,8 +149,8 @@ vec3 draw_brow(vec2 q, float side, vec3 base, float px) {
 	float d = sd_bezier(q, inner, mid, outer);
 	// Thicker towards the inner end, like a brush stroke.
 	float t = clamp(q.x / 0.13, 0.0, 1.0);
-	float w = mix(0.022, 0.011, t) * face_style.y;
-	vec3 brow = mix(col_hair.rgb * 0.55, INK, 0.35);
+	float w = mix(0.022, 0.011, t) * face_style.y * (1.0 + face_age.w * 0.7);
+	vec3 brow = mix(col_hair.rgb * mix(0.55, 0.8, face_age.w), INK, mix(0.35, 0.2, face_age.w));
 	return mix(base, brow, line(px, d, w));
 }
 
@@ -195,6 +198,68 @@ vec3 draw_mouth(vec2 q, vec3 base, float px) {
 	return col;
 }
 
+// Wrinkles, beard and moustache, drawn over the mouth.
+vec3 draw_age(vec2 p, vec3 base, float px) {
+	vec3 col = base;
+	float age = face_age.x;
+	if (age > 0.01) {
+		vec3 crease = mix(base, INK, 0.55);
+		float d = 1e9;
+		for (int i = 0; i < 2; i++) {
+			float s = i == 0 ? -1.0 : 1.0;
+			// Smile lines from the nose to past the mouth corners.
+			vec2 a = vec2(0.5 + s * 0.085, 0.655);
+			d = min(d, sd_bezier(p, a, vec2(0.5 + s * 0.165, 0.72), vec2(0.5 + s * 0.15, 0.83)));
+			// Crow's feet at the outer corners of the eyes.
+			vec2 c = vec2(0.5 + s * 0.31, 0.405);
+			for (int k = 0; k < 3; k++) {
+				float f = float(k - 1);
+				vec2 dir = normalize(vec2(s, f * 0.55));
+				d = min(d, sd_bezier(p, c + dir * 0.012, c + dir * 0.03, c + dir * 0.05));
+			}
+			// Soft bags under the eyes.
+			vec2 e = vec2(0.5 + s * 0.19, 0.505);
+			d = min(d, sd_bezier(p, e - vec2(0.06, 0.0), e + vec2(0.0, 0.022), e + vec2(0.06, 0.0)));
+		}
+		// Two lines across the forehead.
+		d = min(d, sd_bezier(p, vec2(0.38, 0.165), vec2(0.5, 0.145), vec2(0.62, 0.165)));
+		d = min(d, sd_bezier(p, vec2(0.41, 0.115), vec2(0.5, 0.098), vec2(0.59, 0.115)));
+		col = mix(col, crease, line(px, d, 0.0032) * smoothstep(0.0, 0.5, age));
+	}
+	vec3 hair = col_hair.rgb * 0.85;
+	if (face_age.z > 0.01) {
+		// Beard: around the jaw and chin, leaving the lips clear.
+		float jaw = sd_ellipse(p - vec2(0.5, 0.86), vec2(0.36, 0.2));
+		float lips = sd_ellipse(p - vec2(0.5, 0.795), vec2(0.13, 0.05));
+		float area = max(jaw, -lips);
+		float amount = aa_step(px * 3.0, area) * smoothstep(0.6, 0.72, p.y);
+		col = mix(col, mix(hair, INK, 0.2), amount * mix(0.35, 0.95, face_age.z));
+		col = mix(col, INK, line(px, abs(area), 0.004) * step(0.6, face_age.z) * smoothstep(0.66, 0.74, p.y));
+	}
+	if (face_age.y > 0.5) {
+		// Brk: a moustache under the nose, two rounded wings meeting at the middle; the big one
+		// droops past the corners of the mouth.
+		float big = step(1.5, face_age.y);
+		float m = 1e9;
+		for (int i = 0; i < 2; i++) {
+			float s = i == 0 ? -1.0 : 1.0;
+			vec2 q = p - vec2(0.5 + s * mix(0.06, 0.075, big), mix(0.722, 0.735, big));
+			float angle = s * mix(0.28, 0.45, big);
+			q = mat2(vec2(cos(angle), sin(angle)), vec2(-sin(angle), cos(angle))) * q;
+			m = min(m, sd_ellipse(q, mix(vec2(0.075, 0.032), vec2(0.105, 0.046), big)));
+		}
+		col = mix(col, hair, aa_step(px, m));
+		// A few strands for texture, then the ink outline.
+		for (int k = 0; k < 4; k++) {
+			float x = 0.5 + (float(k) - 1.5) * 0.045;
+			float strand = sd_bezier(p, vec2(x, 0.705), vec2(x + (x - 0.5) * 0.15, 0.725), vec2(x + (x - 0.5) * 0.3, 0.745));
+			col = mix(col, mix(hair, INK, 0.45), line(px, strand, 0.0025) * aa_step(px, m + 0.008));
+		}
+		col = mix(col, INK, line(px, abs(m), 0.0042));
+	}
+	return col;
+}
+
 vec3 draw_face(vec2 p, vec3 skin, float px) {
 	vec3 col = skin;
 	// Blush.
@@ -211,6 +276,7 @@ vec3 draw_face(vec2 p, vec3 skin, float px) {
 	col = draw_brow(vec2(0.40 - p.x, p.y - 0.235), -1.0, col, px);
 	col = draw_brow(vec2(p.x - 0.60, p.y - 0.235), 1.0, col, px);
 	col = draw_mouth(p - vec2(0.5, 0.79), col, px);
+	col = draw_age(p, col, px);
 	// Glasses: round frames and a bridge; sunglasses fill the lenses.
 	if (face_style.w > 0.5) {
 		float sun = step(1.5, face_style.w);
