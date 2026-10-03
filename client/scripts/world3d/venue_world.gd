@@ -41,6 +41,9 @@ var time: float = 0.0
 var note_timer: float = 0.0
 var synced_once: bool = false
 var darkness: float = 0.0
+## Where guests walk to the door from the city: {"point": in front of the door on the
+## pavement, "dir": along the pavement}, in this node's space. Empty: straight from the door.
+var approach: Dictionary = {}
 var stage_anchor: Vector3 = Vector3.ZERO
 ## Everyone in the venue, for the shared contact shadows (one draw call for all of them).
 var people: Array = []
@@ -198,6 +201,20 @@ func _street_point() -> Vector3:
 	var spread: float = 0.6 if venue_id == "splav" else 6.0
 	return lay.street + Vector3(rng.randf_range(-spread, spread), 0, rng.randf_range(-0.4, 0.4))
 
+## The walk between the city and the door: along the pavement from one side, then to the door.
+## Arriving it ends in front of the door; leaving it starts there and goes off down the street.
+func _street_route(arriving: bool) -> PackedVector3Array:
+	if approach.is_empty():
+		return PackedVector3Array([_street_point()])
+	var side: float = -1.0 if rng.randf() < 0.5 else 1.0
+	var along: Vector3 = approach.dir
+	var far: Vector3 = approach.point + along * side * rng.randf_range(12.0, 18.0)
+	var near: Vector3 = approach.point + along * rng.randf_range(-0.8, 0.8)
+	var route: PackedVector3Array = PackedVector3Array([far, near, lay.street])
+	if not arriving:
+		route.reverse()
+	return route
+
 func _entry() -> Vector3:
 	return Vector3(lay.entry.x + 0.5, 0, lay.entry.y + 0.5)
 
@@ -267,9 +284,12 @@ func _arrive(slot: Dictionary, table: Dictionary, instant: bool) -> void:
 		if instant:
 			_seat(slot, guest)
 			continue
-		guest.position = _street_point()
+		# They come on foot down the street before they come in.
+		var route: PackedVector3Array = _street_route(true)
+		guest.position = route[0]
 		guest.visible = false
-		var points: PackedVector3Array = PackedVector3Array([lay.door, _entry()])
+		var points: PackedVector3Array = route.slice(1)
+		points.append_array(PackedVector3Array([lay.door, _entry()]))
 		points.append_array(_path(_entry(), _seat_cell(slot, k)))
 		points.append(Venue.seat_point(slot.center, k))
 		guest.arrived.connect(_seat.bind(slot, guest), CONNECT_ONE_SHOT)
@@ -310,7 +330,7 @@ func _depart(slot: Dictionary, previous: Dictionary, simulation) -> void:
 		guest.set_meta("state", "leaving")
 		var points: PackedVector3Array = _path(guest.position, lay.entry)
 		points.append(lay.door)
-		points.append(_street_point() + (Vector3.ZERO if venue_id == "splav" else Vector3(rng.randf_range(-8, 8), 0, 0)))
+		points.append_array(_street_route(false))
 		guest.speed_scale = 1.3 if angry else 1.0
 		if angry: guest.play("angry")
 		var start: Tween = guest.create_tween()

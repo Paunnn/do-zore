@@ -594,8 +594,16 @@ static func build_exterior(root: Node3D, lay: Dictionary, state: String) -> void
 				if side == "south" and s == 0 and absf(u - (lay.door_x + 0.6)) < 1.6:
 					continue
 				var face: Vector3 = Vector3(wide, tall, 0.06) if side == "south" else Vector3(0.06, tall, wide)
-				b.box(p - Vector3(0, 0.08, 0), face + Vector3(0.24, 0.24, 0.0) if side == "south" else face + Vector3(0.0, 0.24, 0.24), Color("2b1d14"))
-				b.box(p, face, Color.WHITE, warm if (lit and rng.randf() < 0.85) else "glow:2d3a5a:0.5")
+				var frame: Color = wall.lightened(0.35) if id == "restoran" else Color("2b1d14")
+				b.box(p - Vector3(0, 0.08, 0), face + Vector3(0.24, 0.24, 0.0) if side == "south" else face + Vector3(0.0, 0.24, 0.24), frame)
+				var glass: String = warm if lit else ("glow:ffb060:1.0" if rng.randf() < 0.5 else "glow:2d3a5a:0.5")
+				b.box(p, face, Color.WHITE, glass if (not lit or rng.randf() < 0.85) else "glow:2d3a5a:0.5")
+				if id == "restoran":
+					# Classical pediments and a mullion cross.
+					var mull: Vector3 = Vector3(0.06, tall, 0.03) if side == "south" else Vector3(0.03, tall, 0.06)
+					b.box(p + (Vector3(0, 0, 0.04) if side == "south" else Vector3(0.04, 0, 0)), mull, frame)
+					var top_at: Vector3 = p + Vector3(0, tall + 0.12, 0) + (Vector3(0, 0, 0.05) if side == "south" else Vector3(0.05, 0, 0))
+					b.prism(top_at, Vector3(wide + 0.5, 0.35, 0.14), frame, "vc", 0.0 if side == "south" else PI / 2.0)
 				var sill: Vector3 = Vector3(wide + 0.3, 0.1, 0.25) if side == "south" else Vector3(0.25, 0.1, wide + 0.3)
 				b.box(p - Vector3(0, 0.12, 0) + (Vector3(0, 0, 0.1) if side == "south" else Vector3(0.1, 0, 0)), sill, wall.darkened(0.2))
 				if id != "restoran":

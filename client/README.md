@@ -21,7 +21,8 @@ The vertical slice intentionally does not make real network requests.
 
 ## Play
 
-- Guests walk in from the street and sit down; a thought cloud shows what they ordered. Tap the
+- Guests come on foot down the street, walk in and sit down while townspeople stroll the
+  pavements outside; a thought cloud shows what they ordered. Tap the
   cloud or the table to serve it (a ring fills while it is prepared) and tap the table again for
   details. A small cloud with a coloured note is the genre they want.
 - Tap the stage or the red **Pesma** button to play a known song: the band plays, notes rise and
@@ -51,8 +52,12 @@ or wheel to zoom from a table close-up out to the whole map, tap to act) and kee
 clouds, coins and notes over their 3D anchors.
 
 - `scripts/world3d/city3d.gd` builds the city on a 52 m street grid in four districts along the
-  road "up" the screen, the river with its quay and bridge, the far bank, parked and passing
-  cars. Buildings in front of the played venue give way to small parks so it is never hidden.
+  road "up" the screen: village houses with porches, old-town blocks with shuttered windows,
+  pediments, dormers and shops, centre blocks with balconies and rooftop clutter around
+  courtyards, the square, the river with its quay and bridge, the far bank, parked and passing
+  cars and townspeople walking round the blocks. Facades near the played venue get full detail;
+  the rest keep their shapes and lit windows. Buildings in front of the played venue give way
+  to small parks so it is never hidden.
 - `scripts/world3d/venue3d.gd` lays out and builds each venue: the played one as a cut-away
   (floor, back walls with windows, bar, stage, themed decor, pendant lamps with real lights, a
   table set per slot); the others as closed buildings with their signs.
@@ -65,9 +70,9 @@ clouds, coins and notes over their 3D anchors.
   `kit3d.gd` holds the shared materials (vertex colours, world-mapped textures, one glow shader
   for every lamp and window, the river shader).
 
-Budget, measured with a full venue: 400–550 draw calls at venue zoom and under 1000 with the
-whole map in view (one draw per character; the contact shadows under people and tables are one
-MultiMesh).
+Budget, measured with a full venue: 360–540 draw calls and 320–360 k triangles at venue zoom,
+660–880 draw calls and under 540 k triangles with the whole map in view (one draw per character;
+the contact shadows under people and tables are one MultiMesh, the walkers' another).
 
 The interface is the modern-kafana kit in `scripts/ui/ui_kit.gd` (floating pills, glossy round
 and lipped buttons, cream cards with a red header over a tablecloth trim); see
@@ -173,7 +178,6 @@ The read-only Python progression simulator and its assumptions are documented in
 ## TODO / explicit stubs
 
 - Add a kitchen/cook for the kuhinja upgrade and characters for the inspection and VIP events.
-- Add pedestrians to the city streets.
 - Attach licensed music and sound to the silent hooks; settings already expose
   the intended controls.
 - Add real HTTP/auth/cloud integration after the offline slice. Mock behavior
