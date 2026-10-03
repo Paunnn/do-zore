@@ -60,12 +60,14 @@ static func make_look(kind: String, variant: int) -> Dictionary:
 		"hair": ["2b1d14", "4a3020", "7a5230", "c9a26a", "1a1a1e", "8a3a22"][rng.randi() % 6],
 		"hair_style": "long" if female else "short", "top": "f4f1ea", "top_style": "shirt", "bottom": "2b2f45",
 		"shoes": "1d1d22", "hat": "", "beard": "", "extra": "", "accent": "c0322c", "build": 1.0, "instrument": "",
+		"top_cell": "cotton", "bottom_cell": "wool",
 	}
 	match kind:
 		"penzioner":
 			look.hair = ["c9c4ba", "e8e4dc", "9a948a"][rng.randi() % 3]
 			look.top = ["7a6a52", "5a6a4a", "6e5a44", "4a5568"][rng.randi() % 4]
 			look.top_style = "cardigan"
+			look.top_cell = "knit"
 			look.bottom = ["4a4a52", "5a4a3a"][rng.randi() % 2]
 			if female:
 				look.hair_style = "bun"
@@ -78,11 +80,16 @@ static func make_look(kind: String, variant: int) -> Dictionary:
 		"studenti":
 			look.top = ["e85a4f", "3e8ed0", "f2b83a", "4fae6a", "9a5ad0", "f4f1ea"][rng.randi() % 6]
 			look.top_style = "hoodie"
+			look.top_cell = "fleece"
+			look.bottom_cell = "denim"
 			look.bottom = ["3a5a8a", "2b2f45", "5a6a7a"][rng.randi() % 3]
 			look.shoes = ["f4f1ea", "e85a4f", "2b2b30"][rng.randi() % 3]
 			look.hat = "beanie" if rng.randf() < 0.3 else ""
 			look.accent = ["2b2f45", "c0322c", "3e8ed0"][rng.randi() % 3]
 			look.extra = "backpack" if rng.randf() < 0.4 else ""
+			if variant % 3 == 2:
+				look.top_style = "shirt"
+				look.top_cell = "stripes" if female else "plaid"
 			if female:
 				look.hair_style = ["long", "ponytail", "bob"][rng.randi() % 3]
 			else:
@@ -91,6 +98,7 @@ static func make_look(kind: String, variant: int) -> Dictionary:
 		"ozalosceni":
 			look.top = "1d1d22"
 			look.top_style = "dress" if female else "suit"
+			look.top_cell = "satin" if female else "wool"
 			look.bottom = "1d1d22"
 			look.accent = "1d1d22"
 			if female:
@@ -102,17 +110,20 @@ static func make_look(kind: String, variant: int) -> Dictionary:
 			if female:
 				look.top = ["d9536a", "f2b83a", "4aa8c9", "b05ad0", "f4f1ea"][rng.randi() % 5]
 				look.top_style = "dress"
+				look.top_cell = "satin"
 				look.hair_style = ["bun", "long"][rng.randi() % 2]
 				look.extra = "necklace"
 			else:
 				look.top = ["2b2f45", "4a4a52", "1d2433"][rng.randi() % 3]
 				look.top_style = "suit"
+				look.top_cell = "wool"
 				look.extra = "flower"
 				look.accent = ["c0322c", "f2b83a"][rng.randi() % 2]
 				look.beard = ["", "mustache"][rng.randi() % 2]
 		"biznismen":
 			look.top = ["1d2433", "2b2b33", "3a3a44"][rng.randi() % 3]
 			look.top_style = "suit"
+			look.top_cell = "pinstripe" if variant % 2 == 0 else "wool"
 			look.accent = ["c0322c", "3e8ed0", "d9a531"][rng.randi() % 3]
 			look.extra = "tie"
 			look.hair_style = "slick" if not female else "bob"
@@ -150,6 +161,7 @@ static func make_look(kind: String, variant: int) -> Dictionary:
 				look.female = look.instrument == "mic"
 				if look.female:
 					look.top_style = "dress"
+					look.top_cell = "satin"
 					look.top = "c9294a"
 					look.hair_style = "long"
 					look.hair = "1a1a1e"
@@ -169,6 +181,16 @@ static func rest_positions(look: Dictionary) -> Array:
 	return [Vector3.ZERO, Vector3(0, HIP, 0), Vector3(0, 0.4, 0), Vector3(-0.235 * build, 0.33, 0), Vector3(0.235 * build, 0.33, 0),
 		Vector3(-0.095, 0, 0), Vector3(0.095, 0, 0)]
 
+## The fabric, hair and skin cells of the people atlas (tools/art/build_textures.py), row by row.
+const CELLS = ["skin", "cotton", "knit", "denim", "wool", "pinstripe", "hair", "leather",
+	"fleece", "satin", "linen", "floral", "plaid", "stripes", "felt", "lace"]
+
+## Where a fabric sits in the atlas, inset a little so mipmaps do not bleed between cells.
+static func cell(name: String) -> Rect2:
+	var index: int = maxi(0, CELLS.find(name))
+	var pad: float = 6.0 / 1024.0
+	return Rect2(Vector2(index % 4, index / 4) * 0.25 + Vector2(pad, pad), Vector2(0.25 - 2.0 * pad, 0.25 - 2.0 * pad))
+
 ## The face's centre on the head bone and its radius (chibi: the head is about 40 % of the height).
 const HEAD_CENTRE = Vector3(0, 0.25, 0)
 const HEAD_R = 0.27
@@ -187,6 +209,7 @@ static func _mesh(look: Dictionary) -> ArrayMesh:
 	var build: float = float(look.build)
 	var rests: Array = rest_positions(look)
 	var b: Builder = Builder.new()
+	b.force_key = "people"
 	var place: Callable = func(bone: int) -> void:
 		var at: Vector3 = Vector3.ZERO
 		var current: int = bone
@@ -201,12 +224,17 @@ static func _mesh(look: Dictionary) -> ArrayMesh:
 	# Body: a rounded bean of a torso over the hips.
 	place.call(BODY)
 	if dress:
+		b.cell = cell(look.top_cell)
 		b.cylinder(Vector3(0, -0.3, 0), 0.27, 0.42, top.darkened(0.06), "vc", 16, 0.55)
 	else:
+		b.cell = cell(look.bottom_cell)
 		b.sphere(Vector3(0, 0.03, 0), 0.19, bottom, "vc", Vector3(1.05 * build, 0.72, 0.9), 8)
 	var torso: Color = accent if look.top_style == "vest" else top
+	b.cell = cell("wool" if look.top_style == "vest" else look.top_cell)
 	b.sphere(Vector3(0, 0.2, 0), 0.2, torso, "vc", Vector3(1.0 * build, 1.18, 0.86), 10)
+	b.cell = cell("skin")
 	b.cylinder(Vector3(0, 0.37, 0), 0.075, 0.07, skin, "vc", 8)
+	b.cell = cell("cotton")
 	var chest: float = 0.172
 	match look.top_style:
 		"shirt":
@@ -245,6 +273,7 @@ static func _mesh(look: Dictionary) -> ArrayMesh:
 				b.sphere(Vector3(x, 0.355, chest + 0.01), 0.032, Color("1d1d22") if look.kind in ["waiter", "bartender"] or look.instrument != "" else accent, "vc", Vector3(1.2, 0.8, 0.5), 6)
 			if look.extra == "apron":
 				# The konobar's long white apron, tied at the waist.
+				b.cell = cell("linen")
 				b.cylinder(Vector3(0, 0.05, 0), 0.205, 0.04, white, "vc", 10)
 				b.box(Vector3(0, -0.33, 0.13), Vector3(0.34, 0.4, 0.03), white)
 		"flower":
@@ -263,6 +292,7 @@ static func _mesh(look: Dictionary) -> ArrayMesh:
 			b.cylinder(Vector3(0, 0.33, 0), 0.12, 0.07, accent, "vc", 8)
 	# Head: a big round face with eyes, brows, cheeks and a smile; hair, beards and hats over it.
 	place.call(HEAD)
+	b.cell = cell("skin")
 	var hc: Vector3 = HEAD_CENTRE
 	var r: float = HEAD_R
 	b.sphere(hc, r, skin, "vc", Vector3(1.0, 0.96, 0.95), 12)
@@ -278,6 +308,7 @@ static func _mesh(look: Dictionary) -> ArrayMesh:
 	b.box(hc + Vector3(0, -0.11, 0.222), Vector3(0.075, 0.018, 0.02), lips)
 	for side in [-1.0, 1.0]:
 		b.box_xf(Transform3D(Basis(Vector3.FORWARD, side * 0.5), hc + Vector3(side * 0.043, -0.1, 0.221)), Vector3(0.022, 0.014, 0.018), lips)
+	b.cell = cell("hair")
 	var cap: Callable = func(lift: float, stretch: Vector3) -> void:
 		b.sphere(hc + Vector3(0, lift, -0.07), r + 0.035, hair, "vc", stretch, 10)
 	# A fringe: one smooth band over the forehead, swept to one side for some styles.
@@ -326,6 +357,7 @@ static func _mesh(look: Dictionary) -> ArrayMesh:
 			b.sphere(hc + Vector3(0, -0.075, 0.24), 0.04, hair, "vc", Vector3(1.6, 0.6, 0.7), 6)
 		"stubble":
 			b.sphere(hc + Vector3(0, -0.12, 0.06), 0.215, skin.darkened(0.2), "vc", Vector3(1.0, 0.62, 0.9), 8)
+	b.cell = cell("felt")
 	match look.hat:
 		"sajkaca":
 			# The Serbian šajkača: a grey-green cap, boat-shaped and folded down the middle.
@@ -337,6 +369,7 @@ static func _mesh(look: Dictionary) -> ArrayMesh:
 			b.cylinder(hc + Vector3(0, 0.17, -0.02), r + 0.01, 0.1, Color("5a4a3a"), "vc", 14, 0.85)
 			b.box(hc + Vector3(0, 0.18, 0.22), Vector3(0.32, 0.03, 0.14), Color("4a3a2c"))
 		"beanie":
+			b.cell = cell("knit")
 			b.sphere(hc + Vector3(0, 0.1, -0.04), r + 0.035, accent, "vc", Vector3(1.04, 0.78, 1.02), 10)
 			b.cylinder(hc + Vector3(0, 0.08, -0.03), r + 0.03, 0.07, accent.darkened(0.15), "vc", 10)
 			b.sphere(hc + Vector3(0, 0.33, -0.04), 0.06, white, "vc", Vector3.ONE, 6)
@@ -350,10 +383,12 @@ static func _mesh(look: Dictionary) -> ArrayMesh:
 			b.box(hc + Vector3(0, 0.0, 0.25), Vector3(0.08, 0.015, 0.012), Color("15151a"))
 	match look.extra:
 		"veil":
+			b.cell = cell("lace")
 			b.sphere(hc + Vector3(0, 0.05, -0.09), r + 0.035, Color("15151a"), "vc", Vector3(1.04, 0.96, 1.0), 10)
 			b.box(hc + Vector3(0, -0.36, -0.13), Vector3(0.44, 0.38, 0.16), Color("15151a"))
 		"marama":
-			# Grandma's headscarf, knotted under the chin.
+			# Grandma's headscarf, knotted under the chin, in a folk print.
+			b.cell = cell("floral")
 			b.sphere(hc + Vector3(0, 0.05, -0.09), r + 0.035, accent, "vc", Vector3(1.05, 0.98, 1.0), 10)
 			b.sphere(hc + Vector3(0, -0.25, 0.14), 0.05, accent.darkened(0.12), "vc", Vector3(1.2, 0.8, 0.8), 6)
 			for k in range(5):
@@ -362,16 +397,21 @@ static func _mesh(look: Dictionary) -> ArrayMesh:
 	for bone in [ARM_L, ARM_R]:
 		place.call(bone)
 		var sleeve: Color = top if look.top_style != "tshirt" else skin
+		b.cell = cell(look.top_cell if look.top_style != "tshirt" else "skin")
 		b.sphere(Vector3(0, -0.01, 0), 0.075 * build, top, "vc", Vector3.ONE, 6)
 		b.cylinder(Vector3(0, -0.27, 0), 0.062 * build, 0.27, sleeve, "vc", 8, 1.18)
 		if look.top_style == "tshirt":
+			b.cell = cell("cotton")
 			b.cylinder(Vector3(0, -0.11, 0), 0.075 * build, 0.11, top, "vc", 6)
 		b.cylinder(Vector3(0, -0.27, 0), 0.066 * build, 0.035, sleeve.darkened(0.12), "vc", 6)
+		b.cell = cell("skin")
 		b.sphere(Vector3(0, -0.31, 0), 0.068, skin, "vc", Vector3.ONE, 6)
 	# Short legs with round shoes.
 	for bone in [LEG_L, LEG_R]:
 		place.call(bone)
+		b.cell = cell(look.bottom_cell if not dress else "skin")
 		b.cylinder(Vector3(0, -0.36, 0), 0.08 * build, 0.36, bottom if not dress else skin, "vc", 8, 1.12)
+		b.cell = cell("leather")
 		b.sphere(Vector3(0, -0.375, 0.045), 0.085, Color(look.shoes), "vc", Vector3(1.0, 0.58, 1.5), 6)
 	var mesh: ArrayMesh = b.mesh()
 	_cache[key] = mesh

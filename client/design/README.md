@@ -23,7 +23,9 @@ reasoning and the reference games are in `research.md`.
 - Characters are chibi at 1.3× life size so they read on a phone (cars and trees are scaled to
   them): the head is about 40 % of the height, with dark oval eyes and a highlight, brows, rosy
   cheeks and a small smile; a rounded body, short limbs, round hands and shoes; hair as a cap
-  with a fringe; one material, so one draw call each. A readable silhouette per guest type
+  with a fringe. Clothes and hair carry fabric textures from one atlas (knit cardigans, denim,
+  plaid and striped shirts, pinstripe and tweed suits, satin dresses, a lace veil, a floral
+  marama, hair strands), so each character is still one material and one draw call. A readable silhouette per guest type
   (šajkača and moustache for penzioneri, a marama for their wives, hoodies for studenti, black
   for ožalošćeni, suits and dresses for svatovi, suits and ties for biznismeni, the long white
   apron for konobari).

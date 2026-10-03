@@ -16,6 +16,7 @@ extends RefCounted
 ##   "add:NAME"      unshaded additive (light pools, glows)
 ##   "blend:NAME"    unshaded alpha blend (contact shadows)
 ##   "water"         animated river surface
+##   "people"        vertex-coloured characters over the fabric/hair/skin atlas
 const TEX = "res://assets/textures/"
 
 static var _materials: Dictionary = {}
@@ -35,6 +36,14 @@ static func material(key: String) -> Material:
 			result = _water()
 		"glowvc":
 			result = _glow()
+		"people":
+			var cloth: StandardMaterial3D = StandardMaterial3D.new()
+			cloth.albedo_texture = texture("people_atlas")
+			cloth.vertex_color_use_as_albedo = true
+			cloth.vertex_color_is_srgb = true
+			cloth.roughness = 0.82
+			cloth.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+			result = cloth
 		"add", "blend":
 			var unshaded: StandardMaterial3D = StandardMaterial3D.new()
 			unshaded.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED

@@ -63,7 +63,7 @@ The game world is built in 3D at run time (see `client/README.md`); these script
 textures, interface pieces and branding it uses:
 
 ```sh
-python tools/art/build_textures.py  # seamless floors, cloths, streets, walls, roofs, rugs, paintings, signs
+python tools/art/build_textures.py  # floors, cloths, streets, walls, roofs, rugs, paintings, signs, people atlas
 python tools/art/build_ui.py        # HUD pills, buttons, cards, glyphs, upgrade and event pictures
 python tools/art/build_fx.py        # thought clouds, emotes, coins, notes, "+" and fight dust
 python tools/art/build_sprites.py   # drink pictures and the coin and mood faces
@@ -71,7 +71,11 @@ python tools/art/build_key_art.py   # key art / boot splash and app icon (SVG; s
 ```
 
 - `build_textures.py` uses NumPy for seamless noise; tiling textures are 512×512 and are mapped
-  in world space by the game, so one texture covers floors and walls of any size.
+  in world space by the game, so one texture covers floors and walls of any size. It also
+  writes `people_atlas.png`: 16 greyscale cells (skin, cotton, knit, denim, wool, pinstripe,
+  hair, leather, fleece, satin, linen, a folk floral print, plaid, stripes, felt, lace) that
+  the characters' vertex colours tint; `people3d.gd` maps each body part into its cell, so a
+  character stays one draw call. The cell order is shared with `CELLS` in that script.
 - `build_ui.py` and `build_key_art.py` share `isokit.py`, a small outlined-isometric SVG kit used
   for the upgrade and event pictures.
 - The venue, band and guest pictures are renders of the 3D models: run

@@ -8,6 +8,12 @@ var groups: Dictionary = {}
 ## applied before placing it (the bone's rest position).
 var bone: int = -1
 var offset: Transform3D = Transform3D.IDENTITY
+## When set, every new primitive's UVs are squeezed into this rectangle of a texture atlas
+## (the characters' fabrics, hair and skin all live in one texture).
+var cell: Rect2 = Rect2()
+## When set, every new primitive uses this material whatever key it asks for (glows excepted),
+## so a whole character merges into one surface.
+var force_key: String = ""
 
 func _init(chunk_size: float = 0.0) -> void:
 	chunk = chunk_size
@@ -23,6 +29,8 @@ func _group(key: String, at: Vector3) -> Dictionary:
 
 func add(arrays: Array, placed: Transform3D, color: Color, key: String) -> void:
 	var xf: Transform3D = offset * placed
+	if force_key != "" and not key.begins_with("glow"):
+		key = force_key
 	if key.begins_with("glow:"):
 		# Fold the emissive colour and strength into the vertex colour of the shared glow material.
 		var parts: PackedStringArray = key.split(":")
@@ -36,7 +44,13 @@ func add(arrays: Array, placed: Transform3D, color: Color, key: String) -> void:
 	group.verts.append_array(xf * verts)
 	group.normals.append_array(Transform3D(xf.basis.inverse().transposed(), Vector3.ZERO) * normals)
 	var uvs: Variant = arrays[Mesh.ARRAY_TEX_UV]
-	if uvs != null:
+	if uvs != null and cell.size != Vector2.ZERO:
+		var mapped: PackedVector2Array = PackedVector2Array()
+		mapped.resize(uvs.size())
+		for i in range(uvs.size()):
+			mapped[i] = cell.position + uvs[i].clamp(Vector2.ZERO, Vector2.ONE) * cell.size
+		group.uvs.append_array(mapped)
+	elif uvs != null:
 		group.uvs.append_array(uvs)
 	else:
 		var empty: PackedVector2Array = PackedVector2Array()
