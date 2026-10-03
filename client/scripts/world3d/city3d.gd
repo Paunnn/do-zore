@@ -414,7 +414,7 @@ func _town_house(b: Builder, rect: Rect2, storeys: int, colour: Color, old: bool
 			b.prism(base + Vector3(0, 1.25, 0), Vector3(1.6, 0.6, 1.6), Color.WHITE, "tex:roof_tiles:0.35", 0.0)
 			b.box(base + Vector3(0, 0.3, 0.66), Vector3(0.7, 0.75, 0.04), Color.WHITE, _window_key())
 	else:
-		b.box(at + Vector3(0, h - 0.05, 0), Vector3(rect.size.x - 0.3, 0.12, rect.size.y - 0.3), Color("55595f"))
+		b.box(at + Vector3(0, h - 0.05, 0), Vector3(rect.size.x - 0.3, 0.12, rect.size.y - 0.3), Color("a49e98"))
 		var roof: float = h + 0.07
 		if not near:
 			if rng.randf() < 0.5:

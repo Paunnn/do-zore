@@ -1,6 +1,6 @@
-"""Painted textures for the 3D city and venues: cloths, wallpapers, logs, rugs, paintings, signs
-and light pools. Floors, streets, grass, plaster, stone, brick and roof tiles are photo scans
-written by fetch_scanned_textures.py.
+"""Painted textures for the 3D city and venues: cartoon wooden floors, cloths, wallpapers, logs,
+rugs, paintings, signs and light pools. Streets, grass, plaster, stone, brick and roof tiles are
+photo scans painted over by fetch_scanned_textures.py.
 
 Tiling textures are seamless 512x512 PNGs; the game maps them in world space (triplanar), so one
 texture covers floors of any size. Rugs, paintings, signs and light pools are single images
@@ -61,6 +61,89 @@ def shade(base: np.ndarray, amount: np.ndarray) -> np.ndarray:
 # ---------------------------------------------------------------------------------------------
 # Cloth
 # ---------------------------------------------------------------------------------------------
+
+def cartoon_planks(name: str, palette: list, plank: int = 128, seed: int = 1, worn: float = 0.0) -> None:
+    """Cartoon floorboards, 1024 px and seamless: flat boards in a few tones, drawn grain and knots,
+    a light top edge, and dark ink gaps and butt joints."""
+    size, sup = 1024, 2
+    rng = np.random.default_rng(seed)
+    big = size * sup
+    img = Image.new("RGB", (big, big))
+    draw = ImageDraw.Draw(img)
+    ink = (52, 32, 22)
+    rows = max(1, round(size / plank))
+    for row in range(rows):
+        y0, y1 = row * big // rows, (row + 1) * big // rows
+        x = int(rng.integers(0, size)) * sup
+        start = x
+        while x < start + big:
+            length = int(rng.integers(300, 720)) * sup
+            base = rgb(palette[int(rng.integers(len(palette)))]) * rng.uniform(0.93, 1.06)
+            for shift in (-big, 0):
+                x0 = x + shift
+                draw.rectangle([x0, y0, x0 + length, y1], fill=tuple(int(c) for c in np.clip(base, 0, 255)))
+                # Grain: long gentle strokes a shade darker.
+                grain = tuple(int(c) for c in np.clip(base * 0.84, 0, 255))
+                for _ in range(int(rng.integers(4, 8))):
+                    gy = rng.uniform(y0 + 10 * sup, y1 - 10 * sup)
+                    amp = rng.uniform(2, 7) * sup
+                    phase = rng.uniform(0, 6.28)
+                    wave = rng.uniform(180, 420) * sup
+                    seg0 = rng.uniform(0, length * 0.4)
+                    seg1 = rng.uniform(length * 0.55, length)
+                    pts = [(x0 + t, gy + amp * math.sin(t / wave * 6.28 + phase)) for t in np.linspace(seg0, seg1, 40)]
+                    draw.line(pts, fill=grain, width=int(2 * sup))
+                if rng.random() < 0.3:
+                    kx = x0 + rng.uniform(0.2, 0.8) * length
+                    ky = rng.uniform(y0 + 30 * sup, y1 - 30 * sup)
+                    for ring, scale in ((3, 1.0), (2, 0.6)):
+                        rw, rh = 26 * sup * scale, 11 * sup * scale
+                        draw.ellipse([kx - rw, ky - rh, kx + rw, ky + rh], outline=grain, width=ring * sup)
+                    draw.ellipse([kx - 6 * sup, ky - 3 * sup, kx + 6 * sup, ky + 3 * sup], fill=grain)
+                # Edges: a light lip on top, ink below and at the joint.
+                light = tuple(int(c) for c in np.clip(base * 1.14, 0, 255))
+                draw.line([(x0, y0 + 3 * sup), (x0 + length, y0 + 3 * sup)], fill=light, width=3 * sup)
+                draw.line([(x0, y1 - 2 * sup), (x0 + length, y1 - 2 * sup)], fill=ink, width=4 * sup)
+                draw.line([(x0, y0), (x0, y1)], fill=ink, width=4 * sup)
+            x += length
+    img = img.resize((size, size), Image.LANCZOS)
+    arr = np.asarray(img, np.float32)
+    arr *= (0.94 + 0.12 * noise(size, 4, seed + 7, 3))[..., None]
+    if worn > 0:
+        arr *= (1.0 - worn * noise(size, 16, seed + 9, 3))[..., None]
+    save(name, arr)
+
+
+def cartoon_parquet(name: str, palette: list, seed: int = 3) -> None:
+    """Basket-weave parquet, 1024 px: squares of four slats turning by quarters, inked joints."""
+    size, sup, cell = 1024, 2, 128
+    rng = np.random.default_rng(seed)
+    big = size * sup
+    img = Image.new("RGB", (big, big))
+    draw = ImageDraw.Draw(img)
+    ink = (60, 38, 24)
+    slats = 4
+    for cy in range(size // cell):
+        for cx in range(size // cell):
+            x0, y0 = cx * cell * sup, cy * cell * sup
+            across = (cx + cy) % 2 == 0
+            step = cell * sup // slats
+            for k in range(slats):
+                base = rgb(palette[int(rng.integers(len(palette)))]) * rng.uniform(0.94, 1.06)
+                base = tuple(int(c) for c in np.clip(base, 0, 255))
+                if across:
+                    box = [x0, y0 + k * step, x0 + cell * sup, y0 + (k + 1) * step]
+                    draw.rectangle(box, fill=base)
+                    draw.line([(box[0], box[3] - sup), (box[2], box[3] - sup)], fill=ink, width=3 * sup)
+                else:
+                    box = [x0 + k * step, y0, x0 + (k + 1) * step, y0 + cell * sup]
+                    draw.rectangle(box, fill=base)
+                    draw.line([(box[2] - sup, box[1]), (box[2] - sup, box[3])], fill=ink, width=3 * sup)
+            draw.rectangle([x0, y0, x0 + cell * sup, y0 + cell * sup], outline=ink, width=3 * sup)
+    img = img.resize((size, size), Image.LANCZOS)
+    arr = np.asarray(img, np.float32) * (0.94 + 0.12 * noise(size, 4, seed + 7, 3))[..., None]
+    save(name, arr)
+
 
 def gingham(name: str, colour: str, ground: str = "#f6eedc", cell: int = 32) -> None:
     y, x = np.mgrid[0:N, 0:N]
@@ -244,6 +327,10 @@ def slot_marker(name: str) -> None:
 
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
+    cartoon_planks("planks_rough", ["#c98a4a", "#b97b3e", "#d39857", "#a86c34"], seed=1, worn=0.08)
+    cartoon_planks("planks_walnut", ["#7a4424", "#6a3a1e", "#86502c", "#5e331c"], seed=2)
+    cartoon_planks("planks_deck", ["#9a7a5a", "#8a6c4e", "#a8876a", "#7c5f45"], plank=96, seed=3, worn=0.12)
+    cartoon_parquet("parquet", ["#b8803e", "#a87034", "#c48c48", "#9c6630"])
     gingham("cloth_red", "#c0322c", cell=64)
     gingham("cloth_blue", "#1f4f9a", cell=64)
     linen("linen", "#f7f3ea")

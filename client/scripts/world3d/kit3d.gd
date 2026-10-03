@@ -18,11 +18,12 @@ extends RefCounted
 ##   "blend:NAME"    unshaded alpha blend (contact shadows)
 ##   "water"         animated river surface
 const TEX = "res://assets/textures/"
+const WORLD_SHADER = preload("res://shaders/world.gdshader")
 
 static var _materials: Dictionary = {}
 static var _units: Dictionary = {}
 
-## A texture by name: painted ones are PNG, photo scans (and their _normal/_rough maps) JPG.
+## A texture by name: drawn ones are PNG, painted-over scans JPG.
 static func texture(name: String) -> Texture2D:
 	for extension in [".png", ".jpg"]:
 		var path: String = TEX + name + extension
@@ -52,46 +53,31 @@ static func material(key: String) -> Material:
 			unshaded.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
 			unshaded.render_priority = 1
 			result = unshaded
-		_:
+		"glow":
 			var standard: StandardMaterial3D = StandardMaterial3D.new()
-			standard.vertex_color_use_as_albedo = true
-			standard.vertex_color_is_srgb = true
-			standard.roughness = 0.85
-			standard.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+			standard.albedo_color = Color(parts[1]).darkened(0.3)
+			standard.emission_enabled = true
+			standard.emission = Color(parts[1])
+			standard.emission_energy_multiplier = float(parts[2]) if parts.size() > 2 else 1.5
+			result = standard
+		_:
+			# Everything else is painted and toon-lit (shaders/world.gdshader).
+			var toon: ShaderMaterial = ShaderMaterial.new()
+			toon.shader = WORLD_SHADER
 			match parts[0]:
 				"vc_gloss":
-					standard.roughness = 0.28
-					standard.metallic_specular = 0.7
+					toon.set_shader_parameter("gloss", 0.8)
 				"vc_metal":
-					standard.roughness = 0.35
-					standard.metallic = 0.65
-				"glow":
-					standard.albedo_color = Color(parts[1]).darkened(0.3)
-					standard.emission_enabled = true
-					standard.emission = Color(parts[1])
-					standard.emission_energy_multiplier = float(parts[2]) if parts.size() > 2 else 1.5
-					standard.vertex_color_use_as_albedo = false
+					toon.set_shader_parameter("gloss", 0.6)
+					toon.set_shader_parameter("metal", 1.0)
 				"tex":
-					standard.albedo_texture = texture(parts[1])
-					standard.uv1_triplanar = true
-					standard.uv1_world_triplanar = true
-					var scale: float = float(parts[2]) if parts.size() > 2 else 0.5
-					standard.uv1_scale = Vector3.ONE * scale
-					standard.uv1_triplanar_sharpness = 8.0
-					# Photo-scanned sets bring relief and shine: planks, cobbles and tiles catch the lamps.
-					var relief: Texture2D = texture(parts[1] + "_normal")
-					if relief != null:
-						standard.normal_enabled = true
-						standard.normal_texture = relief
-						standard.normal_scale = 0.8
-					var shine: Texture2D = texture(parts[1] + "_rough")
-					if shine != null:
-						standard.roughness_texture = shine
-						standard.roughness_texture_channel = BaseMaterial3D.TEXTURE_CHANNEL_GRAYSCALE
-						standard.roughness = 1.0
+					toon.set_shader_parameter("mode", 1)
+					toon.set_shader_parameter("albedo_tex", texture(parts[1]))
+					toon.set_shader_parameter("tex_scale", float(parts[2]) if parts.size() > 2 else 0.5)
 				"uv":
-					standard.albedo_texture = texture(parts[1])
-			result = standard
+					toon.set_shader_parameter("mode", 2)
+					toon.set_shader_parameter("albedo_tex", texture(parts[1]))
+			result = toon
 	_materials[key] = result
 	return result
 

@@ -2,9 +2,9 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://b24l2stwv6wjv"
-path.s3tc="res://.godot/imported/paving_rough.jpg-fb736a9459948db3f3aaceb4db46d3c7.s3tc.ctex"
-path.etc2="res://.godot/imported/paving_rough.jpg-fb736a9459948db3f3aaceb4db46d3c7.etc2.ctex"
+uid="uid://byiewn23x2uvr"
+path.s3tc="res://.godot/imported/parquet.png-e0d9be376efb85ed2ed49934dfaed9e5.s3tc.ctex"
+path.etc2="res://.godot/imported/parquet.png-e0d9be376efb85ed2ed49934dfaed9e5.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -12,8 +12,8 @@ metadata={
 
 [deps]
 
-source_file="res://assets/textures/paving_rough.jpg"
-dest_files=["res://.godot/imported/paving_rough.jpg-fb736a9459948db3f3aaceb4db46d3c7.s3tc.ctex", "res://.godot/imported/paving_rough.jpg-fb736a9459948db3f3aaceb4db46d3c7.etc2.ctex"]
+source_file="res://assets/textures/parquet.png"
+dest_files=["res://.godot/imported/parquet.png-e0d9be376efb85ed2ed49934dfaed9e5.s3tc.ctex", "res://.godot/imported/parquet.png-e0d9be376efb85ed2ed49934dfaed9e5.etc2.ctex"]
 
 [params]
 

@@ -75,8 +75,9 @@ clouds, coins and notes over their 3D anchors.
   towards the person's mood, with blinks, chatter and sips on top; `shaders/ink.gdshader` is the
   outline.
 - `scripts/world3d/builder.gd` merges primitives per material and per spatial chunk;
-  `kit3d.gd` holds the shared materials (vertex colours, world-mapped photo-scanned textures
-  with relief and shine maps, one glow shader for every lamp and window, the river shader).
+  `kit3d.gd` holds the shared materials: the toon world shader (`shaders/world.gdshader`: vertex
+  colours times painted textures mapped in world space or by UV, two-tone light, sheen), one glow
+  shader for every lamp and window, and the river shader.
 
 Budget, measured with a full venue (about 80 people): 370–570 draw calls and about 550 k
 triangles at venue zoom, 680–920 draw calls with the whole map in view (two draws per person,
@@ -88,7 +89,8 @@ and lipped buttons, cream cards with a red header over a tablecloth trim); see
 `design/README.md`. Fonts: Shrikhand, Titan One and Nunito (SIL Open Font License, licences in
 `assets/fonts`). The characters are cartoon MakeHuman people with Quaternius' animations (CC0,
 `assets/people/CREDITS.md`); the
-large surfaces are Poly Haven scans (CC0, `assets/textures/SCANNED.md`); everything else is
+streets, walls and roofs are painted-over Poly Haven scans (CC0, `assets/textures/SCANNED.md`);
+everything else is
 generated from code: see `tools/README.md`. The venue, band and
 guest pictures in `assets/ui/{venues,bands,guests}` are renders of the 3D models made with
 `tests/render_venue_cards.gd`.

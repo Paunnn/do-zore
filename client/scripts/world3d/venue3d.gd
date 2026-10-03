@@ -31,16 +31,16 @@ const THEMES = {
 	},
 	"kafana": {
 		"cols": 4, "top": 6, "stage": Vector2i(5, 4),
-		"floor": "tex:planks_walnut:0.45", "wall": "tex:damask_red:0.45", "wall_tint": "ffffff", "upper": "", "trim": "4a2a18",
+		"floor": "tex:planks_walnut:0.45", "wall": "tex:damask_red:0.45", "wall_tint": "ffffff", "upper": "", "trim": "6e3c22",
 		"facade": "tex:plaster_rose:0.25", "facade_tint": "f0d8c8", "roof": "roof_tiles", "storeys": 2,
-		"table": "4a2a18", "chair": "3a2016", "cloth": "tex:cloth_red:0.9", "stool": "3a2016", "bar": "4a2a18", "bar_top": "2a160c",
+		"table": "7a4628", "chair": "6a3a20", "cloth": "tex:cloth_red:0.9", "stool": "6a3a20", "bar": "7a4628", "bar_top": "5a3018",
 		"lamp": "ffc070", "glass": "1d2c4a",
 	},
 	"restoran": {
 		"cols": 5, "top": 6, "stage": Vector2i(6, 4),
 		"floor": "tex:parquet:0.35", "wall": "tex:stripes_cream:0.45", "wall_tint": "ffffff", "upper": "", "trim": "f4efe4",
 		"facade": "tex:plaster_white:0.25", "facade_tint": "f4efe4", "roof": "", "storeys": 3,
-		"table": "e8e2d6", "chair": "8a1f2a", "cloth": "tex:linen:0.6", "stool": "8a1f2a", "bar": "2a2a33", "bar_top": "e8e2d6",
+		"table": "e8e2d6", "chair": "a8323c", "cloth": "tex:linen:0.6", "stool": "a8323c", "bar": "4a4a58", "bar_top": "e8e2d6",
 		"lamp": "ffe4b0", "glass": "1d2c4a",
 	},
 	"splav": {
@@ -659,7 +659,7 @@ static func build_exterior(root: Node3D, lay: Dictionary, state: String) -> void
 		b.box(Vector3(w * 0.7, height + pitch * 0.4, d * 0.4), Vector3(0.7, pitch * 0.75, 0.7), Color("f4e4dc"), "tex:bricks:0.6")
 	else:
 		b.box(Vector3(w / 2.0, height, d / 2.0), Vector3(w + 0.4, 0.5, d + 0.4), wall.darkened(0.08))
-		b.box(Vector3(w / 2.0, height + 0.5, d / 2.0), Vector3(w - 0.6, 0.06, d - 0.6), Color("3a3f4a"))
+		b.box(Vector3(w / 2.0, height + 0.5, d / 2.0), Vector3(w - 0.6, 0.06, d - 0.6), Color("a49e98"))
 		for k in range(int(w / 0.8)):
 			b.box(Vector3(0.4 + k * 0.8, height + 0.5, d + 0.1), Vector3(0.14, 0.55, 0.14), wall)
 		b.box(Vector3(w / 2.0, height + 1.05, d + 0.1), Vector3(w + 0.2, 0.12, 0.26), wall)

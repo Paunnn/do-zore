@@ -14,10 +14,13 @@ reasoning and the reference games are in `research.md`.
 - One night runs from a warm dusk through deep night to dawn ("do zore") in 20 minutes and opens
   again at dusk with every new venue (`SKIES` in `scripts/ui/floor_view.gd`). The sun, then the
   moon, casts the only shadows; interiors, windows and street lamps are always warm.
-- Shapes are simple primitives with vertex colours; large surfaces (floors, streets, grass,
-  plaster, stone, brick, roof tiles) use photo-scanned CC0 textures with relief and shine maps
-  (`tools/art/fetch_scanned_textures.py`), so planks and cobbles catch the lamps; cloths,
-  wallpapers, rugs and signs stay painted (`tools/art/build_textures.py`).
+- The world is drawn to match the people: simple primitives with flat vertex colours, toon light
+  in two soft tones with a cool violet shadow, a soft sheen where lamps and moon glance back, and
+  no true blacks (flat roofs are pale, dark woods are warm browns). Floors are cartoon boards and
+  basket-weave parquet with inked gaps (`tools/art/build_textures.py`); streets, grass, plaster,
+  stone, brick and roof tiles are CC0 scans painted over into a few flat colours with their joints
+  drawn in ink (`tools/art/fetch_scanned_textures.py`); cloths, wallpapers, rugs and signs are
+  painted.
 - The played venue is a roofless cut-away with low front walls; nothing between it and the
   camera rises above one storey. Nothing hangs over the tables either: the room is lit by lights
   alone, and the lamps you see are sconces on the back walls and shaded pendants over the bar.

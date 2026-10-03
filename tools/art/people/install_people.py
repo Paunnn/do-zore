@@ -54,7 +54,12 @@ def main() -> None:
         sub = RETARGET % ("ual" if path.name.startswith("people_anims") else "mh")
         if '"retarget/bone_map"' not in text:
             path.write_text(text.replace("_subresources={}", sub))
-    for glb in PEOPLE.glob("*.glb"):
+    # Atlases: VRAM-compressed with mipmaps (people are small on screen most of the time).
+    for path in PEOPLE.glob("*_atlas.png.import"):
+        text = path.read_text()
+        text = text.replace("compress/mode=0", "compress/mode=2").replace("mipmaps/generate=false", "mipmaps/generate=true")
+        path.write_text(text.replace("detect_3d/compress_to=1", "detect_3d/compress_to=0"))
+    for glb in list(PEOPLE.glob("*.glb")) + list(PEOPLE.glob("*_atlas.png")):
         glb.touch()
     godot_import(args.godot)
     print(f"Installed {len(list(PEOPLE.glob('*.glb')))} GLBs into {PEOPLE}")

@@ -3,10 +3,6 @@
 Written by `tools/art/fetch_scanned_textures.py` from [Poly Haven](https://polyhaven.com)
 texture sets, released under CC0 (public domain). Thank you to their authors:
 
-- `planks_rough`: Wood Floor Worn (`wood_floor_worn`) by Dimitrios Savva
-- `planks_walnut`: Wood Floor Deck (`wood_floor_deck`) by Dimitrios Savva
-- `planks_deck`: Weathered Brown Planks (`weathered_brown_planks`) by Dimitrios Savva, Rico Cilliers
-- `parquet`: Herringbone Parquet (`herringbone_parquet`) by Jenelle van Heerden, Sergej Majboroda
 - `cobble`: Cobblestone Floor 08 (`cobblestone_floor_08`) by Rob Tuytel
 - `paving`: Pavement 03 (`pavement_03`) by Charlotte Baglioni, Dario Barresi
 - `sidewalk`: Concrete Pavers (`concrete_pavers`) by Amal Kumar

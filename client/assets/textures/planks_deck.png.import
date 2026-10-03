@@ -2,9 +2,9 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bp56th0ykic4r"
-path.s3tc="res://.godot/imported/paving_normal.jpg-fb09c5619eb340ce915f0570a487b3c8.s3tc.ctex"
-path.etc2="res://.godot/imported/paving_normal.jpg-fb09c5619eb340ce915f0570a487b3c8.etc2.ctex"
+uid="uid://swg6r5kk2tc8"
+path.s3tc="res://.godot/imported/planks_deck.png-aa914f6657488d5df54ae5d7638e722b.s3tc.ctex"
+path.etc2="res://.godot/imported/planks_deck.png-aa914f6657488d5df54ae5d7638e722b.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -12,8 +12,8 @@ metadata={
 
 [deps]
 
-source_file="res://assets/textures/paving_normal.jpg"
-dest_files=["res://.godot/imported/paving_normal.jpg-fb09c5619eb340ce915f0570a487b3c8.s3tc.ctex", "res://.godot/imported/paving_normal.jpg-fb09c5619eb340ce915f0570a487b3c8.etc2.ctex"]
+source_file="res://assets/textures/planks_deck.png"
+dest_files=["res://.godot/imported/planks_deck.png-aa914f6657488d5df54ae5d7638e722b.s3tc.ctex", "res://.godot/imported/planks_deck.png-aa914f6657488d5df54ae5d7638e722b.etc2.ctex"]
 
 [params]
 
@@ -23,7 +23,7 @@ compress/lossy_quality=0.7
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
-compress/normal_map=1
+compress/normal_map=0
 compress/channel_pack=0
 mipmaps/generate=true
 mipmaps/limit=-1

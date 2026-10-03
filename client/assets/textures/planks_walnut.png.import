@@ -2,9 +2,9 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://c7v3tq33lwj4s"
-path.s3tc="res://.godot/imported/plaster_white_normal.jpg-49ec73730400dddbdc0b2da07880d95f.s3tc.ctex"
-path.etc2="res://.godot/imported/plaster_white_normal.jpg-49ec73730400dddbdc0b2da07880d95f.etc2.ctex"
+uid="uid://dnpy8gvvqhmxv"
+path.s3tc="res://.godot/imported/planks_walnut.png-fee975f309c8d82e8bb6324157bae1d0.s3tc.ctex"
+path.etc2="res://.godot/imported/planks_walnut.png-fee975f309c8d82e8bb6324157bae1d0.etc2.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc", "etc2_astc"],
 "vram_texture": true
@@ -12,8 +12,8 @@ metadata={
 
 [deps]
 
-source_file="res://assets/textures/plaster_white_normal.jpg"
-dest_files=["res://.godot/imported/plaster_white_normal.jpg-49ec73730400dddbdc0b2da07880d95f.s3tc.ctex", "res://.godot/imported/plaster_white_normal.jpg-49ec73730400dddbdc0b2da07880d95f.etc2.ctex"]
+source_file="res://assets/textures/planks_walnut.png"
+dest_files=["res://.godot/imported/planks_walnut.png-fee975f309c8d82e8bb6324157bae1d0.s3tc.ctex", "res://.godot/imported/planks_walnut.png-fee975f309c8d82e8bb6324157bae1d0.etc2.ctex"]
 
 [params]
 
@@ -23,7 +23,7 @@ compress/lossy_quality=0.7
 compress/uastc_level=0
 compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
-compress/normal_map=1
+compress/normal_map=0
 compress/channel_pack=0
 mipmaps/generate=true
 mipmaps/limit=-1

@@ -63,8 +63,8 @@ The game world is built in 3D at run time (see `client/README.md`); these script
 textures, interface pieces and branding it uses:
 
 ```sh
-python tools/art/fetch_scanned_textures.py  # photo-scanned floors, streets, grass, plaster, stone, brick, roofs
-python tools/art/build_textures.py  # painted cloths, wallpapers, logs, rugs, paintings, signs
+python tools/art/fetch_scanned_textures.py  # painted-over scans: streets, grass, plaster, stone, brick, roofs
+python tools/art/build_textures.py  # cartoon floors, cloths, wallpapers, logs, rugs, paintings, signs
 python tools/art/build_ui.py        # HUD pills, buttons, cards, glyphs, upgrade and event pictures
 python tools/art/build_fx.py        # thought clouds, emotes, coins, notes, "+" and fight dust
 python tools/art/build_sprites.py   # drink pictures and the coin and mood faces
@@ -72,13 +72,14 @@ python tools/art/build_key_art.py   # key art / boot splash and app icon (SVG; s
 ```
 
 - `fetch_scanned_textures.py` downloads CC0 (public domain) texture sets from Poly Haven and
-  writes `NAME.jpg` with `NAME_normal.jpg` and `NAME_rough.jpg` relief and shine maps (indoor
-  floors 1024 px, the rest 512 px); plaster becomes a neutral grey that each building's colour
+  paints them into the cartoon style (needs OpenCV): mean-shift and k-means flatten each into a
+  few colours, its relief adds a painted bevel and draws the joints in ink, and one `NAME.jpg`
+  (512 px) is written per surface; plaster becomes a neutral grey that each building's colour
   tints. It needs network access; the results are committed, with credits in
-  `client/assets/textures/SCANNED.md`. After the first import give the `_normal` maps
-  `compress/normal_map=1` (and every scan `compress/mode=2`, `mipmaps/generate=true`).
-- `build_textures.py` uses NumPy for seamless noise; tiling textures are 512×512 and are mapped
-  in world space by the game, so one texture covers floors and walls of any size.
+  `client/assets/textures/SCANNED.md`.
+- `build_textures.py` uses NumPy for seamless noise; tiling textures (512 px, the wooden floors
+  1024 px) are mapped in world space by the game, so one texture covers floors and walls of any
+  size.
 - The characters are cartoon people built in Blender from MakeHuman bodies with Quaternius'
   animations (all CC0): `tools/art/people` holds the pipeline and its README (setup, cartoon
   reshaping, cleaned faces drawn by the game's shader, texture atlas, animation library, install).
