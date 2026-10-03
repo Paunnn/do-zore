@@ -431,7 +431,6 @@ func _place_drink(slot: Dictionary, item: String) -> void:
 		var vessel: MeshInstance3D = MeshInstance3D.new()
 		vessel.mesh = People.vessel_mesh(kind)
 		vessel.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		vessel.material_overlay = People._ink()
 		slot.table.add_child(vessel)
 		# Drawn a size up, like the people's hands.
 		vessel.transform = Transform3D(Basis(Vector3.UP, atan2(toward.x, toward.z)).scaled(Vector3.ONE * VESSEL_SCALE), -toward * 0.34 + right * 0.15 + Vector3(0, 0.79, 0))

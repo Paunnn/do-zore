@@ -88,10 +88,11 @@ clouds, coins and notes over their 3D anchors.
   colours times painted textures mapped in world space or by UV, two-tone light, sheen), one glow
   shader for every lamp and window, and the river shader.
 
-Budget, measured with a full venue (about 80 people): 360–570 draw calls and 500–550 k
-triangles at venue zoom, 660–920 draw calls with the whole map in view (two draws per person,
-person and outline; people take coarser levels of detail early, `lod_bias` 0.3; the contact
-shadows under people and tables are one MultiMesh, the walkers' another).
+Budget, measured with a full venue (about 80 people): 440–620 draw calls and 500–580 k
+triangles at venue zoom, 760–960 draw calls with the whole map in view (two draws per person
+and per prop, body and outline; one per glass on the tables; people take coarser levels of
+detail early, `lod_bias` 0.3; the contact shadows under people and tables are one MultiMesh, the
+walkers' another, the chairs a third).
 
 The interface is the modern-kafana kit in `scripts/ui/ui_kit.gd` (floating pills, glossy round
 and lipped buttons, cream cards with a red header over a tablecloth trim); see
