@@ -101,9 +101,41 @@ static func layout(venue_id: String, max_tables: int) -> Dictionary:
 		"plants": [Vector3(w - 0.7, 0, top + 0.7), Vector3(0.7, 0, d - 0.7), Vector3(w - 0.7, 0, d - 2.2), Vector3(0.7, 0, top + 0.7)],
 	}
 
+## Where things already hang on the side wall (x = 0), as distances from the first table row.
+const WALL_ITEMS = {"birtija": [0.2, 2.0, 4.0, 6.0, 7.0, 10.0], "kafana": [3.0, 6.0, 9.0], "restoran": [2.5, 7.5, 12.5]}
+
+## The middle of the widest free stretch of the side wall (z), or -1 when there is no room for a
+## hanging 1.2 m wide.
+static func free_wall_spot(lay: Dictionary) -> float:
+	if not WALL_ITEMS.has(lay.id):
+		return -1.0
+	var top: float = float(lay.top)
+	var marks: Array = [top - 0.2, float(lay.d) - 0.6]
+	for at in WALL_ITEMS[lay.id]:
+		if top + at < float(lay.d) - 0.6:
+			marks.append(top + at)
+	marks.sort()
+	var best: float = -1.0
+	var gap: float = 0.0
+	for i in range(marks.size() - 1):
+		if marks[i + 1] - marks[i] > gap:
+			gap = marks[i + 1] - marks[i]
+			best = (marks[i] + marks[i + 1]) / 2.0
+	return best if gap >= 2.2 else -1.0
+
 static func seat_point(center: Vector2, seat: int) -> Vector3:
 	var offset: Vector2 = SEATS[seat].offset if seat < SEATS.size() else STANDING[seat - SEATS.size()]
 	return Vector3(center.x + offset.x, 0, center.y + offset.y)
+
+## A chair at a table: its tucked-in centre, the way to the table, a free spot beside where one
+## stands to sit down (people come and go from there), and the walk cell next to that spot.
+static func seat_geometry(center: Vector2, seat: int) -> Dictionary:
+	var offset: Vector2 = SEATS[seat].offset
+	var chair: Vector3 = Vector3(center.x + offset.x, 0, center.y + offset.y)
+	var dir: Vector3 = -Vector3(offset.x, 0, offset.y).normalized()
+	var side: Vector3 = Vector3(-dir.z, 0, dir.x)
+	return {"chair": chair, "dir": dir, "side": chair - dir * 0.12 + side * 0.6,
+		"corner": SEATS[seat].cell + Vector2i(roundi(side.x), roundi(side.z))}
 
 # ---------------------------------------------------------------------------------------------
 # Interior: the venue being played
@@ -138,7 +170,7 @@ static func build_interior(root: Node3D, lay: Dictionary) -> Dictionary:
 		node.position = Vector3(cell.x + 0.5, 0, cell.y + 0.5)
 		root.add_child(node)
 		var dining: Builder = Builder.new()
-		_dining_set(dining, id, t, rng)
+		_dining_set(dining, id, t, rng, false)
 		dining.commit(node)
 		slots.append(node)
 	return {"slots": slots, "lights": lights}
@@ -307,7 +339,8 @@ static func _pendant(b: Builder, at: Vector3, lamp: String, id: String) -> void:
 	b.cylinder(at - Vector3(0, 0.01, 0), 0.25, 0.02, Color.WHITE, "glow:%s:1.2" % lamp, 14)
 	b.sphere(at - Vector3(0, 0.03, 0), 0.07, Color.WHITE, "glow:%s:2.2" % lamp, Vector3.ONE, 8)
 
-static func _dining_set(b: Builder, id: String, t: Dictionary, rng: RandomNumberGenerator) -> void:
+## A table, set for the venue; the chairs too unless they are drawn apart (see chair_mesh).
+static func _dining_set(b: Builder, id: String, t: Dictionary, rng: RandomNumberGenerator, chairs: bool = true) -> void:
 	var wood: Color = Color(t.table)
 	var chair: Color = Color(t.chair)
 	if id == "restoran":
@@ -330,11 +363,19 @@ static func _dining_set(b: Builder, id: String, t: Dictionary, rng: RandomNumber
 		elif id == "birtija":
 			b.cylinder(Vector3(-0.2, 0.75, 0.15), 0.05, 0.2, Color("dfeff0"), "vc_gloss", 8)
 			b.cylinder(Vector3(0.25, 0.75, -0.2), 0.11, 0.05, Color("c9ced6"), "vc_gloss", 10)
+	if not chairs:
+		return
 	for seat in SEATS:
 		var offset: Vector2 = seat.offset
 		var turn: float = atan2(offset.x, offset.y)
 		var xf: Transform3D = Transform3D(Basis(Vector3.UP, turn), Vector3(offset.x, 0, offset.y))
 		_chair(b, xf, id, chair)
+
+## One of the venue's chairs on its own (its back towards +z), so chairs can slide out and back.
+static func chair_mesh(id: String) -> ArrayMesh:
+	var b: Builder = Builder.new()
+	_chair(b, Transform3D.IDENTITY, id, Color(THEMES[id].chair))
+	return b.mesh()
 
 ## A chair whose back faces away from the table (local +Z points away from it).
 static func _chair(b: Builder, xf: Transform3D, id: String, colour: Color) -> void:
@@ -419,9 +460,8 @@ static func _kafana_decor(b: Builder, lay: Dictionary, rng: RandomNumberGenerato
 	var w: float = lay.w
 	_painting(b, Vector3(0.05, 1.5, lay.top + 3.0), PI / 2.0, "painting_landscape", Vector2(1.2, 0.9), Color("d9a531"))
 	_painting(b, Vector3(0.05, 1.5, lay.top + 9.0), PI / 2.0, "painting_still", Vector2(0.9, 0.7), Color("d9a531"))
-	# A kilim hung on the wall and a long one on the floor in front of the stage.
+	# A kilim hung on the wall.
 	b.add(Kit.unit("quad"), Transform3D(Basis(Vector3.UP, PI / 2.0) * Basis(Vector3.RIGHT, PI / 2.0) * Basis.from_scale(Vector3(1.3, 1, 1.9)), Vector3(0.05, 1.95, lay.top + 6.0)), Color.WHITE, "uv:rug_kilim")
-	b.add(Kit.unit("quad"), Transform3D(Basis(Vector3.UP, PI / 2.0) * Basis.from_scale(Vector3(2.4, 1, 3.6)), Vector3(lay.stage.x / 2.0 + 0.5, 0.01, lay.stage.y + 1.4)), Color.WHITE, "uv:rug_kilim")
 	# Coat rack by the door, an old radio on a sideboard, plants.
 	var rack: Vector3 = Vector3(w - 0.6, 0, d - 1.2)
 	b.cylinder(rack, 0.04, 1.9, Color("3a2016"), "vc_gloss", 6)
@@ -452,7 +492,6 @@ static func _restoran_decor(b: Builder, lay: Dictionary, rng: RandomNumberGenera
 	_plant(b, Vector3(w - 0.6, 0, lay.top + 0.6), "palm")
 	_plant(b, Vector3(0.7, 0, d - 0.7), "palm")
 	_plant(b, Vector3(w - 0.6, 0, d - 2.4), "palm")
-	b.add(Kit.unit("quad"), Transform3D(Basis(Vector3.UP, PI / 2.0) * Basis.from_scale(Vector3(3.0, 1, 4.6)), Vector3(lay.stage.x / 2.0 + 0.5, 0.01, lay.stage.y + 1.6)), Color.WHITE, "uv:rug_persian")
 	# Wine rack along the back wall.
 	b.box(Vector3(lay.bar_to - 0.5, 0, 0.3), Vector3(0.9, 2.4, 0.5), Color("3a2016"), "vc_gloss")
 	for r in range(6):
@@ -470,7 +509,6 @@ static func _splav_decor(b: Builder, lay: Dictionary, rng: RandomNumberGenerator
 		b.cylinder_xf(Transform3D(Basis(Vector3.FORWARD, PI / 2.0), Vector3(w + 0.55, 0.8, z)), 0.3, 0.08, Color("f26a2a"), "vc_gloss", 14)
 		for a in [0.0, PI / 2.0, PI, PI * 1.5]:
 			b.box(Vector3(w + 0.6, 0.8 + sin(a) * 0.26, z + cos(a) * 0.26), Vector3(0.1, 0.1, 0.1), Color("f4f1ea"), "vc")
-	b.add(Kit.unit("quad"), Transform3D(Basis(Vector3.UP, PI / 2.0) * Basis.from_scale(Vector3(2.6, 1, 4.2)), Vector3(lay.stage.x / 2.0 + 0.5, 0.01, lay.stage.y + 1.5)), Color.WHITE, "uv:rug_blue")
 
 ## A thin cord between two points (string lights).
 static func _cord(b: Builder, from: Vector3, to: Vector3) -> void:

@@ -23,9 +23,25 @@ const SIZE = 1.2
 ## Metres per second the walk clip covers at rate 1 for a hip height of one metre; the clip runs
 ## faster for shorter legs so the feet don't slide.
 const STRIDE = 1.45
-## The height of a chair seat, and how far the hips sit above it.
-const SEAT_HEIGHT = 0.47
-const HIP_OVER_SEAT = 0.1
+## Chairs: the top of the seat, how high the hips sit above it (model units), how far a chair
+## slides out to let someone sit down or get up, and how far behind its centre the hips sit.
+const SEAT_TOP = 0.51
+const HIP_OVER_SEAT = 0.075
+const CHAIR_PULL = 0.4
+const SEAT_BACK = 0.0
+## A drink: reach for the glass, lift it, sip, put it down, let go (seconds from the start).
+const DRINK_REACH = 0.45
+const DRINK_LIFT = 0.95
+const DRINK_SIP = 1.95
+const DRINK_DOWN = 2.45
+const DRINK_END = 2.85
+## Vessels on the table, per drink: radius and height in metres (drawn a little big, like the
+## hands), and how far they tip at the mouth.
+const VESSELS = {
+	"cup": [0.05, 0.085, 0.7], "mug": [0.065, 0.17, 1.0], "shot": [0.035, 0.085, 1.3],
+	"wine": [0.05, 0.19, 0.9], "tumbler": [0.055, 0.1, 0.9], "flute": [0.032, 0.2, 1.0],
+	"water": [0.05, 0.15, 0.9],
+}
 ## How far a head tips back so the face reads from the high camera.
 const HEAD_LIFT = 0.28
 ## Who plays in each band level, left to right on the stage.
@@ -55,6 +71,7 @@ const FACES = {
 	"sing": [Vector4(0.05, 0.0, 0, 0), Vector4(0.7, 0, 0.8, 0), Vector4(0.2, 0.8, 0.6, 1), Vector4(0.5, 0, 0, 0)],
 	"blissful": [Vector4(0.0, 0.4, 0, 0), Vector4(0.5, 0, 0.3, 0), Vector4(0.9, 0.0, 0, 1.0), Vector4(0.6, 0, 1, 0)],
 	"sip": [Vector4(0.3, 0.2, 0, 0), Vector4(0.3, 0, 0, 0), Vector4(0.2, 0.25, 1, 0.8), Vector4(0.6, 0, 0, 0)],
+	"gulp": [Vector4(0.0, 0.3, 0, 0), Vector4(0.6, 0, 0.2, 0), Vector4(0.1, 0.12, 1, 0.65), Vector4(0.8, 0, 1, 0)],
 	"whistle": [Vector4(0.9, 0.1, 0.4, -0.2), Vector4(0.4, 0, 0, 0), Vector4(0.0, 0.2, 1, 0.7), Vector4(0.3, 0, 0, 0)],
 }
 const SKIN = ["f6d2b4", "f2c6a0", "e8b48f", "dba27e", "f3cba8", "c98e6a"]
@@ -95,6 +112,19 @@ var emote_name: String = ""
 var emote_left: float = 0.0
 var blink_in: float = 2.0
 var talking: bool = false
+## Seating: the chair ({"chair": tucked-in centre, "dir": towards the table, "move": Callable(pull)},
+## venue space), where in sitting down or getting up the person is, and how far the chair is out.
+var seat: Dictionary = {}
+var seat_state: String = ""
+var seat_time: float = 0.0
+var pull: float = 0.0
+var after_rising: Callable
+## The person's own glass or cup on the table, where it stands, and the drink in progress.
+var vessel: Node3D
+var vessel_rest: Transform3D
+var vessel_kind: String = ""
+var sip_time: float = -1.0
+var sip_in: float = 2.0
 
 # ---------------------------------------------------------------------------------------------
 # Looks
@@ -195,7 +225,7 @@ static func library() -> AnimationLibrary:
 	_library = AnimationLibrary.new()
 	for name in source.get_animation_list():
 		var anim: Animation = source.get_animation(name).duplicate()
-		anim.loop_mode = Animation.LOOP_LINEAR
+		anim.loop_mode = Animation.LOOP_NONE if name in ["Sitting_Enter", "Sitting_Exit"] else Animation.LOOP_LINEAR
 		_library.add_animation(name, anim)
 	scene.free()
 	_compose("Sit_Drink", {"Sitting_Idle": LOWER_BODY}, "Consume")
@@ -260,31 +290,60 @@ static func _material(model_name: String, atlas: Texture2D) -> ShaderMaterial:
 		_materials[model_name] = mat
 	return _materials[model_name]
 
-## Measures of a model, taken once: where the top of the head is above the head bone, the hip
-## height, and how high the hips sit in the sitting clip.
-static func _measure(model_name: String, skeleton: Skeleton3D, mesh: Mesh) -> Dictionary:
+## A bone's bind pose: mesh space to the bone's frame, as the skin deforms the mesh (falls back to
+## the rest pose).
+static func _bind(skeleton: Skeleton3D, skin: Skin, bone_name: String) -> Transform3D:
+	if skin != null:
+		var bone: int = skeleton.find_bone(bone_name)
+		for i in range(skin.get_bind_count()):
+			if skin.get_bind_name(i) == bone_name or (skin.get_bind_name(i) == "" and skin.get_bind_bone(i) == bone):
+				return skin.get_bind_pose(i)
+	return skeleton.get_bone_global_rest(skeleton.find_bone(bone_name)).affine_inverse()
+
+## Measures of a model, taken once: the head's box, the hip height, where the hips sit in the
+## sitting clip and stand in the idle one, and where the mouth is (in the head bone's frame).
+static func _measure(model_name: String, skeleton: Skeleton3D, mesh: Mesh, skin: Skin) -> Dictionary:
 	if _measures.has(model_name):
 		return _measures[model_name]
-	var head: int = skeleton.find_bone("Head")
 	var hips: int = skeleton.find_bone("Hips")
-	var head_rest: Vector3 = skeleton.get_bone_global_rest(head).origin
-	var sit: Animation = library().get_animation("Sitting_Idle")
-	var hip_track: int = sit.find_track(NodePath("%GeneralSkeleton:Hips"), Animation.TYPE_POSITION_3D)
-	var sit_hips: float = 0.5
-	if hip_track >= 0:
-		sit_hips = (sit.track_get_key_value(hip_track, 0) as Vector3).y * skeleton.motion_scale
-	# The head's box (everything above the chin) and the front of the chest, from the mesh.
-	var neck: Vector3 = skeleton.get_bone_global_rest(skeleton.find_bone("Neck")).origin
-	var verts: PackedVector3Array = mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX]
+	# Mesh-space positions of the joints (the import's rest fixer moves the rests, not the mesh).
+	var head_bind: Transform3D = _bind(skeleton, skin, "Head")
+	var head_rest: Vector3 = head_bind.affine_inverse().origin
+	var sit_hips: Vector3 = Vector3(0, 0.5, -0.2)
+	var stand_hips: Vector3 = Vector3(0, 0.8, 0)
+	for pair in [["Sitting_Idle", "sit"], ["Idle", "stand"]]:
+		var anim: Animation = library().get_animation(pair[0])
+		var track: int = anim.find_track(NodePath("%GeneralSkeleton:Hips"), Animation.TYPE_POSITION_3D)
+		if track >= 0:
+			var at: Vector3 = (anim.track_get_key_value(track, 0) as Vector3) * skeleton.motion_scale
+			if pair[1] == "sit": sit_hips = at
+			else: stand_hips = at
+	# The head's box (everything above the chin), the front of the chest and the mouth (the face
+	# point the shader draws the mouth at), from the mesh.
+	var neck: Vector3 = _bind(skeleton, skin, "Neck").affine_inverse().origin
+	var arrays: Array = mesh.surface_get_arrays(0)
+	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	var face_uv: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV2] if arrays[Mesh.ARRAY_TEX_UV2] != null else PackedVector2Array()
+	var colors: PackedColorArray = arrays[Mesh.ARRAY_COLOR] if arrays[Mesh.ARRAY_COLOR] != null else PackedColorArray()
 	var head_box: AABB = AABB(head_rest, Vector3.ZERO)
 	var chest_front: float = neck.z
-	for v in verts:
+	var mouth: Vector3 = head_rest + Vector3(0, 0.05, 0.15)
+	var mouth_d: float = -1e9
+	for i in range(verts.size()):
+		var v: Vector3 = verts[i]
 		if v.y > head_rest.y + 0.04:
 			head_box = head_box.expand(v)
 		elif v.y > neck.y - 0.16 and v.y < neck.y - 0.04 and absf(v.x) < 0.06:
 			chest_front = maxf(chest_front, v.z)
+		# The face plane is a projection, so the inside of the closed mouth maps there too: take the
+		# frontmost point near the mouth.
+		if i < face_uv.size() and i < colors.size() and colors[i].g > 0.5 and colors[i].r < 0.1:
+			if face_uv[i].distance_to(Vector2(0.5, 0.79)) < 0.06 and v.z > mouth_d:
+				mouth_d = v.z
+				mouth = v
 	_measures[model_name] = {"head": head_box, "neck": neck, "chest_front": chest_front,
-		"hips": skeleton.get_bone_global_rest(hips).origin.y, "sit_hips": sit_hips,
+		"hips": skeleton.get_bone_global_rest(hips).origin.y, "sit_hips": sit_hips, "stand_hips": stand_hips,
+		"mouth": head_bind * mouth,
 		"stride": STRIDE * skeleton.motion_scale}
 	return _measures[model_name]
 
@@ -301,10 +360,42 @@ static func _mesh(kind: String) -> Mesh:
 
 ## Adds a prop, hat or instrument to a builder (at the builder's offset).
 static func _accessory(b: Builder, kind: String) -> void:
+	var glass: Color = Color("e4f2f4")
 	match kind:
-		"glass":
-			b.cylinder(Vector3.ZERO, 0.045, 0.13, Color("dfeff0"), "vc_gloss", 8)
-			b.cylinder(Vector3(0, 0.006, 0), 0.04, 0.085, Color("e8a33a"), "vc_gloss", 8)
+		# Drinks (their base at the origin, the handle on the drinker's right, -x).
+		"cup":
+			# Fildžan: a small white porcelain cup with a blue band, black coffee at the top.
+			b.cylinder(Vector3.ZERO, 0.04, 0.085, Color("f7f4ee"), "vc_gloss", 12, 1.25)
+			b.cylinder(Vector3(0, 0.055, 0), 0.047, 0.012, Color("3e6fb0"), "vc_gloss", 12)
+			b.cylinder(Vector3(0, 0.076, 0), 0.046, 0.006, Color("2a160c"), "vc", 12)
+		"mug":
+			# A beer mug: amber beer, a head of foam, a thick glass handle.
+			b.cylinder(Vector3.ZERO, 0.065, 0.14, Color("e8a02e"), "vc_gloss", 12)
+			b.cylinder(Vector3(0, 0.14, 0), 0.068, 0.035, Color("fbf6e8"), "vc", 12)
+			b.sphere(Vector3(0, 0.172, 0), 0.06, Color("fbf6e8"), "vc", Vector3(1, 0.35, 1), 10)
+			b.box(Vector3(-0.085, 0.03, 0), Vector3(0.02, 0.11, 0.03), glass, "vc_gloss")
+			b.box(Vector3(-0.07, 0.125, 0), Vector3(0.04, 0.02, 0.03), glass, "vc_gloss")
+			b.box(Vector3(-0.07, 0.03, 0), Vector3(0.04, 0.02, 0.03), glass, "vc_gloss")
+		"shot":
+			# Čokanjčić: a little rakija glass, flaring at the top.
+			b.cylinder(Vector3.ZERO, 0.028, 0.085, glass, "vc_gloss", 10, 1.3)
+			b.cylinder(Vector3(0, 0.01, 0), 0.027, 0.055, Color("f2dc8a"), "vc_gloss", 10, 1.2)
+		"wine":
+			b.cylinder(Vector3.ZERO, 0.04, 0.008, glass, "vc_gloss", 10)
+			b.cylinder(Vector3.ZERO, 0.008, 0.09, glass, "vc_gloss", 6)
+			b.sphere(Vector3(0, 0.13, 0), 0.05, Color("7a1426"), "vc_gloss", Vector3(1, 0.9, 1), 10)
+			b.cylinder(Vector3(0, 0.13, 0), 0.046, 0.06, glass, "vc_gloss", 10, 0.9)
+		"tumbler":
+			b.cylinder(Vector3.ZERO, 0.055, 0.1, glass, "vc_gloss", 10)
+			b.cylinder(Vector3(0, 0.008, 0), 0.051, 0.05, Color("c9822e"), "vc_gloss", 10)
+			b.box(Vector3(0.0, 0.05, 0.0), Vector3(0.04, 0.035, 0.04), Color("f2fbff"), "vc_gloss")
+		"flute":
+			b.cylinder(Vector3.ZERO, 0.035, 0.008, glass, "vc_gloss", 10)
+			b.cylinder(Vector3.ZERO, 0.007, 0.08, glass, "vc_gloss", 6)
+			b.cylinder(Vector3(0, 0.08, 0), 0.026, 0.12, Color("f4d88a"), "vc_gloss", 10, 1.25)
+		"water":
+			b.cylinder(Vector3.ZERO, 0.045, 0.15, glass, "vc_gloss", 10, 1.1)
+			b.cylinder(Vector3(0, 0.008, 0), 0.042, 0.1, Color("bfe4f2"), "vc_gloss", 10, 1.08)
 		"tray":
 			b.cylinder(Vector3.ZERO, 0.2, 0.018, Color("c9ced6"), "vc_metal", 14)
 			b.cylinder(Vector3(0.05, 0.018, 0.03), 0.035, 0.12, Color("dfeff0"), "vc_gloss", 8)
@@ -371,7 +462,7 @@ func setup(new_look: Dictionary) -> void:
 	for key in look.pal:
 		body.set_instance_shader_parameter(key, Color(str(look.pal[key])))
 	body.set_instance_shader_parameter("face_style", look.style)
-	measure = _measure(model_name, skeleton, body.mesh)
+	measure = _measure(model_name, skeleton, body.mesh, body.skin)
 	player = AnimationPlayer.new()
 	model.add_child(player)
 	player.add_animation_library("", library())
@@ -420,7 +511,7 @@ func full_scale() -> Vector3:
 ## space: +y up, +z the way the person faces), so props sit right whatever the bone's own axes.
 func _holder(bone_name: String, at: Vector3, turn: Vector3 = Vector3.ZERO) -> Node3D:
 	var holder: Node3D = Node3D.new()
-	holder.transform = skeleton.get_bone_global_rest(bones[bone_name]).affine_inverse() * Transform3D(Basis.from_euler(turn), at)
+	holder.transform = _bind(skeleton, body.skin, bone_name) * Transform3D(Basis.from_euler(turn), at)
 	_attachment(bone_name).add_child(holder)
 	return holder
 
@@ -439,7 +530,11 @@ func _add_mesh(parent: Node3D, mesh: Mesh, at: Vector3, turn: Vector3 = Vector3.
 	parent.add_child(node)
 	return node
 
-## Hold something in the right hand: "", "glass", "tray" or "cloth".
+## A drink in front of a guest (shared mesh, base at the origin).
+static func vessel_mesh(kind: String) -> Mesh:
+	return _mesh(kind if VESSELS.has(kind) else "water")
+
+## Hold something in the right hand: "", "tray" or "cloth".
 func hold(kind: String) -> void:
 	if kind == holding:
 		return
@@ -455,15 +550,20 @@ func hold(kind: String) -> void:
 # Animation
 # ---------------------------------------------------------------------------------------------
 
-## Animations: idle, walk, sit, drink, dance, angry, happy, carry, carry_idle, play, wipe.
+## Animations: idle, walk, sit, dance, angry, happy, carry, carry_idle, play, wipe. While someone
+## is sitting down or getting up, the chair choreography owns the body and this waits.
 func play(name: String, new_rate: float = 1.0, restart: bool = false) -> void:
+	if name == "drink":
+		name = "sit"
+	if seat_state not in ["", "seated"]:
+		return
 	if name == current and not restart:
 		rate = new_rate
 		return
 	current = name
 	rate = new_rate
 	anim_time = 0.0
-	hold("tray" if name in ["carry", "carry_idle"] else ("glass" if name == "drink" else ("cloth" if name == "wipe" else "")))
+	hold("tray" if name in ["carry", "carry_idle"] else ("cloth" if name == "wipe" else ""))
 	var kind: String = str(look.get("kind", ""))
 	var chatty: bool = int(phase * 10.0) % 2 == 0
 	var wanted: String = "Idle"
@@ -478,8 +578,6 @@ func play(name: String, new_rate: float = 1.0, restart: bool = false) -> void:
 		"sit":
 			wanted = "Sitting_Talking" if chatty else "Sitting_Idle"
 			talking = chatty and kind != "ozalosceni"
-		"drink":
-			wanted = "Sit_Drink"
 		"happy":
 			wanted = "Sit_Cheer" if chatty else "Sit_Clap"
 		"angry":
@@ -504,13 +602,258 @@ func play(name: String, new_rate: float = 1.0, restart: bool = false) -> void:
 				talking = true
 	mood = _mood_for(name)
 	if wanted != clip:
-		var blend: float = 0.0 if clip == "" else 0.25
-		clip = wanted
-		player.play(clip, blend)
-		player.seek(fmod(phase, player.get_animation(clip).length), true)
+		_clip(wanted, 0.0 if clip == "" else 0.3, true)
+
+## Starts a clip with a blend; looping clips start at a random point so neighbours don't move in step.
+func _clip(wanted: String, blend: float, random_start: bool) -> void:
+	clip = wanted
+	player.play(clip, blend)
+	var anim: Animation = player.get_animation(clip)
+	player.seek(fmod(phase, anim.length) if random_start and anim.loop_mode != Animation.LOOP_NONE else 0.0, true)
 
 func _seated_clip(name: String) -> bool:
-	return name.begins_with("Sit")
+	return name.begins_with("Sit_") or name in ["Sitting_Idle", "Sitting_Talking"]
+
+# ---------------------------------------------------------------------------------------------
+# Chairs: sitting down and getting up
+# ---------------------------------------------------------------------------------------------
+
+## The chair's centre (venue space), pulled `out` of the way (0 tucked in, 1 out).
+func chair_at(out: float) -> Vector3:
+	return seat.chair - seat.dir * CHAIR_PULL * out
+
+## Where to stand to sit down: in front of the pulled-out chair, so that sitting back puts the
+## hips on the seat.
+func stand_point() -> Vector3:
+	return chair_at(1.0) + seat.dir * _seat_offset().z * scale.z
+
+## How far the body is moved (model units) while on a chair: forward so the seated hips land on the
+## seat (the clips sit far back), and up to the seat's height.
+func _seat_offset() -> Vector3:
+	var sit: Vector3 = measure.sit_hips
+	return Vector3(0, SEAT_TOP / scale.y + HIP_OVER_SEAT - sit.y, -SEAT_BACK / scale.z - sit.z)
+
+## Sit on a chair: {"chair": tucked-in centre, "dir": towards the table, "side": a free spot beside
+## it, "move": Callable(pull), "release": Callable()} (venue space). The chair slides out, the
+## person steps in front of it, sits down and the chair goes back in with them on it.
+func sit_down(chair: Dictionary) -> void:
+	seat = chair
+	seat_state = "pulling"
+	seat_time = 0.0
+	speed_scale = 0.6
+	walk(PackedVector3Array([stand_point()]))
+
+## Already sitting (when the venue is built with guests in it).
+func sit_instant(chair: Dictionary) -> void:
+	seat = chair
+	pull = 0.0
+	seat.move.call(0.0)
+	_set_seated()
+
+func _set_seated() -> void:
+	seat_state = "seated"
+	speed_scale = 1.0
+	position = chair_at(pull)
+	face_now(seat.dir)
+	current = ""
+	play("sit")
+
+func is_seated() -> bool:
+	return seat_state == "seated"
+
+## Get up, step out beside the chair (it goes back in) and then call `then`.
+func stand_up(then: Callable) -> void:
+	after_rising = then
+	sip_time = -1.0
+	match seat_state:
+		"":
+			then.call()
+		"pulling":
+			path = PackedVector3Array()
+			_step_out()
+		"entering":
+			_rise()
+		"seated", "tucking":
+			seat_state = "untucking"
+			seat_time = 0.0
+
+func _rise() -> void:
+	seat_state = "rising"
+	position = chair_at(pull)
+	_clip("Sitting_Exit", 0.25, false)
+	rate = 1.15
+
+func _step_out() -> void:
+	seat_state = "stepping"
+	position = stand_point()
+	model.position = Vector3.ZERO
+	current = ""
+	speed_scale = 0.7
+	walk(PackedVector3Array([seat.side]))
+
+func _seat_step(delta: float) -> void:
+	match seat_state:
+		"pulling":
+			pull = minf(1.0, pull + delta / 0.45)
+			seat.move.call(pull)
+			if path.is_empty() and pull >= 1.0:
+				seat_state = "entering"
+				position = chair_at(1.0)
+				face(seat.dir)
+				_clip("Sitting_Enter", 0.2, false)
+				rate = 1.15
+		"entering":
+			if player.current_animation_position >= player.get_animation("Sitting_Enter").length * 0.9:
+				seat_state = "tucking"
+				seat_time = 0.0
+				rate = 1.0
+				var chatty: bool = int(phase * 10.0) % 2 == 0
+				_clip("Sitting_Talking" if chatty else "Sitting_Idle", 0.4, true)
+		"tucking":
+			seat_time += delta
+			pull = 1.0 - smoothstep(0.0, 1.0, seat_time / 0.6)
+			seat.move.call(pull)
+			position = chair_at(pull)
+			if seat_time >= 0.6:
+				_set_seated()
+		"untucking":
+			seat_time += delta
+			pull = smoothstep(0.0, 1.0, seat_time / 0.45)
+			seat.move.call(pull)
+			position = chair_at(pull)
+			if seat_time >= 0.45:
+				_rise()
+		"rising":
+			if player.current_animation_position >= player.get_animation("Sitting_Exit").length * 0.88:
+				rate = 1.0
+				_step_out()
+		"stepping":
+			if path.is_empty():
+				seat_state = ""
+				speed_scale = 1.0
+				pull = 0.0
+				seat.release.call()
+				play("idle")
+				if after_rising.is_valid():
+					after_rising.call()
+
+# ---------------------------------------------------------------------------------------------
+# Drinking: the person's own glass, lifted to the mouth with the right arm (two-bone IK)
+# ---------------------------------------------------------------------------------------------
+
+## Give the person their drink on the table (`node` stands where it should rest), or none.
+func set_vessel(node: Node3D, kind: String) -> void:
+	vessel = node
+	vessel_kind = kind
+	sip_time = -1.0
+	if node != null:
+		vessel_rest = node.global_transform
+		sip_in = randf_range(1.0, 4.0)
+
+func is_drinking() -> bool:
+	return sip_time >= 0.0
+
+## Drink now (if seated and not already drinking).
+func drink() -> void:
+	if seat_state == "seated" and vessel != null and sip_time < 0.0:
+		sip_time = 0.0
+
+func _drink_step(delta: float) -> void:
+	if vessel == null or not is_instance_valid(vessel) or seat_state != "seated":
+		sip_time = -1.0
+		return
+	if sip_time < 0.0:
+		sip_in -= delta
+		if sip_in <= 0.0 and current == "sit":
+			sip_time = 0.0
+		return
+	sip_time += delta
+	if sip_time >= DRINK_END:
+		sip_time = -1.0
+		sip_in = randf_range(4.0, 10.0)
+		emote("glum" if str(look.mood) == "sad" else "blissful", 0.9)
+
+static func _ease(x: float) -> float:
+	x = clampf(x, 0.0, 1.0)
+	return x * x * x * (x * (x * 6.0 - 15.0) + 10.0)
+
+## How far into a sip the drinker is: 0 glass down, 1 at the lips and tipped.
+func _sip_amount() -> float:
+	if sip_time < 0.0:
+		return 0.0
+	return smoothstep(DRINK_LIFT - 0.1, DRINK_LIFT + 0.25, sip_time) * (1.0 - smoothstep(DRINK_SIP - 0.25, DRINK_SIP, sip_time))
+
+func _drink_pose() -> void:
+	if vessel == null or not is_instance_valid(vessel):
+		return
+	if sip_time < 0.0:
+		vessel.global_transform = vessel_rest
+		return
+	var t: float = sip_time
+	var reach: float = smoothstep(0.0, DRINK_REACH, t) * (1.0 - smoothstep(DRINK_DOWN, DRINK_END, t))
+	var up: float = _ease((t - DRINK_REACH) / (DRINK_LIFT - DRINK_REACH)) * (1.0 - _ease((t - DRINK_SIP) / (DRINK_DOWN - DRINK_SIP)))
+	var spec: Array = VESSELS.get(vessel_kind, VESSELS.water)
+	var size: float = vessel_rest.basis.get_scale().y
+	var radius: float = spec[0] * size
+	var height: float = spec[1] * size
+	var sk: Transform3D = skeleton.global_transform
+	var forward: Vector3 = sk.basis.z.normalized()
+	var right: Vector3 = -sk.basis.x.normalized()
+	var head: Transform3D = sk * skeleton.get_bone_global_pose(bones["Head"])
+	var mouth: Vector3 = head * (measure.mouth as Vector3)
+	# Tipped towards the face at the lips, more while sipping; the rim just under the lower lip.
+	var tip: float = up * float(spec[2]) * (0.45 + 0.55 * _sip_amount())
+	var tilt: Basis = Basis(right, tip)
+	var glass_up: Vector3 = tilt * Vector3.UP
+	var at_lips: Vector3 = mouth + forward * (radius * 0.9) - Vector3.UP * 0.02 - glass_up * height
+	var base: Vector3 = vessel_rest.origin.lerp(at_lips, up) + (forward * 0.07 + Vector3.UP * 0.04) * sin(PI * up)
+	var grip: Vector3 = base + glass_up * height * 0.45 + right * (radius + 0.03)
+	if up > 0.0:
+		vessel.global_transform = Transform3D(tilt * vessel_rest.basis, base)
+	else:
+		vessel.global_transform = vessel_rest
+	_reach(grip, (right * 0.7 - Vector3.UP - forward * 0.3).normalized(), reach)
+
+## Two-bone IK on the right arm: the wrist goes to `target` with the elbow bent towards `pole`
+## (both global), blended with the animated arm by `weight`.
+func _reach(target: Vector3, pole: Vector3, weight: float) -> void:
+	if weight <= 0.001:
+		return
+	var ua: int = bones["RightUpperArm"]
+	var la: int = bones["RightLowerArm"]
+	var hd: int = bones["RightHand"]
+	var inv: Transform3D = skeleton.global_transform.affine_inverse()
+	var a: Vector3 = skeleton.get_bone_global_pose(ua).origin
+	var b: Vector3 = skeleton.get_bone_global_pose(la).origin
+	var c: Vector3 = skeleton.get_bone_global_pose(hd).origin
+	var l1: float = a.distance_to(b)
+	var l2: float = b.distance_to(c)
+	var goal: Vector3 = c.lerp(inv * target, weight)
+	var animated_bend: Vector3 = b - (a + c) * 0.5
+	var bend: Vector3 = animated_bend.normalized().lerp((inv.basis * pole).normalized(), weight)
+	var to: Vector3 = goal - a
+	var dist: float = clampf(to.length(), absf(l1 - l2) + 0.001, l1 + l2 - 0.001)
+	var dir: Vector3 = to.normalized()
+	var cos_a: float = clampf((l1 * l1 + dist * dist - l2 * l2) / (2.0 * l1 * dist), -1.0, 1.0)
+	var perp: Vector3 = bend - dir * bend.dot(dir)
+	if perp.length() < 0.0001:
+		perp = Vector3.DOWN - dir * Vector3.DOWN.dot(dir)
+	perp = perp.normalized()
+	var elbow: Vector3 = a + dir * (cos_a * l1) + perp * (sqrt(1.0 - cos_a * cos_a) * l1)
+	_aim_bone(ua, b - a, elbow - a)
+	var b2: Vector3 = skeleton.get_bone_global_pose(la).origin
+	var c2: Vector3 = skeleton.get_bone_global_pose(hd).origin
+	_aim_bone(la, c2 - b2, a + dir * dist - b2)
+
+## Turns a bone so that `from` (skeleton space) points along `to`, keeping its twist.
+func _aim_bone(bone: int, from: Vector3, to: Vector3) -> void:
+	if from.length() < 1e-5 or to.length() < 1e-5:
+		return
+	var turn: Quaternion = Quaternion(from.normalized(), to.normalized())
+	var parent: int = skeleton.get_bone_parent(bone)
+	var parent_basis: Basis = skeleton.get_bone_global_pose(parent).basis.orthonormalized() if parent >= 0 else Basis()
+	var global_basis: Basis = Basis(turn) * skeleton.get_bone_global_pose(bone).basis.orthonormalized()
+	skeleton.set_bone_pose_rotation(bone, (parent_basis.inverse() * global_basis).get_rotation_quaternion())
 
 func _mood_for(name: String) -> String:
 	var base: String = str(look.get("mood", "smile"))
@@ -521,8 +864,6 @@ func _mood_for(name: String) -> String:
 			return "angry"
 		"dance":
 			return "laugh" if base != "sad" else "glum"
-		"drink":
-			return "smile" if base != "sad" else "glum"
 		"carry", "carry_idle":
 			return "smile"
 		"wipe":
@@ -575,7 +916,10 @@ func _process(delta: float) -> void:
 		offset.y = 0.0
 		var step: float = WALK_SPEED * speed_scale * delta
 		face(offset)
-		if current not in ["walk", "carry", "angry"]:
+		if seat_state in ["pulling", "stepping"]:
+			if clip != "Walk":
+				_clip("Walk", 0.2, true)
+		elif current not in ["walk", "carry", "angry"]:
 			play("carry" if holding == "tray" else "walk")
 		clip_rate = WALK_SPEED * speed_scale / maxf(0.3, float(measure.stride) * scale.x)
 		if offset.length() <= step:
@@ -587,6 +931,9 @@ func _process(delta: float) -> void:
 			position += offset.normalized() * step
 	elif current == "angry" and not _seated_clip(clip):
 		play("idle")
+	if not seat.is_empty():
+		_seat_step(delta)
+	_drink_step(delta)
 	heading = lerp_angle(heading, target_heading, clampf(delta * 10.0, 0.0, 1.0))
 	rotation.y = heading
 	player.advance(delta * clip_rate)
@@ -600,13 +947,22 @@ func _turn(bone: String, rotation_euler: Vector3) -> void:
 
 func _pose() -> void:
 	var t: float = anim_time
-	var seated: bool = _seated_clip(clip)
-	# Seated clips put the hips at the chair's height.
-	model.position.y = (SEAT_HEIGHT / scale.y + HIP_OVER_SEAT - float(measure.sit_hips)) if seated else 0.0
+	# On a chair the body moves forward and up so the hips land on the seat; while sitting down or
+	# getting up the lift follows the hips (as they go down, the seat comes up to meet them).
+	if seat_state in ["entering", "tucking", "seated", "untucking", "rising"]:
+		var off: Vector3 = _seat_offset()
+		var sit: Vector3 = measure.sit_hips
+		var stand: Vector3 = measure.stand_hips
+		var hip_y: float = skeleton.get_bone_pose_position(bones["Hips"]).y
+		var down: float = clampf((stand.y - hip_y) / maxf(0.01, stand.y - sit.y), 0.0, 1.0)
+		model.position = Vector3(0, down * off.y + maxf(0.0, sit.y - hip_y), off.z)
+	else:
+		model.position = Vector3.ZERO
 	# Faces read from the high camera: heads tip back, more for the seated (their clips look down
-	# at the table).
-	var lift: float = HEAD_LIFT * (0.6 if current in ["drink", "angry"] else (1.6 if seated else 1.0))
-	_turn("Head", Vector3(-lift, sin(t * 0.7 + phase) * 0.12, 0))
+	# at the table), and back again to drink.
+	var lift: float = HEAD_LIFT * (0.6 if current == "angry" else (1.6 if seat_state == "seated" else 1.0))
+	lift += _sip_amount() * 0.3
+	_turn("Head", Vector3(-lift, sin(t * 0.7 + phase) * 0.12 * (1.0 - _sip_amount()), 0))
 	match current:
 		"dance":
 			model.position.y = absf(sin(t * 6.0 + phase)) * 0.04
@@ -621,12 +977,16 @@ func _pose() -> void:
 				_:
 					_turn("RightLowerArm", Vector3(beat * 0.25, 0, 0))
 			model.position.y = absf(sin(t * 4.0 + phase)) * 0.015
+	if seat_state == "seated":
+		_drink_pose()
+	elif vessel != null and is_instance_valid(vessel):
+		vessel.global_transform = vessel_rest
 
 ## The drawn face: eased towards the mood (or an emote), with blinks and a talking mouth.
 func _face(delta: float) -> void:
 	if emote_left > 0.0:
 		emote_left -= delta
-	var target: Array = FACES[emote_name if emote_left > 0.0 else mood]
+	var target: Array = FACES["gulp" if _sip_amount() > 0.3 else (emote_name if emote_left > 0.0 else mood)]
 	var ease: float = clampf(delta * 8.0, 0.0, 1.0)
 	for i in range(4):
 		face_now_values[i] = (face_now_values[i] as Vector4).lerp(target[i], ease)
@@ -637,13 +997,9 @@ func _face(delta: float) -> void:
 		eyes.x *= clampf(absf(blink_in + 0.06) / 0.06, 0.0, 1.0)
 		if blink_in < -0.12:
 			blink_in = randf_range(1.8, 4.5)
-	if talking and emote_left <= 0.0:
+	if talking and emote_left <= 0.0 and sip_time < 0.0:
 		var chatter: float = absf(sin(anim_time * 9.0 + phase)) * (0.5 + 0.5 * sin(anim_time * 2.3 + phase * 2.0))
 		mouth.y = maxf(mouth.y, chatter * 0.45)
-	elif current == "drink":
-		var cycle: float = fmod(anim_time, 2.0) / 2.0
-		if cycle > 0.35 and cycle < 0.7:
-			mouth = FACES.sip[2]
 	body.set_instance_shader_parameter("face_eyes", eyes)
 	body.set_instance_shader_parameter("face_brows", face_now_values[1])
 	body.set_instance_shader_parameter("face_mouth", mouth)

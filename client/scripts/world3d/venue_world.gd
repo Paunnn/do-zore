@@ -20,6 +20,11 @@ const STANDING = Venue.STANDING
 const WAITER_THRESHOLDS = [1, 4, 8]
 const BAND_LINEUPS = People.BAND_LINEUPS
 const LOOKS_PER_KIND = 8
+const VESSEL_SCALE = 1.35
+## Each guest's own glass, per menu item (the bottle or dish stands in the middle of the table).
+const VESSEL_FOR = {"domaca_kafa": "cup", "kisela_voda": "water", "pivo": "mug", "sljivovica": "shot",
+	"lozovaca": "shot", "vinjak": "shot", "crno_vino": "wine", "viski": "tumbler", "sampanjac": "flute",
+	"meze": "shot", "rostilj": "mug", "riblja_corba": "wine"}
 
 var venue_id: String = ""
 var lay: Dictionary = {}
@@ -48,6 +53,8 @@ var stage_anchor: Vector3 = Vector3.ZERO
 ## Everyone in the venue, for the shared contact shadows (one draw call for all of them).
 var people: Array = []
 var shadows: MultiMeshInstance3D
+## Every chair in the room in one draw call; each can slide out when someone sits down or gets up.
+var chairs: MultiMeshInstance3D
 
 static var _drinks: Dictionary = {}
 
@@ -112,7 +119,8 @@ func _build_slots(nodes: Array) -> void:
 		var cell: Vector2i = lay.tables[index]
 		var center: Vector2 = Vector2(cell) + Vector2(0.5, 0.5)
 		var slot: Dictionary = {"index": index, "cell": cell, "center": center, "guests": [], "locked": true, "party": 0,
-			"kind": "", "status": "", "prep_total": 0.0, "drink": null, "table": nodes[index], "drink_timer": rng.randf_range(2, 6),
+			"kind": "", "status": "", "prep_total": 0.0, "drink": null, "vessels": [], "table": nodes[index],
+			"pulls": [0.0, 0.0, 0.0, 0.0],
 			"angry_until": -1.0, "anchor": Vector3(center.x, 1.95, center.y), "floor": Vector3(center.x, 0.8, center.y)}
 		var marker: MeshInstance3D = MeshInstance3D.new()
 		var quad: PlaneMesh = PlaneMesh.new()
@@ -132,6 +140,46 @@ func _build_slots(nodes: Array) -> void:
 		slot.plus = plus
 		slots.append(slot)
 		_set_locked(slot, true)
+	chairs = MultiMeshInstance3D.new()
+	var multimesh: MultiMesh = MultiMesh.new()
+	multimesh.transform_format = MultiMesh.TRANSFORM_3D
+	multimesh.mesh = Venue.chair_mesh(venue_id)
+	multimesh.instance_count = slots.size() * SEATS.size()
+	chairs.multimesh = multimesh
+	add_child(chairs)
+	for slot in slots:
+		for seat in range(SEATS.size()):
+			_place_chair(slot, seat, 0.0)
+
+## A chair at its table, `out` of the way pulled out (hidden while the table is locked).
+func _place_chair(slot: Dictionary, seat: int, out: float) -> void:
+	slot.pulls[seat] = out
+	if chairs == null:
+		return
+	var offset: Vector2 = SEATS[seat].offset
+	var at: Vector2 = slot.center + offset + offset.normalized() * People.CHAIR_PULL * out
+	var basis: Basis = Basis(Vector3.UP, atan2(offset.x, offset.y))
+	if slot.locked:
+		basis = basis.scaled(Vector3.ZERO)
+	chairs.multimesh.set_instance_transform(slot.index * SEATS.size() + seat, Transform3D(basis, Vector3(at.x, 0, at.y)))
+
+## What a guest needs to use a chair (see People.sit_down).
+func _seat_info(slot: Dictionary, seat: int) -> Dictionary:
+	var info: Dictionary = Venue.seat_geometry(slot.center, seat)
+	info.move = func(out: float): _place_chair(slot, seat, out)
+	info.release = func():
+		create_tween().tween_method(func(out: float): _place_chair(slot, seat, out), float(slot.pulls[seat]), 0.0, 0.45) \
+			.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	return info
+
+## The walk cell beside a chair, where guests come from and go to.
+func _seat_cell(slot: Dictionary, seat: int) -> Vector2i:
+	if seat < SEATS.size():
+		var corner: Vector2i = slot.cell + Venue.seat_geometry(slot.center, seat).corner
+		if astar.is_in_boundsv(corner) and not astar.is_point_solid(corner):
+			return corner
+		return slot.cell + SEATS[seat].cell
+	return _cell_at(Venue.seat_point(slot.center, seat))
 
 func clear_overlay() -> void:
 	for slot in slots:
@@ -151,6 +199,8 @@ func _set_locked(slot: Dictionary, locked: bool) -> void:
 			if is_instance_valid(guest): guest.queue_free()
 		slot.guests = []
 		_clear_drink(slot)
+	for seat in range(SEATS.size()):
+		_place_chair(slot, seat, 0.0)
 
 func _person(kind: String, variant: int):
 	var person = People.new()
@@ -282,7 +332,7 @@ func _arrive(slot: Dictionary, table: Dictionary, instant: bool) -> void:
 		guest.set_meta("state", "walking")
 		slot.guests.append(guest)
 		if instant:
-			_seat(slot, guest)
+			_seat(slot, guest, true)
 			continue
 		# They come on foot down the street before they come in.
 		var route: PackedVector3Array = _street_route(true)
@@ -291,7 +341,7 @@ func _arrive(slot: Dictionary, table: Dictionary, instant: bool) -> void:
 		var points: PackedVector3Array = route.slice(1)
 		points.append_array(PackedVector3Array([lay.door, _entry()]))
 		points.append_array(_path(_entry(), _seat_cell(slot, k)))
-		points.append(Venue.seat_point(slot.center, k))
+		points.append(Venue.seat_geometry(slot.center, k).side if k < SEATS.size() else Venue.seat_point(slot.center, k))
 		guest.arrived.connect(_seat.bind(slot, guest), CONNECT_ONE_SHOT)
 		var delay: Tween = guest.create_tween()
 		delay.tween_interval(0.5 * k)
@@ -300,20 +350,23 @@ func _arrive(slot: Dictionary, table: Dictionary, instant: bool) -> void:
 			guest.fade_in()
 			guest.walk(points))
 
-func _seat_cell(slot: Dictionary, seat: int) -> Vector2i:
-	if seat < SEATS.size():
-		return slot.cell + SEATS[seat].cell
-	return _cell_at(Venue.seat_point(slot.center, seat))
-
-func _seat(slot: Dictionary, guest) -> void:
+## A guest takes their place: on their chair (pulling it out, sitting down, tucking it in), or
+## standing at the corner for the ones the chairs don't fit.
+func _seat(slot: Dictionary, guest, instant: bool = false) -> void:
 	if not is_instance_valid(guest) or guest.get_meta("state", "") == "leaving":
 		return
 	var seat: int = int(guest.get_meta("seat"))
 	guest.path = PackedVector3Array()
-	guest.position = Venue.seat_point(slot.center, seat)
 	guest.set_meta("state", "seated")
+	if seat < SEATS.size():
+		if instant:
+			guest.sit_instant(_seat_info(slot, seat))
+		else:
+			guest.sit_down(_seat_info(slot, seat))
+		return
+	guest.position = Venue.seat_point(slot.center, seat)
 	guest.face_now(Vector3(slot.center.x, 0, slot.center.y) - guest.position)
-	guest.play("sit" if seat < SEATS.size() else "idle")
+	guest.play("idle")
 
 func _depart(slot: Dictionary, previous: Dictionary, simulation) -> void:
 	var angry: bool = float(previous.get("mood", 50)) <= float(DataCatalog.data.economy.mood.leave_at_or_below) + 2.0
@@ -328,17 +381,21 @@ func _depart(slot: Dictionary, previous: Dictionary, simulation) -> void:
 		if not is_instance_valid(guest):
 			continue
 		guest.set_meta("state", "leaving")
-		var points: PackedVector3Array = _path(guest.position, lay.entry)
-		points.append(lay.door)
-		points.append_array(_street_route(false))
-		guest.speed_scale = 1.3 if angry else 1.0
-		if angry: guest.play("angry")
+		var go: Callable = func():
+			if not is_instance_valid(guest):
+				return
+			var points: PackedVector3Array = _path(guest.position, lay.entry)
+			points.append(lay.door)
+			points.append_array(_street_route(false))
+			guest.speed_scale = 1.3 if angry else 1.0
+			if angry: guest.play("angry")
+			guest.arrived.connect(func(): guest.fade_and_free(), CONNECT_ONE_SHOT)
+			guest.walk(points)
 		var start: Tween = guest.create_tween()
 		start.tween_interval(rng.randf_range(0.0, 0.6))
 		start.tween_callback(func():
 			if is_instance_valid(guest):
-				guest.arrived.connect(func(): guest.fade_and_free(), CONNECT_ONE_SHOT)
-				guest.walk(points))
+				guest.stand_up(go))
 	slot.guests = []
 	slot.kind = ""
 	_clear_drink(slot)
@@ -347,7 +404,14 @@ func _clear_drink(slot: Dictionary) -> void:
 	if slot.drink != null and is_instance_valid(slot.drink):
 		slot.drink.queue_free()
 	slot.drink = null
+	for vessel in slot.vessels:
+		if is_instance_valid(vessel): vessel.queue_free()
+	slot.vessels = []
+	for guest in slot.guests:
+		if is_instance_valid(guest): guest.set_vessel(null, "")
 
+## The order arrives: its bottle or dish in the middle of the table, and a glass (or cup) in front
+## of every seated guest, which they pick up and drink from.
 func _place_drink(slot: Dictionary, item: String) -> void:
 	_clear_drink(slot)
 	var node: MeshInstance3D = MeshInstance3D.new()
@@ -355,8 +419,29 @@ func _place_drink(slot: Dictionary, item: String) -> void:
 	node.position = Vector3(0, 0.79, 0)
 	slot.table.add_child(node)
 	slot.drink = node
-	node.scale = Vector3.ONE * 0.1
-	node.create_tween().tween_property(node, "scale", Vector3.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_pop_in(node)
+	var kind: String = VESSEL_FOR.get(item, "water")
+	for guest in slot.guests:
+		var seat: int = int(guest.get_meta("seat")) if is_instance_valid(guest) else 99
+		if seat >= SEATS.size():
+			continue
+		var out: Vector2 = SEATS[seat].offset.normalized()
+		var toward: Vector3 = -Vector3(out.x, 0, out.y)
+		var right: Vector3 = toward.cross(Vector3.UP)
+		var vessel: MeshInstance3D = MeshInstance3D.new()
+		vessel.mesh = People.vessel_mesh(kind)
+		vessel.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		slot.table.add_child(vessel)
+		# Drawn a size up, like the people's hands.
+		vessel.transform = Transform3D(Basis(Vector3.UP, atan2(toward.x, toward.z)).scaled(Vector3.ONE * VESSEL_SCALE), -toward * 0.34 + right * 0.15 + Vector3(0, 0.79, 0))
+		guest.set_vessel(vessel, kind)
+		slot.vessels.append(vessel)
+		_pop_in(vessel)
+
+static func _pop_in(node: Node3D) -> void:
+	var size: Vector3 = node.scale
+	node.scale = size * 0.1
+	node.create_tween().tween_property(node, "scale", size, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 ## A small still life for each menu item, set in the middle of the table.
 static func drink_mesh(item: String) -> ArrayMesh:
@@ -366,54 +451,50 @@ static func drink_mesh(item: String) -> ArrayMesh:
 	var glass: Color = Color("dfeff0")
 	match item:
 		"domaca_kafa":
-			for x in [-0.15, 0.15]:
-				b.cylinder(Vector3(x, 0, 0.05), 0.09, 0.015, Color("f4f1ea"), "vc_gloss", 12)
-				b.cylinder(Vector3(x, 0.015, 0.05), 0.045, 0.07, Color("f4f1ea"), "vc_gloss", 10)
-				b.cylinder(Vector3(x, 0.07, 0.05), 0.04, 0.012, Color("3a2416"), "vc", 10)
-			b.cylinder(Vector3(0, 0, -0.15), 0.06, 0.12, Color("c98a4a"), "vc_metal", 10, 0.7)
+			# Džezva and a little plate of ratluk.
+			b.cylinder(Vector3(0, 0, -0.05), 0.07, 0.13, Color("c98a4a"), "vc_metal", 12, 0.75)
+			b.box(Vector3(0.1, 0.12, -0.05), Vector3(0.16, 0.018, 0.022), Color("3a2416"), "vc")
+			b.cylinder(Vector3(-0.08, 0, 0.12), 0.09, 0.012, Color("f7f4ee"), "vc_gloss", 12)
+			for k in range(4):
+				b.box(Vector3(-0.11 + (k % 2) * 0.05, 0.012, 0.1 + (k / 2) * 0.05), Vector3(0.035, 0.03, 0.035), Color("f6efe2"), "vc")
 		"kisela_voda":
 			b.cylinder(Vector3(0, 0, 0), 0.06, 0.22, Color("7ab8a0"), "vc_gloss", 10)
 			b.cylinder(Vector3(0, 0.22, 0), 0.025, 0.06, Color("2f6a5a"), "vc", 8)
-			b.cylinder(Vector3(0.15, 0, 0.1), 0.05, 0.12, glass, "vc_gloss", 10)
-		"pivo":
-			for x in [-0.12, 0.12]:
-				b.cylinder(Vector3(x, 0, 0), 0.07, 0.2, Color("e8a33a"), "vc_gloss", 10)
-				b.cylinder(Vector3(x, 0.2, 0), 0.072, 0.04, Color("f8f4ea"), "vc", 10)
-		"sljivovica", "lozovaca":
-			for x in [-0.12, 0.0, 0.12]:
-				b.cylinder(Vector3(x, 0, 0.1), 0.035, 0.08, glass, "vc_gloss", 8, 1.2)
-			b.cylinder(Vector3(0, 0, -0.12), 0.07, 0.24, Color("d8c27a") if item == "lozovaca" else Color("e8e2c8"), "vc_gloss", 10)
-			b.cylinder(Vector3(0, 0.24, -0.12), 0.025, 0.08, Color("6a4a2a"), "vc", 8)
-		"crno_vino":
-			b.cylinder(Vector3(0, 0, -0.1), 0.065, 0.28, Color("3a0f1a"), "vc_gloss", 10)
-			b.cylinder(Vector3(0, 0.28, -0.1), 0.022, 0.1, Color("3a0f1a"), "vc_gloss", 8)
-			for x in [-0.13, 0.13]:
-				b.cylinder(Vector3(x, 0, 0.1), 0.012, 0.1, glass, "vc_gloss", 6)
-				b.cylinder(Vector3(x, 0.1, 0.1), 0.045, 0.08, Color("7a1a2a"), "vc_gloss", 10, 1.2)
-		"vinjak", "viski":
-			for x in [-0.12, 0.12]:
-				b.cylinder(Vector3(x, 0, 0), 0.06, 0.09, Color("c98a3a"), "vc_gloss", 10)
-			b.sphere(Vector3(0.12, 0.1, 0), 0.025, Color("e8f4f8"), "vc_gloss", Vector3.ONE, 6)
-		"meze":
-			b.cylinder(Vector3(0, 0, 0), 0.24, 0.025, Color("8a5a32"), "vc_gloss", 14)
-			for k in range(6):
-				var a: float = k * TAU / 6.0
-				b.box(Vector3(cos(a) * 0.12, 0.025, sin(a) * 0.12), Vector3(0.07, 0.04, 0.07), [Color("f2e2a0"), Color("c0322c"), Color("e8a07a")][k % 3])
-		"rostilj":
-			b.cylinder(Vector3(0, 0, 0), 0.24, 0.02, Color("f4f1ea"), "vc_gloss", 14)
-			for k in range(5):
-				b.cylinder_xf(Transform3D(Basis(Vector3.FORWARD, PI / 2.0), Vector3(-0.1, 0.04, -0.1 + k * 0.05)), 0.02, 0.18, Color("7a3f22"), "vc", 6)
-			b.sphere(Vector3(0.1, 0.04, 0.08), 0.06, Color("e8c870"), "vc", Vector3(1, 0.4, 1), 8)
-		"riblja_corba":
-			b.cylinder(Vector3(0, 0, 0), 0.13, 0.08, Color("6e4528"), "vc_gloss", 12, 1.15)
-			b.cylinder(Vector3(0, 0.07, 0), 0.13, 0.01, Color("d9622a"), "vc", 12)
+		"pivo", "rostilj":
+			if item == "rostilj":
+				b.cylinder(Vector3(0, 0, 0.08), 0.24, 0.02, Color("f4f1ea"), "vc_gloss", 14)
+				for k in range(5):
+					b.cylinder_xf(Transform3D(Basis(Vector3.FORWARD, PI / 2.0), Vector3(-0.1, 0.04, -0.02 + k * 0.05)), 0.02, 0.18, Color("7a3f22"), "vc", 6)
+				b.sphere(Vector3(0.1, 0.04, 0.16), 0.06, Color("e8c870"), "vc", Vector3(1, 0.4, 1), 8)
+			# A green beer bottle or two.
+			for x in ([-0.06, 0.08] if item == "pivo" else [0.22]):
+				b.cylinder(Vector3(x, 0, -0.1), 0.045, 0.17, Color("2f6a3a"), "vc_gloss", 10)
+				b.cylinder(Vector3(x, 0.17, -0.1), 0.018, 0.08, Color("2f6a3a"), "vc_gloss", 8, 0.8)
+				b.cylinder(Vector3(x, 0.08, -0.1), 0.047, 0.05, Color("f2e2b8"), "vc", 10)
+		"sljivovica", "lozovaca", "vinjak", "meze":
+			if item == "meze":
+				b.cylinder(Vector3(0, 0, 0.06), 0.22, 0.025, Color("8a5a32"), "vc_gloss", 14)
+				for k in range(6):
+					var a: float = k * TAU / 6.0
+					b.box(Vector3(cos(a) * 0.11, 0.025, 0.06 + sin(a) * 0.11), Vector3(0.07, 0.04, 0.07), [Color("f2e2a0"), Color("c0322c"), Color("e8a07a")][k % 3])
+			var liquor: Color = {"lozovaca": Color("d8c27a"), "vinjak": Color("9a5a22")}.get(item, Color("e8e2c8"))
+			b.cylinder(Vector3(0, 0, -0.14), 0.07, 0.24, liquor, "vc_gloss", 10)
+			b.cylinder(Vector3(0, 0.24, -0.14), 0.025, 0.08, liquor, "vc_gloss", 8)
+			b.cylinder(Vector3(0, 0.32, -0.14), 0.027, 0.03, Color("6a4a2a"), "vc", 8)
+		"crno_vino", "riblja_corba":
+			if item == "riblja_corba":
+				b.cylinder(Vector3(0, 0, 0.06), 0.13, 0.08, Color("6e4528"), "vc_gloss", 12, 1.15)
+				b.cylinder(Vector3(0, 0.07, 0.06), 0.13, 0.01, Color("d9622a"), "vc", 12)
+			b.cylinder(Vector3(0, 0, -0.14), 0.065, 0.28, Color("3a0f1a"), "vc_gloss", 10)
+			b.cylinder(Vector3(0, 0.28, -0.14), 0.022, 0.1, Color("3a0f1a"), "vc_gloss", 8)
+		"viski":
+			b.box(Vector3(0, 0, -0.08), Vector3(0.13, 0.22, 0.08), Color("b8722a"), "vc_gloss")
+			b.cylinder(Vector3(0, 0.22, -0.08), 0.022, 0.06, Color("1d1d22"), "vc", 8)
+			b.cylinder(Vector3(0.15, 0, 0.06), 0.06, 0.07, Color("c9ced6"), "vc_metal", 10)
 		"sampanjac":
 			b.cylinder(Vector3(0, 0, -0.08), 0.12, 0.14, Color("c9ced6"), "vc_metal", 12, 1.1)
 			b.cylinder(Vector3(0, 0.05, -0.08), 0.05, 0.3, Color("2f5a35"), "vc_gloss", 10)
 			b.cylinder(Vector3(0, 0.35, -0.08), 0.02, 0.06, Color("d9a531"), "vc_metal", 8)
-			for x in [-0.14, 0.14]:
-				b.cylinder(Vector3(x, 0, 0.12), 0.01, 0.1, glass, "vc_gloss", 6)
-				b.cylinder(Vector3(x, 0.1, 0.12), 0.03, 0.1, Color("f2d27a"), "vc_gloss", 8)
 		_:
 			b.cylinder(Vector3(0, 0, 0), 0.05, 0.12, glass, "vc_gloss", 10)
 	var mesh: ArrayMesh = b.mesh()
@@ -467,26 +548,40 @@ func _update_slot(slot: Dictionary, table: Dictionary, simulation) -> void:
 
 func _animate_guests(slot: Dictionary, table: Dictionary, mood: float, mood_rules: Dictionary) -> void:
 	var dancing: bool = bool(table.get("dancing", false))
-	var drinking: bool = slot.drink != null and float(slot.drink_timer) < 1.3
 	for guest in slot.guests:
 		if not is_instance_valid(guest):
 			continue
 		var state: String = guest.get_meta("state", "")
 		var seat: int = int(guest.get_meta("seat"))
 		if dancing and state == "seated":
+			# Up from the chair, a step out from the table, and dance.
 			guest.set_meta("state", "dancing")
 			var spot: Vector3 = Venue.seat_point(slot.center, seat)
 			var out: Vector3 = (spot - Vector3(slot.center.x, 0, slot.center.y)) * 0.55
-			guest.position = spot + out
-			guest.face_now(out)
-			guest.play("dance", rng.randf_range(0.9, 1.15))
+			var rate: float = rng.randf_range(0.9, 1.15)
+			guest.stand_up(func():
+				if not is_instance_valid(guest):
+					return
+				if guest.get_meta("state", "") == "returning":
+					_seat(slot, guest)
+					return
+				guest.arrived.connect(func():
+					if is_instance_valid(guest) and guest.get_meta("state", "") == "dancing":
+						guest.face(out)
+						guest.play("dance", rate), CONNECT_ONE_SHOT)
+				guest.walk(PackedVector3Array([spot + out])))
 		elif not dancing and state == "dancing":
-			_seat(slot, guest)
-		elif state == "seated" and seat < SEATS.size():
+			# Back to the chair (once up, if they are still getting up).
+			guest.set_meta("state", "returning")
+			if guest.seat_state == "":
+				var back: Vector3 = Venue.seat_geometry(slot.center, seat).side if seat < SEATS.size() else Venue.seat_point(slot.center, seat)
+				guest.arrived.connect(func():
+					if is_instance_valid(guest) and guest.get_meta("state", "") == "returning":
+						_seat(slot, guest), CONNECT_ONE_SHOT)
+				guest.walk(PackedVector3Array([back]))
+		elif state == "seated" and seat < SEATS.size() and guest.is_seated():
 			var anim: String = "sit"
-			if drinking and (seat + int(slot.index)) % 2 == 0:
-				anim = "drink"
-			elif mood < float(mood_rules.unhappy_below):
+			if mood < float(mood_rules.unhappy_below):
 				anim = "angry"
 			elif mood >= float(mood_rules.happy_at_or_above) and (seat + int(time / 3.0)) % 3 == 0:
 				anim = "happy"
@@ -511,9 +606,11 @@ func _sync_staff(save: Dictionary) -> void:
 	_decor("plants", dekor >= 1, func(b: Builder):
 		for spot in lay.plants:
 			Venue._plant(b, spot, "barrel" if venue_id == "birtija" else ("palm" if venue_id == "restoran" else "ficus")))
-	_decor("rug", dekor >= 3, func(b: Builder):
-		var name: String = {"birtija": "rug_kilim", "kafana": "rug_persian", "restoran": "rug_kilim", "splav": "rug_blue"}[venue_id]
-		b.add(Kit.unit("quad"), Transform3D(Basis.from_scale(Vector3(3.0, 1, 4.4)), Vector3(lay.w - 3.0, 0.012, lay.top + 0.2 + 2.2 - 1.6)), Color.WHITE, "uv:" + name))
+	# Kilims hang on the wall, the old kafana way (the floor stays clear for the tables).
+	var wall_spot: float = Venue.free_wall_spot(lay)
+	_decor("rug", dekor >= 3 and wall_spot > 0.0, func(b: Builder):
+		var name: String = {"birtija": "rug_kilim", "kafana": "rug_persian", "restoran": "rug_blue"}.get(venue_id, "rug_kilim")
+		b.add(Kit.unit("quad"), Transform3D(Basis(Vector3.UP, PI / 2.0) * Basis(Vector3.RIGHT, PI / 2.0) * Basis.from_scale(Vector3(1.2, 1, 1.7)), Vector3(0.06, 1.95, wall_spot)), Color.WHITE, "uv:" + name))
 	var sound: int = int(upgrades.get("ozvucenje", 0))
 	var make_speakers: Callable = func(b: Builder):
 		var tall: float = 1.5 if sound >= 5 else 0.9
@@ -571,11 +668,6 @@ func _process(delta: float) -> void:
 		var flicker: float = 1.0 + 0.04 * sin(time * 3.1 + i * 1.7) + 0.02 * sin(time * 7.3 + i)
 		var target: float = light_energy[i] * flicker * (1.0 - 0.8 * darkness)
 		lights[i].light_energy = lerpf(lights[i].light_energy, target, clampf(delta * 4.0, 0.0, 1.0))
-	for slot in slots:
-		if slot.drink != null:
-			slot.drink_timer = float(slot.drink_timer) - delta
-			if float(slot.drink_timer) < 0.0:
-				slot.drink_timer = rng.randf_range(4.0, 8.0)
 	_run_waiters()
 	_update_shadows()
 	if not band.is_empty() and band[0].current == "play":
@@ -607,7 +699,6 @@ func _run_waiters() -> void:
 func _delivered(waiter, slot: Dictionary, item: String) -> void:
 	if not slot.guests.is_empty():
 		_place_drink(slot, item)
-		slot.drink_timer = 0.5
 	waiter.face(Vector3(slot.center.x, 0, slot.center.y) - waiter.position)
 	waiter.play("carry_idle")
 	var back: Tween = waiter.create_tween()

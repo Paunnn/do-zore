@@ -297,7 +297,7 @@ func _test_ui() -> void:
 	for guest in slot.guests:
 		world._seat(slot, guest)
 	ui.floor_view.refresh()
-	check(slot.hud.mode == "order" and slot.guests[0].current.begins_with("sit"), "seated guests show their order in a thought cloud")
+	check(slot.hud.mode == "order" and slot.guests[0].get_meta("state") == "seated" and slot.guests[0].seat_state != "", "seated guests take their chairs and show their order in a thought cloud")
 	var view = ui.floor_view
 	view._update_overlay()
 	var hit: Dictionary = world.pick(view.project(world.to_global(slot.floor)), view.project, view.metre())
