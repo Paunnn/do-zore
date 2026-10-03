@@ -16,7 +16,11 @@ const WorldData = preload("res://scripts/world/world_data.gd")
 const TAP_SLOP = 18.0
 const PITCH = -46.0
 const YAW = 45.0
-const CLOSE = 13.0
+const CLOSE = 4.5
+## Zoomed right in, the camera comes down to this pitch so faces read; it is at PITCH from
+## TILT_FROM metres of view width up.
+const CLOSE_PITCH = -32.0
+const TILT_FROM = 16.0
 const FAR = 150.0
 const MAP_ZOOM = 46.0
 ## One night takes this long: warm evening, deep night, then dawn ("do zore"), and round again.
@@ -400,6 +404,8 @@ func _apply_camera() -> void:
 	target = Vector3(-1, 0, -1).normalized() * t + Vector3(1, 0, -1).normalized() * u
 	view_width = clampf(view_width, CLOSE, FAR)
 	camera.size = view_width
+	var tilt: float = clampf((view_width - CLOSE) / (TILT_FROM - CLOSE), 0.0, 1.0)
+	camera.rotation_degrees = Vector3(lerpf(CLOSE_PITCH, PITCH, tilt * tilt * (3.0 - 2.0 * tilt)), YAW, 0)
 	# Keep the looked-at point in the middle of the space between the HUD and the bottom bar.
 	var shift: float = (bottom_inset - top_inset) / 2.0 / metre()
 	camera.position = target + camera.transform.basis.z * 200.0
@@ -429,7 +435,7 @@ func _pan(screen_delta: Vector2) -> void:
 	var right: Vector3 = Vector3(1, 0, -1).normalized()
 	var down: Vector3 = Vector3(1, 0, 1).normalized()
 	# Screen y covers less ground than x at this pitch.
-	var scale_y: float = 1.0 / sin(deg_to_rad(-PITCH))
+	var scale_y: float = 1.0 / sin(deg_to_rad(-camera.rotation_degrees.x))
 	target -= (right * screen_delta.x + down * screen_delta.y * scale_y) / metre()
 	_apply_camera()
 

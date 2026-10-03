@@ -79,11 +79,9 @@ python tools/art/build_key_art.py   # key art / boot splash and app icon (SVG; s
   `compress/normal_map=1` (and every scan `compress/mode=2`, `mipmaps/generate=true`).
 - `build_textures.py` uses NumPy for seamless noise; tiling textures are 512×512 and are mapped
   in world space by the game, so one texture covers floors and walls of any size.
-- The characters are not generated: `client/assets/people` holds Kenney's "Mini Characters"
-  (CC0, https://kenney.nl/assets/mini-characters; licence in `LICENSE-Kenney.txt`) as GLB with
-  their shared `Textures/colormap.png`. `client/scripts/world3d/people3d.gd` lists which palette
-  cells each model paints its clothes and hair with (`PARTS`), read from the models' UVs and
-  bone weights; update it if you add or replace a model.
+- The characters are cartoon people built in Blender from MakeHuman bodies with Quaternius'
+  animations (all CC0): `tools/art/people` holds the pipeline and its README (setup, cartoon
+  reshaping, cleaned faces drawn by the game's shader, texture atlas, animation library, install).
 - `build_ui.py` and `build_key_art.py` share `isokit.py`, a small outlined-isometric SVG kit used
   for the upgrade and event pictures.
 - The venue, band and guest pictures are renders of the 3D models: run

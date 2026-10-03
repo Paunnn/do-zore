@@ -9,7 +9,8 @@ reasoning and the reference games are in `research.md`.
 - One night city is the map. The road from the birtija to the splav runs up the screen through
   the village edge, the old town, the centre and the river quay (`scripts/world3d/city3d.gd`).
 - Lit low-poly 3D seen through an orthographic camera pitched 46° and turned 45°, zoomed so the
-  venue fills the screen edge to edge.
+  venue fills the screen edge to edge. Zooming in to a table close-up (4.5 m across) brings the
+  camera down to 32° so the people's faces read.
 - One night runs from a warm dusk through deep night to dawn ("do zore") in 20 minutes and opens
   again at dusk with every new venue (`SKIES` in `scripts/ui/floor_view.gd`). The sun, then the
   moon, casts the only shadows; interiors, windows and street lamps are always warm.
@@ -22,16 +23,21 @@ reasoning and the reference games are in `research.md`.
   alone, and the lamps you see are sconces on the back walls and shaded pendants over the bar.
 - Keep the floor quiet: only the next table to buy is marked, tables stand on soft contact
   shadows, and floor textures are low-contrast.
-- Characters are Kenney's blocky chibi "Mini Characters" (CC0), drawn at about 1.45 m so they
-  read on a phone (cars and trees are scaled to them). Each role picks fitting models and
-  repaints their palette cells: bald and bearded penzioneri in muted cardigans with a šajkača
-  or flat cap, grey-haired grandmothers with a dark headband; studenti in bright tops and
-  denim; svatovi in dark suits with a flower and bright dresses; biznismeni in navy and grey
-  with glasses; ožalošćeni all in black; konobari in white shirts, black waistcoats and a long
-  white apron; a bearded barmen with a bow tie; the izbacivač in black with sunglasses; the band
-  in matching suits. Hats and extras are built onto the bones and merged with the body, so a
-  character is one mesh, one material and one draw call; a soft rim light lifts them off the
-  floor.
+- Characters are cartoon people for a family game: a big round head, short legs, big hands and feet,
+  real clothes and hair (MakeHuman, CC0, reshaped in Blender; see `tools/art/people`) with flat painted
+  textures, toon shading in two tones and an ink outline. Faces are drawn by the shader, not
+  modelled: big eyes with a coloured iris, catch-lights and a lash line, thick brows, a mouth that
+  smiles, opens, rounds into an O or shows teeth, blush and tears. Every person carries a mood
+  (penzioneri smile, studenti grin, svatovi laugh, ožalošćeni are sad, the singer sings with her eyes
+  closed, the band plays blissfully), eases between expressions, blinks, talks while chatting and
+  sips when drinking; they laugh when happy and frown and shout when cross. Heads tip back a little
+  so faces read from the high camera, and the camera comes down as you zoom in. Roles: penzioneri in
+  sweaters and slacks (some in a šajkača, some with glasses), grandmothers in dresses; studenti in
+  bright T-shirts and cargo or wool trousers; svatovi in suits with a flower and bright dresses;
+  biznismeni in suits; ožalošćeni in black; konobari in white jackets, konobarice in white and black;
+  a šanker with a bow tie; the izbacivač with folded arms and sunglasses; the band in coloured shirts
+  and bow ties, and the singer in red at her microphone. People are drawn 1.2 times life size
+  against the furniture.
 - The city has life: guests walk to the door along the pavement, townspeople stroll round the
   nearby blocks.
 

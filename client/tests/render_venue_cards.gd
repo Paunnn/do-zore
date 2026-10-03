@@ -95,7 +95,7 @@ func _people(out: String, name: String, kinds: Array, pose: String) -> void:
 	key.rotation_degrees = Vector3(-35, 25, 0)
 	scene.add_child(key)
 	var count: int = kinds.size()
-	var spacing: float = 0.62
+	var spacing: float = 0.85
 	for k in range(count):
 		var person = People.new()
 		scene.add_child(person)
@@ -104,15 +104,16 @@ func _people(out: String, name: String, kinds: Array, pose: String) -> void:
 		person.position = Vector3(x, 0, -absf(x) * 0.25)
 		person.face_now(Vector3(-x * 0.3, 0, 1))
 		person.play(pose)
-		person.anim_time = 0.35 + k * 0.4
-		person._pose()
+		# One step of animation and face, then hold still (no blink mid-picture).
+		person.blink_in = 99.0
+		person._process(0.5 + k * 0.37)
 		person.set_process(false)
 	var camera: Camera3D = Camera3D.new()
 	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 	camera.keep_aspect = Camera3D.KEEP_WIDTH
-	camera.size = maxf(2.4, count * spacing + 0.9)
+	camera.size = maxf(2.8, count * spacing + 1.0)
 	camera.rotation_degrees = Vector3(-12, 0, 0)
-	camera.position = Vector3(0, 0.95, 0) + camera.transform.basis.z * 20.0
+	camera.position = Vector3(0, 1.0, 0) + camera.transform.basis.z * 20.0
 	scene.add_child(camera)
 	camera.make_current()
 	for i in range(6):

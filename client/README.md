@@ -65,22 +65,29 @@ clouds, coins and notes over their 3D anchors.
   in from the street along an A* grid, sit, order, drink, dance and leave paying; waiters carry
   trays from the bar; the band plays; konobar, ozvučenje, dekor, izbacivač and sef levels show.
 - `scripts/world3d/people3d.gd` dresses each character from a look (guest type, staff or
-  musician): one of Kenney's rigged "Mini Characters" (`assets/people`, CC0) with its palette
-  repainted per role, our hats, glasses and clothing extras built onto its bones, all merged
-  into one skinned mesh; Kenney's walk, idle, sit and hold clips play underneath the drinking,
-  dancing, cheering, arguing and playing poses set in code.
+  musician): one of the cartoon people in `assets/people` (built in Blender from MakeHuman bodies,
+  CC0; see `tools/art/people`) with a palette, a face style (lashes, brows, lipstick, glasses) and
+  a mood, plus hats, bow ties, flowers, instruments and props on its bones. The animation library
+  (`people_anims.glb`, Quaternius' Universal Animation Library, CC0) is retargeted on import through
+  Godot's humanoid profile, so it plays on every body; a few clips are put together from two at run
+  time (sitting legs with drinking, cheering or arguing arms; standing musicians). The face is drawn
+  by `shaders/person.gdshader` from four numbers per person (eyes, brows, mouth, extras), eased
+  towards the person's mood, with blinks, chatter and sips on top; `shaders/ink.gdshader` is the
+  outline.
 - `scripts/world3d/builder.gd` merges primitives per material and per spatial chunk;
   `kit3d.gd` holds the shared materials (vertex colours, world-mapped photo-scanned textures
   with relief and shine maps, one glow shader for every lamp and window, the river shader).
 
-Budget, measured with a full venue: 360–545 draw calls and 220–240 k triangles at venue zoom,
-655–890 draw calls and under 360 k triangles with the whole map in view (one draw per character;
-the contact shadows under people and tables are one MultiMesh, the walkers' another).
+Budget, measured with a full venue (about 80 people): 370–570 draw calls and about 550 k
+triangles at venue zoom, 680–920 draw calls with the whole map in view (two draws per person,
+person and outline; people take coarser levels of detail early, `lod_bias` 0.3; the contact
+shadows under people and tables are one MultiMesh, the walkers' another).
 
 The interface is the modern-kafana kit in `scripts/ui/ui_kit.gd` (floating pills, glossy round
 and lipped buttons, cream cards with a red header over a tablecloth trim); see
 `design/README.md`. Fonts: Shrikhand, Titan One and Nunito (SIL Open Font License, licences in
-`assets/fonts`). The characters are Kenney's Mini Characters (CC0, `assets/people`); the
+`assets/fonts`). The characters are cartoon MakeHuman people with Quaternius' animations (CC0,
+`assets/people/CREDITS.md`); the
 large surfaces are Poly Haven scans (CC0, `assets/textures/SCANNED.md`); everything else is
 generated from code: see `tools/README.md`. The venue, band and
 guest pictures in `assets/ui/{venues,bands,guests}` are renders of the 3D models made with
