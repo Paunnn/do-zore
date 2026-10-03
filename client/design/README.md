@@ -13,8 +13,10 @@ reasoning and the reference games are in `research.md`.
 - One night runs from a warm dusk through deep night to dawn ("do zore") in 20 minutes and opens
   again at dusk with every new venue (`SKIES` in `scripts/ui/floor_view.gd`). The sun, then the
   moon, casts the only shadows; interiors, windows and street lamps are always warm.
-- Shapes are simple primitives with vertex colours; surfaces that need grain (wood, cloth,
-  cobbles, plaster, roof tiles) use the world-mapped textures from `tools/art/build_textures.py`.
+- Shapes are simple primitives with vertex colours; large surfaces (floors, streets, grass,
+  plaster, stone, brick, roof tiles) use photo-scanned CC0 textures with relief and shine maps
+  (`tools/art/fetch_scanned_textures.py`), so planks and cobbles catch the lamps; cloths,
+  wallpapers, rugs and signs stay painted (`tools/art/build_textures.py`).
 - The played venue is a roofless cut-away with low front walls; nothing between it and the
   camera rises above one storey. Nothing hangs over the tables either: the room is lit by lights
   alone, and the lamps you see are sconces on the back walls and shaded pendants over the bar.
@@ -25,7 +27,9 @@ reasoning and the reference games are in `research.md`.
   cheeks and a small smile; a rounded body, short limbs, round hands and shoes; hair as a cap
   with a fringe. Clothes and hair carry fabric textures from one atlas (knit cardigans, denim,
   plaid and striped shirts, pinstripe and tweed suits, satin dresses, a lace veil, a floral
-  marama, hair strands), so each character is still one material and one draw call. A readable silhouette per guest type
+  marama, hair strands), so each character is still one material and one draw call. Their
+  shader raises the weave as gentle relief, shades toward the feet and adds a rim of the sky's
+  light (warm at dusk, cool by night) so people stand out from the floor. A readable silhouette per guest type
   (šajkača and moustache for penzioneri, a marama for their wives, hoodies for studenti, black
   for ožalošćeni, suits and dresses for svatovi, suits and ties for biznismeni, the long white
   apron for konobari).

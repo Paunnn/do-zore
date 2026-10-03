@@ -286,6 +286,9 @@ func _apply_sky(sky: Dictionary) -> void:
 	var water: ShaderMaterial = Kit.material("water")
 	water.set_shader_parameter("deep", sky.deep)
 	water.set_shader_parameter("shallow", sky.shallow)
+	# People catch a rim of the sky's light: warm at dusk and dawn, cool by night.
+	var people: ShaderMaterial = Kit.material("people")
+	people.set_shader_parameter("rim", sky.sun.lerp(Color(1, 1, 1), 0.25))
 
 ## Glide across the map: out over the city, then down into the new venue.
 func fly_to(point: Vector3, width: float, from: Vector3 = Vector3.INF) -> void:

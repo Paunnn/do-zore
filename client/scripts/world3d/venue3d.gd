@@ -149,7 +149,7 @@ static func _room(b: Builder, lay: Dictionary, t: Dictionary, rng: RandomNumberG
 	var trim: Color = Color(t.trim)
 	var white: Color = Color.WHITE
 	# Floor slab with a darker plinth showing at the cut edges.
-	b.box(Vector3(w / 2.0, -0.28, d / 2.0), Vector3(w + 0.6, 0.25, d + 0.6), Color("8d8a86"), "tex:sidewalk:0.4")
+	b.box(Vector3(w / 2.0, -0.28, d / 2.0), Vector3(w + 0.6, 0.25, d + 0.6), Color("e6e2dc"), "tex:sidewalk:0.4")
 	b.box(Vector3(w / 2.0, -0.02, d / 2.0), Vector3(w, 0.02, d), white, t.floor)
 	# Back walls with a wainscot, a skirting board and a cornice.
 	b.box(Vector3(w / 2.0, 0, -0.15), Vector3(w + 0.3, WALL_H, 0.3), Color(t.wall_tint), t.wall)
@@ -407,7 +407,7 @@ static func _birtija_decor(b: Builder, lay: Dictionary, rng: RandomNumberGenerat
 	_painting(b, Vector3(0.05, 1.6, lay.top + 2.0), PI / 2.0, "painting_portrait", Vector2(0.7, 0.55), Color("6e4528"))
 	# A big barrel and crates by the bar, a bench along the wall.
 	_plant(b, Vector3(w - 0.6, 0, 0.6), "barrel")
-	b.box(Vector3(w - 0.6, 0, 1.6), Vector3(0.6, 0.45, 0.6), Color("8a6a42"), "tex:planks_rough:0.8")
+	b.box(Vector3(w - 0.6, 0, 1.6), Vector3(0.6, 0.45, 0.6), Color("e8dcc8"), "tex:planks_rough:0.8")
 	b.box(Vector3(0.35, 0, d - 3.0), Vector3(0.5, 0.42, 3.4), Color("7a4a2c"), "vc_gloss")
 	# Calendar and clock.
 	b.box(Vector3(lay.bar_to - 0.8, 2.0, 0.02), Vector3(0.5, 0.6, 0.02), Color("f4ead2"))
@@ -503,7 +503,7 @@ static func _raft(b: Builder, lay: Dictionary, rng: RandomNumberGenerator) -> vo
 			[Vector3(w + 0.3, 1.0, d / 2.0), Vector3(0.09, 0.07, d + 0.7)], [Vector3(-0.3, 1.0, d / 2.0), Vector3(0.09, 0.07, d + 0.7)]]:
 		b.box(spec[0], spec[1], rail, "vc_gloss")
 	# Gap in the rail for the gangway.
-	b.box(Vector3(lay.door_x + 0.6, -0.05, d + 4.3), Vector3(1.4, 0.08, 8.0), Color("8a7458"), "tex:planks_deck:0.6")
+	b.box(Vector3(lay.door_x + 0.6, -0.05, d + 4.3), Vector3(1.4, 0.08, 8.0), Color("f0e8dc"), "tex:planks_deck:0.6")
 	for k in range(9):
 		for side in [-0.7, 0.7]:
 			b.box(Vector3(lay.door_x + 0.6 + side, 0, d + 0.6 + k), Vector3(0.05, 0.9, 0.05), Color("f4f1ea"), "vc_gloss")
@@ -527,7 +527,7 @@ static func _raft(b: Builder, lay: Dictionary, rng: RandomNumberGenerator) -> vo
 	# The back wall of the splav is the bar hut under a striped canvas awning, like its roof on the map.
 	var mid: float = (lay.bar_from + lay.bar_to) / 2.0
 	var span: float = lay.bar_to - lay.bar_from + 1.0
-	b.box(Vector3(mid, 0, -0.1), Vector3(span - 0.4, 2.6, 0.2), Color("6e5a44"), "tex:planks_deck:0.5")
+	b.box(Vector3(mid, 0, -0.1), Vector3(span - 0.4, 2.6, 0.2), Color("d8c8b4"), "tex:planks_deck:0.5")
 	var stripes: int = int(span / 0.5)
 	var slope: float = atan2(0.6, 2.6)
 	for k in range(stripes):
@@ -539,7 +539,7 @@ static func _raft(b: Builder, lay: Dictionary, rng: RandomNumberGenerator) -> vo
 		b.cylinder(Vector3(px, 0, 2.5), 0.05, 2.3, Color("e8e2d6"), "vc_gloss", 8)
 	# Planters along the rail.
 	for px in [w * 0.25, w * 0.75]:
-		b.box(Vector3(px, 0, d - 0.1), Vector3(1.4, 0.45, 0.45), Color("6e5a44"), "tex:planks_deck:0.6")
+		b.box(Vector3(px, 0, d - 0.1), Vector3(1.4, 0.45, 0.45), Color("d8c8b4"), "tex:planks_deck:0.6")
 		for k in range(4):
 			b.sphere(Vector3(px - 0.5 + k * 0.33, 0.6, d - 0.1), 0.22, Color("4f8a46").darkened(0.12 * (k % 2)), "vc", Vector3.ONE, 8)
 
@@ -575,9 +575,9 @@ static func build_exterior(root: Node3D, lay: Dictionary, state: String) -> void
 	var storeys: int = int(t.storeys)
 	var height: float = 3.4 * storeys
 	var wall: Color = Color(t.facade_tint)
-	b.box(Vector3(w / 2.0, -0.28, d / 2.0), Vector3(w + 0.6, 0.25, d + 0.6), Color("8d8a86"), "tex:sidewalk:0.4")
+	b.box(Vector3(w / 2.0, -0.28, d / 2.0), Vector3(w + 0.6, 0.25, d + 0.6), Color("e6e2dc"), "tex:sidewalk:0.4")
 	b.box(Vector3(w / 2.0, 0, d / 2.0), Vector3(w, height, d), wall, t.facade if id != "birtija" else "tex:plaster_warm:0.25")
-	b.box(Vector3(w / 2.0, 0, d / 2.0), Vector3(w + 0.12, 0.7, d + 0.12), wall.darkened(0.3), "tex:stone_wall:0.5")
+	b.box(Vector3(w / 2.0, 0, d / 2.0), Vector3(w + 0.12, 0.7, d + 0.12), wall.lerp(Color.WHITE, 0.3), "tex:stone_wall:0.5")
 	for s in range(1, storeys + 1):
 		b.box(Vector3(w / 2.0, 3.4 * s - 0.2, d / 2.0), Vector3(w + 0.3, 0.22, d + 0.3), wall.darkened(0.12))
 	var shutter: Color = {"birtija": Color("5a3a22"), "kafana": Color("3d6a4a"), "restoran": Color("f4efe4")}[id]
@@ -628,7 +628,7 @@ static func build_exterior(root: Node3D, lay: Dictionary, state: String) -> void
 	match id:
 		"birtija":
 			# A wooden porch along the front with a bench and a lantern.
-			b.box(Vector3(w / 2.0, 0, d + 1.2), Vector3(w - 1.0, 0.2, 2.2), Color("8a6a42"), "tex:planks_rough:0.6")
+			b.box(Vector3(w / 2.0, 0, d + 1.2), Vector3(w - 1.0, 0.2, 2.2), Color("e8dcc8"), "tex:planks_rough:0.6")
 			for k in range(5):
 				b.box(Vector3(1.0 + k * (w - 2.0) / 4.0, 0.2, d + 2.15), Vector3(0.16, 2.6, 0.16), Color("6e4528"))
 			b.box(Vector3(w / 2.0, 2.8, d + 1.3), Vector3(w - 0.6, 0.14, 2.6), Color("6e4528"))
@@ -656,7 +656,7 @@ static func build_exterior(root: Node3D, lay: Dictionary, state: String) -> void
 	if str(t.roof) != "":
 		var pitch: float = minf(w, d) * 0.42
 		b.prism(Vector3(w / 2.0, height, d / 2.0), Vector3(d + 0.8, pitch, w + 0.8), Color.WHITE, "tex:roof_tiles:0.35", PI / 2.0)
-		b.box(Vector3(w * 0.7, height + pitch * 0.4, d * 0.4), Vector3(0.7, pitch * 0.75, 0.7), Color("8a4a32"), "tex:bricks:0.6")
+		b.box(Vector3(w * 0.7, height + pitch * 0.4, d * 0.4), Vector3(0.7, pitch * 0.75, 0.7), Color("f4e4dc"), "tex:bricks:0.6")
 	else:
 		b.box(Vector3(w / 2.0, height, d / 2.0), Vector3(w + 0.4, 0.5, d + 0.4), wall.darkened(0.08))
 		b.box(Vector3(w / 2.0, height + 0.5, d / 2.0), Vector3(w - 0.6, 0.06, d - 0.6), Color("3a3f4a"))

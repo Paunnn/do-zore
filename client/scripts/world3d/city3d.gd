@@ -174,7 +174,7 @@ func _ground(b: Builder) -> void:
 	# A wide dark base so the city never shows its edge.
 	b.box(Vector3(-80, -1.2, -80), Vector3(560, 0.3, 560), Color("1c2a22"), "vc")
 	# A lawn strip between the last blocks and the quay.
-	_diag_box(b, -RIVER_NEAR / sqrt(2.0) - 30.0, 0.0, Vector3(320, 0.42, 34.0), Color("8aa88a"), "tex:grass:0.25", -0.5)
+	_diag_box(b, -RIVER_NEAR / sqrt(2.0) - 30.0, 0.0, Vector3(320, 0.42, 34.0), Color("eef2e6"), "tex:grass:0.25", -0.5)
 
 func _block_rect(bx: int, bz: int) -> Rect2:
 	return Rect2(bx * BLOCK + STREET / 2.0, bz * BLOCK + STREET / 2.0, BLOCK - STREET, BLOCK - STREET)
@@ -191,7 +191,7 @@ func _block(b: Builder, bx: int, bz: int) -> void:
 	if kind == "quay" and c.x + c.z < RIVER_NEAR + 30.0:
 		return
 	var ground: String = {"village": "tex:grass:0.25", "oldtown": "tex:paving:0.35", "center": "tex:paving:0.3", "quay": "tex:paving:0.3"}[kind]
-	var tint: Color = {"village": Color("9ab89a"), "oldtown": Color("c8bfb2"), "center": Color("b8b2aa"), "quay": Color("b8b2aa")}[kind]
+	var tint: Color = {"village": Color("eef2e6"), "oldtown": Color("f4eee6"), "center": Color("e8e4de"), "quay": Color("e8e4de")}[kind]
 	b.box(Vector3(c.x, -0.46, c.z), Vector3(r.size.x, 0.42, r.size.y), tint, ground)
 	var keep_out: Array = []
 	for id in lots:
@@ -294,7 +294,7 @@ func _town_block(b: Builder, r: Rect2, keep_out: Array, low: int, high: int, roo
 ## The central square: paving, a fountain, trees and benches.
 func _square(b: Builder, r: Rect2) -> void:
 	var c: Vector3 = Vector3(r.get_center().x, 0, r.get_center().y)
-	b.cylinder(c, 5.5, 0.6, Color("b8b2aa"), "tex:stone_wall:0.6", 24)
+	b.cylinder(c, 5.5, 0.6, Color("ece6dc"), "tex:stone_wall:0.6", 24)
 	b.cylinder(c + Vector3(0, 0.1, 0), 5.0, 0.45, Color.WHITE, "water", 24)
 	b.cylinder(c, 1.0, 1.8, Color("d8d2c6"), "vc", 14, 0.6)
 	b.cylinder(c + Vector3(0, 1.8, 0), 2.0, 0.3, Color("d8d2c6"), "vc", 16)
@@ -308,14 +308,14 @@ func _square(b: Builder, r: Rect2) -> void:
 		b.box(bench, Vector3(1.6, 0.45, 0.5), Color("6e4528"), "vc", -a)
 		if k % 2 == 0:
 			var bed: Vector3 = c + Vector3(cos(a + 0.4), 0, sin(a + 0.4)) * 17.0
-			b.cylinder(bed, 2.2, 0.4, Color("b8b2aa"), "tex:stone_wall:0.6", 16)
+			b.cylinder(bed, 2.2, 0.4, Color("ece6dc"), "tex:stone_wall:0.6", 16)
 			b.cylinder(bed + Vector3(0, 0.05, 0), 2.0, 0.42, Color("4f7a3e"), "vc", 16)
 			for f in range(7):
 				var fa: float = f * TAU / 7.0
 				b.sphere(bed + Vector3(cos(fa) * 1.3, 0.5, sin(fa) * 1.3), 0.22, [Color("d9536a"), Color("f2b83a"), Color("c0322c"), Color("f4f1ea")][f % 4], "vc", Vector3.ONE, 6)
 	# A statue on a plinth, and two kiosks at the corners.
 	var statue: Vector3 = c + Vector3(-14.0, 0, -14.0)
-	b.box(statue, Vector3(2.4, 2.2, 2.4), Color("c9c2b6"), "tex:stone_wall:0.5")
+	b.box(statue, Vector3(2.4, 2.2, 2.4), Color("f0ebe2"), "tex:stone_wall:0.5")
 	b.box(statue + Vector3(0, 2.2, 0), Vector3(2.8, 0.25, 2.8), Color("b8b2aa"))
 	b.box(statue + Vector3(0, 2.45, 0), Vector3(1.6, 1.0, 0.7), Color("5a7a6a"))
 	b.sphere(statue + Vector3(0.5, 3.7, 0), 0.45, Color("5a7a6a"), "vc", Vector3(1.6, 0.8, 0.7), 10)
@@ -359,7 +359,7 @@ func _town_house(b: Builder, rect: Rect2, storeys: int, colour: Color, old: bool
 	var near: bool = _near(at)
 	var trim: Color = Color("f2ece0") if old else colour.lightened(0.3)
 	b.box(at, Vector3(rect.size.x, h, rect.size.y), colour, "tex:plaster_white:0.25")
-	b.box(at, Vector3(rect.size.x + 0.08, 0.9, rect.size.y + 0.08), colour.darkened(0.3), "tex:stone_wall:0.5")
+	b.box(at, Vector3(rect.size.x + 0.08, 0.9, rect.size.y + 0.08), colour.lerp(Color.WHITE, 0.35), "tex:stone_wall:0.5")
 	for s in range(1, storeys):
 		b.box(at + Vector3(0, 0.45 + s * 3.2, 0), Vector3(rect.size.x + 0.14, 0.14, rect.size.y + 0.14), trim)
 	b.box(at + Vector3(0, h - 0.42, 0), Vector3(rect.size.x + 0.22, 0.22, rect.size.y + 0.22), trim)
@@ -403,7 +403,7 @@ func _town_house(b: Builder, rect: Rect2, storeys: int, colour: Color, old: bool
 		b.prism(at + Vector3(0, h, 0), span, Color.WHITE, "tex:roof_tiles:0.35", PI / 2.0 if along_x else 0.0)
 		for k in range(1 if rect.size.x < 9.0 else 2):
 			var cx: Vector3 = at + (Vector3(rect.size.x * (0.3 - 0.6 * k), 0, -rect.size.y * 0.12) if along_x else Vector3(-rect.size.x * 0.12, 0, rect.size.y * (0.3 - 0.6 * k)))
-			b.box(cx + Vector3(0, h + pitch * 0.4, 0), Vector3(0.6, pitch * 0.6 + 0.9, 0.6), Color("8a4a32"), "tex:bricks:0.6")
+			b.box(cx + Vector3(0, h + pitch * 0.4, 0), Vector3(0.6, pitch * 0.6 + 0.9, 0.6), Color("f4e4dc"), "tex:bricks:0.6")
 			b.box(cx + Vector3(0, h + pitch + 0.9, 0), Vector3(0.8, 0.12, 0.8), Color("5a3a2a"))
 		if near and along_x and rect.size.x >= 8.0 and rng.randf() < 0.6:
 			# A dormer on the street slope.
@@ -496,7 +496,7 @@ func _doorway(b: Builder, xf: Transform3D, trim: Color) -> void:
 ## Where a house would block the view of the played venue: a pocket park instead.
 func _pocket_park(b: Builder, rect: Rect2) -> void:
 	var c: Vector3 = Vector3(rect.get_center().x, 0, rect.get_center().y)
-	b.box(c - Vector3(0, 0.02, 0), Vector3(rect.size.x - 0.6, 0.06, rect.size.y - 0.6), Color("7a9a6e"), "tex:grass:0.3")
+	b.box(c - Vector3(0, 0.02, 0), Vector3(rect.size.x - 0.6, 0.06, rect.size.y - 0.6), Color("e4ecd8"), "tex:grass:0.3")
 	var count: int = maxi(1, int(rect.size.x * rect.size.y / 40.0))
 	for k in range(count):
 		var p: Vector3 = Vector3(rect.position.x + rng.randf_range(1.5, rect.size.x - 1.5), 0, rect.position.y + rng.randf_range(1.5, rect.size.y - 1.5))
@@ -511,11 +511,11 @@ func _house(b: Builder, at: Vector3, size: Vector3, colour: Color, porch: bool) 
 	var trim: Color = Color("f4efe4")
 	var shutter: Color = [Color("3d6a4a"), Color("6e3a2a"), Color("3a5a7a")][rng.randi() % 3]
 	b.box(c, size, colour, "tex:plaster_warm:0.3")
-	b.box(c, Vector3(size.x + 0.06, 0.6, size.z + 0.06), colour.darkened(0.35), "tex:stone_wall:0.5")
+	b.box(c, Vector3(size.x + 0.06, 0.6, size.z + 0.06), colour.lerp(Color.WHITE, 0.3), "tex:stone_wall:0.5")
 	b.box(c + Vector3(0, size.y - 0.15, 0), Vector3(size.x + 0.16, 0.15, size.z + 0.16), trim)
 	b.prism(c + Vector3(0, size.y, 0), Vector3(size.z + 1.0, minf(size.x, size.z) * 0.5, size.x + 1.0), Color.WHITE, "tex:roof_tiles:0.35", PI / 2.0)
 	var chimney: Vector3 = c + Vector3(size.x * 0.28, size.y + 0.6, -size.z * 0.1)
-	b.box(chimney, Vector3(0.5, 1.8, 0.5), Color("8a4a32"), "tex:bricks:0.6")
+	b.box(chimney, Vector3(0.5, 1.8, 0.5), Color("f4e4dc"), "tex:bricks:0.6")
 	b.box(chimney + Vector3(0, 1.8, 0), Vector3(0.7, 0.1, 0.7), Color("5a3a2a"))
 	var front: Transform3D = Transform3D(Basis.IDENTITY, Vector3(c.x, 0, at.z + size.z))
 	var side: Transform3D = Transform3D(Basis(Vector3.UP, PI / 2.0), Vector3(at.x + size.x, 0, c.z))
@@ -531,7 +531,7 @@ func _house(b: Builder, at: Vector3, size: Vector3, colour: Color, porch: bool) 
 		for u in [-1.1, 1.1]:
 			b.box_xf(front * Transform3D(Basis.IDENTITY, Vector3(u, 0, 1.5)), Vector3(0.14, 2.4, 0.14), Color("6e5a3a"))
 		b.box_xf(front * Transform3D(Basis(Vector3.RIGHT, 0.32), Vector3(0, 2.45, 0.0)), Vector3(2.8, 0.1, 1.85), Color.WHITE, "tex:roof_tiles:0.35")
-		b.box_xf(front * Transform3D(Basis.IDENTITY, Vector3(0, 0, 0.75)), Vector3(2.6, 0.12, 1.5), Color("8a7458"), "tex:planks_rough:0.6")
+		b.box_xf(front * Transform3D(Basis.IDENTITY, Vector3(0, 0, 0.75)), Vector3(2.6, 0.12, 1.5), Color("e8dcc8"), "tex:planks_rough:0.6")
 		b.box_xf(front * Transform3D(Basis.IDENTITY, Vector3(1.6, 0, 0.6)), Vector3(0.4, 0.45, 1.2), Color("6e4528"), "vc")
 		b.sphere_xf(front * Transform3D(Basis.IDENTITY, Vector3(0.7, 2.2, 0.15)), 0.09, Color.WHITE, "glow:ffbf6a:3.0", Vector3.ONE, 6)
 		b.quad(Vector3(c.x + 0.7, 0.03, at.z + size.z + 1.2), Vector2(4.5, 4.5), Color(1, 1, 1, 0.55), "add:pool")
@@ -593,7 +593,7 @@ func _street_segment(b: Builder, c: Vector3, along_x: bool) -> void:
 	for s in [-1.0, 1.0]:
 		var off: Vector3 = Vector3(0, 0, s * (ROAD / 2.0 + 0.75)) if along_x else Vector3(s * (ROAD / 2.0 + 0.75), 0, 0)
 		var walk: Vector3 = Vector3(BLOCK - STREET, 0.36, 1.5) if along_x else Vector3(1.5, 0.36, BLOCK - STREET)
-		b.box(c + off - Vector3(0, 0.3, 0), walk, Color("bdb6aa"), "tex:sidewalk:0.4")
+		b.box(c + off - Vector3(0, 0.3, 0), walk, Color("f2eee8"), "tex:sidewalk:0.4")
 	if kind == "center":
 		var dash: Vector3 = Vector3(2.0, 0.02, 0.15) if along_x else Vector3(0.15, 0.02, 2.0)
 		for k in range(-5, 6):
@@ -698,8 +698,8 @@ func _river(b: Builder) -> void:
 func _quay(b: Builder) -> void:
 	var near_t: float = -RIVER_NEAR / sqrt(2.0)
 	# Stone embankment wall and a paved promenade with lamps and benches.
-	_diag_box(b, near_t - 1.0, 0.0, Vector3(300, 1.4, 2.0), Color("9a9184"), "tex:stone_wall:0.5", -1.0)
-	_diag_box(b, near_t - 8.0, 0.0, Vector3(300, 0.42, 14.0), Color("b8b2aa"), "tex:paving:0.3", -0.46)
+	_diag_box(b, near_t - 1.0, 0.0, Vector3(300, 1.4, 2.0), Color("e2dccf"), "tex:stone_wall:0.5", -1.0)
+	_diag_box(b, near_t - 8.0, 0.0, Vector3(300, 0.42, 14.0), Color("ece6de"), "tex:paving:0.3", -0.46)
 	for k in range(-9, 10):
 		var u: float = k * 14.0
 		var dir_up: Vector3 = Vector3(-1, 0, -1).normalized()
@@ -719,16 +719,16 @@ func _bridge(b: Builder) -> void:
 	var u: float = 46.0
 	var length: float = far_t - near_t + 16.0
 	var mid: float = (near_t + far_t) / 2.0
-	_diag_box(b, mid, u, Vector3(12.0, 0.8, length), Color("e0d8ca"), "tex:stone_wall:0.5", 4.0)
-	_diag_box(b, mid, u, Vector3(8.0, 0.05, length), Color("8a8c94"), "tex:asphalt:0.3", 4.8)
+	_diag_box(b, mid, u, Vector3(12.0, 0.8, length), Color("f4eee4"), "tex:stone_wall:0.5", 4.0)
+	_diag_box(b, mid, u, Vector3(8.0, 0.05, length), Color("d8d8dc"), "tex:asphalt:0.3", 4.8)
 	for side in [-5.0, 5.0]:
-		_diag_box(b, mid, u + side, Vector3(1.6, 0.08, length), Color("d8d2c6"), "tex:sidewalk:0.4", 4.8)
+		_diag_box(b, mid, u + side, Vector3(1.6, 0.08, length), Color("f2eee8"), "tex:sidewalk:0.4", 4.8)
 	for side in [-5.9, 5.9]:
 		_diag_box(b, mid, u + side, Vector3(0.25, 1.0, length), Color("e8e2d6"), "vc", 4.8)
 	# Piers and arches.
 	for k in range(5):
 		var t: float = near_t + 4.0 + k * (far_t - near_t - 8.0) / 4.0
-		_diag_box(b, t, u, Vector3(10.0, 5.0, 3.0), Color("a8a196"), "tex:stone_wall:0.5", -1.0)
+		_diag_box(b, t, u, Vector3(10.0, 5.0, 3.0), Color("e6e0d4"), "tex:stone_wall:0.5", -1.0)
 	# Lamps along the bridge.
 	var dir_up: Vector3 = Vector3(-1, 0, -1).normalized()
 	var dir_right: Vector3 = Vector3(1, 0, -1).normalized()

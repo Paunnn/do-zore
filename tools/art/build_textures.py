@@ -1,4 +1,6 @@
-"""Textures for the 3D city and venues: floors, cloths, walls, streets, rugs, paintings and signs.
+"""Painted textures for the 3D city and venues: cloths, wallpapers, logs, rugs, paintings, signs,
+light pools and the characters' fabric atlas. Floors, streets, grass, plaster, stone, brick and
+roof tiles are photo scans written by fetch_scanned_textures.py.
 
 Tiling textures are seamless 512x512 PNGs; the game maps them in world space (triplanar), so one
 texture covers floors of any size. Rugs, paintings, signs and light pools are single images
@@ -57,74 +59,6 @@ def shade(base: np.ndarray, amount: np.ndarray) -> np.ndarray:
 
 
 # ---------------------------------------------------------------------------------------------
-# Floors
-# ---------------------------------------------------------------------------------------------
-
-def planks(name: str, base: str, board: int, seed: int, gap: str, contrast: float = 0.16, weathered: bool = False) -> None:
-    rng = np.random.default_rng(seed)
-    y, x = np.mgrid[0:N, 0:N].astype(np.float32)
-    rows = (y // board).astype(int)
-    out = np.zeros((N, N, 3), np.float32)
-    grain_noise = noise(N, 8, seed + 1, 3)
-    fine = noise(N, 64, seed + 2, 2)
-    for r in range(N // board):
-        tone = 1.0 + rng.uniform(-contrast, contrast)
-        offset = rng.uniform(0, N)
-        joint = rng.uniform(0, N)
-        mask = rows == r
-        xs = x[mask]
-        ys = y[mask]
-        grain = 0.5 + 0.5 * np.sin((xs + offset) * 0.045 + grain_noise[mask] * 9.0 + (ys % board) * 0.35)
-        level = tone * (0.88 + 0.12 * grain) * (0.94 + 0.12 * fine[mask])
-        col = rgb(base)[None, :] * level[:, None]
-        # Board ends.
-        near_joint = np.abs(((xs - joint) % N)) < 2.5
-        col[near_joint] *= 0.62
-        out[mask] = col
-    seam = (y % board) < 2.5
-    out[seam] = rgb(gap)
-    if weathered:
-        stains = noise(N, 6, seed + 3, 4)
-        out *= (0.82 + 0.3 * stains)[..., None]
-    save(name, out)
-
-
-def parquet(name: str, base: str, seed: int) -> None:
-    """Basket-weave parquet: blocks of three slats, alternating direction."""
-    rng = np.random.default_rng(seed)
-    out = np.zeros((N, N, 3), np.float32)
-    block = 128
-    slat = block / 4
-    fine = noise(N, 32, seed, 3)
-    y, x = np.mgrid[0:N, 0:N].astype(np.float32)
-    bx, by = (x // block).astype(int), (y // block).astype(int)
-    horizontal = (bx + by) % 2 == 0
-    local = np.where(horizontal, y % block, x % block)
-    along = np.where(horizontal, x, y)
-    slat_id = (local // slat).astype(int) + bx * 7 + by * 13
-    tones = rng.uniform(0.92, 1.06, size=200)
-    level = tones[slat_id % 200] * (0.9 + 0.1 * np.sin(along * 0.08 + fine * 6)) * (0.94 + 0.1 * fine)
-    out = shade(rgb(base), level)
-    edge = (local % slat < 1.6) | (x % block < 1.6) | (y % block < 1.6)
-    out[edge] *= 0.6
-    save(name, out)
-
-
-def checker_marble(name: str) -> None:
-    y, x = np.mgrid[0:N, 0:N]
-    cell = 64
-    dark = ((x // cell) + (y // cell)) % 2 == 1
-    veins = noise(N, 6, 9, 5)
-    vein = np.clip(1 - np.abs(np.sin(veins * 18.0)) * 6, 0, 1)
-    light = shade(rgb("#ece6da"), 0.95 + 0.05 * veins) - vein[..., None] * 40
-    darkc = shade(rgb("#2c2f38"), 0.9 + 0.15 * veins) + vein[..., None] * 30
-    out = np.where(dark[..., None], darkc, light)
-    grout = (x % cell < 1.5) | (y % cell < 1.5)
-    out[grout] = rgb("#8a8478")
-    save(name, out)
-
-
-# ---------------------------------------------------------------------------------------------
 # Cloth
 # ---------------------------------------------------------------------------------------------
 
@@ -148,79 +82,8 @@ def linen(name: str, base: str) -> None:
 
 
 # ---------------------------------------------------------------------------------------------
-# Streets and ground
+# Walls
 # ---------------------------------------------------------------------------------------------
-
-def voronoi_stones(name: str, base: str, mortar: str, count: int, seed: int, variance: float = 0.22) -> None:
-    rng = np.random.default_rng(seed)
-    pts = rng.random((count, 2)) * N
-    y, x = np.mgrid[0:N, 0:N].astype(np.float32)
-    best = np.full((N, N), 1e9, np.float32)
-    second = np.full((N, N), 1e9, np.float32)
-    owner = np.zeros((N, N), np.int32)
-    for i, (px, py) in enumerate(pts):
-        dx = np.abs(x - px)
-        dx = np.minimum(dx, N - dx)
-        dy = np.abs(y - py)
-        dy = np.minimum(dy, N - dy)
-        d = np.sqrt(dx * dx + dy * dy)
-        closer = d < best
-        second = np.where(closer, best, np.minimum(second, d))
-        owner = np.where(closer, i, owner)
-        best = np.where(closer, d, best)
-    edge = second - best
-    tones = rng.uniform(1 - variance, 1 + variance, size=count)
-    fine = noise(N, 32, seed + 1, 3)
-    level = tones[owner] * (0.85 + 0.25 * fine)
-    # Rounded stones: darker toward their edges.
-    level *= np.clip(0.75 + edge / 18.0, 0.75, 1.0)
-    out = shade(rgb(base), level)
-    out[edge < 3.0] = rgb(mortar) * (0.9 + 0.2 * fine[edge < 3.0])[..., None]
-    save(name, out)
-
-
-def asphalt(name: str) -> None:
-    n = noise(N, 128, 11, 2)
-    speck = np.random.default_rng(12).random((N, N)) > 0.985
-    out = shade(rgb("#3b3d44"), 0.85 + 0.25 * n)
-    out[speck] = rgb("#6a6c74")
-    save(name, out)
-
-
-def slabs(name: str, base: str, cell: int, seed: int) -> None:
-    rng = np.random.default_rng(seed)
-    y, x = np.mgrid[0:N, 0:N]
-    tones = rng.uniform(0.9, 1.08, size=(N // cell + 1, N // cell + 1))
-    fine = noise(N, 32, seed, 3)
-    out = shade(rgb(base), tones[y // cell, x // cell] * (0.92 + 0.12 * fine))
-    out[(x % cell < 2) | (y % cell < 2)] *= 0.72
-    save(name, out)
-
-
-def grass(name: str) -> None:
-    n = noise(N, 8, 21, 5)
-    blades = noise(N, 128, 22, 2)
-    out = shade(rgb("#5f8748"), 0.88 + 0.16 * n + 0.07 * blades)
-    out[..., 0] *= 0.95 + 0.1 * noise(N, 4, 23, 2)
-    save(name, out)
-
-
-def dirt(name: str) -> None:
-    n = noise(N, 16, 31, 4)
-    pebbles = np.random.default_rng(32).random((N, N)) > 0.992
-    out = shade(rgb("#7a5a3c"), 0.8 + 0.3 * n)
-    out[pebbles] = rgb("#a08a6e")
-    save(name, out)
-
-
-# ---------------------------------------------------------------------------------------------
-# Walls and roofs
-# ---------------------------------------------------------------------------------------------
-
-def plaster(name: str, base: str, seed: int) -> None:
-    n = noise(N, 6, seed, 5)
-    save(name, shade(rgb(base), 0.9 + 0.14 * n))
-
 
 def damask(name: str, base: str, motif: str) -> None:
     """Wallpaper: a repeating gold motif on a deep ground, the old kafana look."""
@@ -257,36 +120,6 @@ def logs(name: str) -> None:
     tones = rng.uniform(0.85, 1.1, size=N // h + 1)
     level = (0.55 + 0.5 * roundness) * tones[(y // h).astype(int)] * (0.9 + 0.15 * np.sin(x * 0.05 + grain * 10))
     save(name, shade(rgb("#8a5e3a"), level))
-
-
-def bricks(name: str, base: str, mortar: str) -> None:
-    rng = np.random.default_rng(71)
-    y, x = np.mgrid[0:N, 0:N]
-    bh, bw = 32, 64
-    row = y // bh
-    shift = (row % 2) * (bw // 2)
-    col = (x + shift) // bw
-    tones = rng.uniform(0.82, 1.15, size=(N // bh + 1, N // bw + 2))
-    fine = noise(N, 64, 72, 2)
-    out = shade(rgb(base), tones[row, col % tones.shape[1]] * (0.9 + 0.15 * fine))
-    joint = (y % bh < 3) | ((x + shift) % bw < 3)
-    out[joint] = rgb(mortar)
-    save(name, out)
-
-
-def roof_tiles(name: str) -> None:
-    y, x = np.mgrid[0:N, 0:N].astype(np.float32)
-    h, w = 32, 32
-    row = (y // h).astype(int)
-    shift = (row % 2) * (w / 2)
-    local_x = ((x + shift) % w) / w
-    local_y = (y % h) / h
-    curve = np.sin(local_x * math.pi) ** 0.5
-    level = (0.6 + 0.45 * curve) * (1.0 - 0.35 * local_y)
-    rng = np.random.default_rng(81)
-    tones = rng.uniform(0.85, 1.12, size=(N // h + 1, int(N / w) + 3))
-    level *= tones[row, (((x + shift) // w).astype(int)) % tones.shape[1]]
-    save(name, shade(rgb("#b4532f"), level))
 
 
 # ---------------------------------------------------------------------------------------------
@@ -520,31 +353,12 @@ def people_atlas() -> None:
 
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
-    planks("planks_rough", "#a8784a", 64, 1, "#3a2414", 0.18, weathered=True)
-    planks("planks_walnut", "#7a4a2a", 32, 2, "#2a160c", 0.14)
-    planks("planks_deck", "#9a8468", 64, 3, "#2e261e", 0.12, weathered=True)
-    planks("planks_honey", "#b98250", 32, 4, "#4a2c18", 0.1)
-    parquet("parquet", "#8e6a4c", 5)
-    checker_marble("marble_checker")
     gingham("cloth_red", "#c0322c", cell=64)
     gingham("cloth_blue", "#1f4f9a", cell=64)
     linen("linen", "#f7f3ea")
-    voronoi_stones("cobble", "#6e6a66", "#2c2a28", 260, 7)
-    voronoi_stones("stone_wall", "#9a9184", "#5a544c", 90, 8, 0.15)
-    asphalt("asphalt")
-    slabs("paving", "#a29c92", 64, 9)
-    slabs("sidewalk", "#8c8780", 48, 10)
-    grass("grass")
-    dirt("dirt")
-    plaster("plaster_warm", "#e6cfa6", 11)
-    plaster("plaster_white", "#efe9de", 12)
-    plaster("plaster_blue", "#9fb3c6", 13)
-    plaster("plaster_rose", "#d9a596", 14)
     damask("damask_red", "#6e1f22", "#c9963c")
     stripes("stripes_cream", "#efe4cc", "#e6d7b8", 24)
     logs("logs")
-    bricks("bricks", "#9a4a32", "#c9bba5")
-    roof_tiles("roof_tiles")
     kilim("rug_kilim", "#a3302c", ["#1f3b5a", "#d9a531", "#f3e8cf", "#2b1d14"])
     kilim("rug_persian", "#5a1f2a", ["#1f2a44", "#c9963c", "#e8d8b8", "#8a2f2a"])
     kilim("rug_blue", "#24406e", ["#f3e8cf", "#c0322c", "#9fb3c6", "#1a2440"])

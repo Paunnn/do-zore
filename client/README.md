@@ -67,8 +67,10 @@ clouds, coins and notes over their 3D anchors.
 - `scripts/world3d/people3d.gd` builds each character from a look (guest type, staff or
   musician) as one skinned mesh with a procedural skeleton and poses it in code.
 - `scripts/world3d/builder.gd` merges primitives per material and per spatial chunk;
-  `kit3d.gd` holds the shared materials (vertex colours, world-mapped textures, one glow shader
-  for every lamp and window, the river shader).
+  `kit3d.gd` holds the shared materials (vertex colours, world-mapped photo-scanned textures
+  with relief and shine maps, one glow shader for every lamp and window, the river shader and
+  the character shader: a fabric atlas with relief from the weave, shade toward the feet and a
+  rim of the sky's light).
 
 Budget, measured with a full venue: 360–540 draw calls and 320–360 k triangles at venue zoom,
 660–880 draw calls and under 540 k triangles with the whole map in view (one draw per character;
