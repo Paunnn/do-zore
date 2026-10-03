@@ -19,6 +19,37 @@ const MODELS = "res://assets/people/"
 const PERSON_SHADER = preload("res://shaders/person.gdshader")
 const INK_SHADER = preload("res://shaders/ink.gdshader")
 const WALK_SPEED = 2.0
+## How early a walker turns into the next leg of a path (metres before the corner).
+const CORNER = 0.3
+
+## The cartoon women's head radius (head box units, round the headscarf's centre): rows every 20
+## degrees down from the crown, columns every 20 degrees from the back of the head to the face.
+const HEAD_ROUND: Array = [
+	[0.48, 0.48, 0.48, 0.48, 0.48, 0.48, 0.48, 0.48, 0.48, 0.50],
+	[0.48, 0.48, 0.48, 0.48, 0.48, 0.48, 0.49, 0.52, 0.52, 0.53],
+	[0.48, 0.49, 0.48, 0.47, 0.46, 0.47, 0.49, 0.53, 0.54, 0.54],
+	[0.48, 0.49, 0.48, 0.46, 0.45, 0.45, 0.46, 0.51, 0.54, 0.54],
+	[0.48, 0.48, 0.48, 0.46, 0.44, 0.43, 0.45, 0.52, 0.53, 0.54],
+	[0.49, 0.49, 0.50, 0.48, 0.57, 0.50, 0.54, 0.57, 0.62, 0.66],
+	[0.50, 0.49, 0.50, 0.50, 0.61, 0.62, 0.62, 0.67, 0.75, 0.75],
+	[0.52, 0.52, 0.53, 0.53, 0.53, 0.60, 0.65, 0.70, 0.72, 0.72],
+]
+
+## How far the bride's hair and bun reach out from the middle of her head (head box units): rows
+## every 0.1 down from 0.45 above the middle, columns every 20 degrees from the back to the side.
+const VEIL_ROUND: Array = [
+	[0.41, 0.33, 0.12, 0.14, 0.21, 0.24],
+	[0.45, 0.46, 0.46, 0.30, 0.35, 0.38],
+	[0.46, 0.51, 0.50, 0.34, 0.39, 0.42],
+	[0.44, 0.52, 0.53, 0.37, 0.41, 0.45],
+	[0.49, 0.52, 0.53, 0.39, 0.42, 0.46],
+	[0.50, 0.52, 0.50, 0.39, 0.43, 0.45],
+	[0.48, 0.49, 0.38, 0.38, 0.42, 0.49],
+	[0.22, 0.25, 0.30, 0.35, 0.40, 0.50],
+	[0.20, 0.19, 0.20, 0.30, 0.36, 0.50],
+	[0.11, 0.13, 0.17, 0.15, 0.23, 0.46],
+	[0.00, 0.04, 0.00, 0.05, 0.12, 0.17],
+]
 ## People are drawn a little larger than the furniture, so faces read on a phone.
 const SIZE = 1.2
 ## Metres per second the walk clip covers at rate 1 for a hip height of one metre; the clip runs
@@ -30,6 +61,9 @@ const SEAT_TOP = 0.51
 const HIP_OVER_SEAT = 0.075
 const CHAIR_PULL = 0.4
 const SEAT_BACK = 0.0
+## The table top (with its cloth) above the floor, and its near edge ahead of a tucked-in chair.
+const TABLE_TOP = 0.8
+const TABLE_REACH = 0.29
 ## A drink: reach for the glass, lift it, sip, put it down, let go (seconds from the start).
 const DRINK_REACH = 0.45
 const DRINK_LIFT = 0.95
@@ -56,6 +90,9 @@ const LOWER_BODY = ["Root", "Hips", "LeftUpperLeg", "LeftLowerLeg", "LeftFoot", 
 	"RightUpperLeg", "RightLowerLeg", "RightFoot", "RightToes"]
 const LEFT_ARM = ["LeftShoulder", "LeftUpperArm", "LeftLowerArm", "LeftHand"]
 const RIGHT_ARM = ["RightShoulder", "RightUpperArm", "RightLowerArm", "RightHand"]
+## Bones the code poses on top of the clips (head, spine, arms for reaching and playing).
+const TOUCHED = ["Head", "Neck", "Spine", "Chest", "LeftUpperArm", "LeftLowerArm", "LeftHand",
+	"RightUpperArm", "RightLowerArm", "RightHand"]
 ## Expressions: eyes (open, squint, look x, look y), brows (lift, angry, worry), mouth (smile, open,
 ## round, width), extra (blush, tears, happy closed eyes, wink).
 const FACES = {
@@ -128,6 +165,11 @@ var vessel_rest: Transform3D
 var vessel_kind: String = ""
 var sip_time: float = -1.0
 var sip_in: float = 2.0
+## How much the musician is playing (eases in and out with the song).
+var play_amount: float = 0.0
+## Walking: how far into a walk (eases in), and this person's own pace.
+var gait: float = 0.0
+var pace: float = 1.0
 
 # ---------------------------------------------------------------------------------------------
 # Looks
@@ -180,7 +222,7 @@ static func make_look(kind: String, variant: int) -> Dictionary:
 				look.model = "student2" if second else "student"
 				look.style.w = 1.0 if rng.randf() < 0.25 else 0.0
 				look.age.z = 0.3 if rng.randf() < 0.3 else 0.0
-				if second and rng.randf() < 0.5:
+				if second:
 					look.props.append(["beanie", pick.call(["d8423a", "3e6fb0", "f2b83a", "2b2f45", "4fae6a"])])
 			if rng.randf() < 0.65:
 				look.props.append(["backpack", pick.call(["d8423a", "3e8ed0", "f2b83a", "2fb5a8", "9a5ad0", "2b2f45"])])
@@ -219,7 +261,7 @@ static func make_look(kind: String, variant: int) -> Dictionary:
 			look.pal.col_hair = pick.call(["2b1d14", "1a1a1e", "4a3020", "9a948a"])
 			look.style.z = 0.0
 			look.mood = "sad"
-			if female and rng.randf() < 0.5:
+			if female:
 				look.props.append(["marama", "1d1d22"])
 			elif not female:
 				look.age = Vector4(0.3, 1.0 if rng.randf() < 0.5 else 0.0, 0.0, 0.2)
@@ -431,7 +473,7 @@ static func _ink() -> ShaderMaterial:
 
 ## A smooth surface through rows of points (all rows the same length), its faces turned to the
 ## side the normals point to.
-static func _surface(b: Builder, rows: Array, color: Color, key: String) -> void:
+static func _surface(b: Builder, rows: Array, color: Color, key: String, inside: Vector3 = Vector3.INF) -> void:
 	if _front_sign == 0.0:
 		# Which way round Godot's own primitives wind their outward faces.
 		var probe: Array = Kit.unit("sphere", 8)
@@ -456,13 +498,20 @@ static func _surface(b: Builder, rows: Array, color: Color, key: String) -> void
 			var du: Vector3 = rows[mini(r + 1, n_r - 1)][c] - rows[maxi(r - 1, 0)][c]
 			var dv: Vector3 = rows[r][mini(c + 1, n_c - 1)] - rows[r][maxi(c - 1, 0)]
 			var nn: Vector3 = du.cross(dv)
-			normals.append(nn.normalized() if nn.length() > 1e-7 else Vector3.UP)
+			nn = nn.normalized() if nn.length() > 1e-7 else Vector3.UP
+			# A closed shape faces away from a point inside it (the loft's own sense is unreliable
+			# where rows pinch to a point).
+			if inside.is_finite() and nn.dot(rows[r][c] - inside) < 0.0:
+				nn = -nn
+			normals.append(nn)
 	for r in range(n_r - 1):
 		for c in range(n_c - 1):
 			var a: int = r * n_c + c
 			for tri in [[a, a + n_c, a + 1], [a + 1, a + n_c, a + n_c + 1]]:
 				var g: Vector3 = (verts[tri[1]] - verts[tri[0]]).cross(verts[tri[2]] - verts[tri[0]])
 				var nsum: Vector3 = normals[tri[0]] + normals[tri[1]] + normals[tri[2]]
+				if inside.is_finite():
+					nsum = (verts[tri[0]] + verts[tri[1]] + verts[tri[2]]) / 3.0 - inside
 				if signf(g.dot(nsum)) != _front_sign:
 					tri = [tri[0], tri[2], tri[1]]
 				indices.append_array(PackedInt32Array(tri))
@@ -521,49 +570,125 @@ static func _accessory(b: Builder, full_kind: String) -> void:
 		"cloth":
 			b.box(Vector3(0, -0.02, 0), Vector3(0.14, 0.04, 0.11), Color("f4f1ea"))
 		"sajkaca":
-			# The Serbian šajkača (unit head width): a soft wool cap shaped like a boat, peaked at the
-			# front and back, its top folded down into a crease along the middle.
+			# The Serbian šajkača (unit box: the head's width and depth at the band, the head's height):
+			# a soft wool cap with nearly upright sides, shaped like a boat from the side (peaked at the
+			# front and back) and folded down into a crease along the top.
 			var rows: Array = []
-			for i in range(15):
-				var u: float = lerpf(-1.0, 1.0, i / 14.0)
-				var half: float = 0.47 * sqrt(maxf(0.0, 1.0 - u * u)) + 0.004
-				var high: float = 0.27 + 0.17 * u * u + 0.04 * u
-				var crease: float = 0.075 * (1.0 - u * u)
+			for i in range(17):
+				var u: float = lerpf(-1.0, 1.0, i / 16.0)
+				var half: float = 0.5 * pow(maxf(0.0, 1.0 - pow(absf(u), 2.6)), 0.42)
+				var high: float = 0.42 + 0.06 * u * u + 0.015 * u
+				var crease: float = 0.05 * (1.0 - u * u)
 				var row: PackedVector3Array = PackedVector3Array()
-				for j in range(17):
-					var t: float = lerpf(-1.0, 1.0, j / 16.0)
-					var x: float = half * signf(t) * pow(absf(t), 0.7)
-					var y: float = high * (1.0 - pow(absf(t), 1.8)) - crease * exp(-pow(t / 0.2, 2.0))
-					row.append(Vector3(x, y - 0.05 * u * u * pow(absf(t), 4.0), u * 0.6))
+				for j in range(19):
+					var t: float = lerpf(-1.0, 1.0, j / 18.0)
+					var x: float = half * signf(t) * pow(absf(t), 0.8)
+					var y: float = high * (1.0 - pow(absf(t), 2.2)) - crease * exp(-pow(t / 0.22, 2.0))
+					row.append(Vector3(x, y, u * 0.5))
 				rows.append(row)
-			_surface(b, rows, tint, "vc_matte")
-			b.sphere(Vector3(0, 0.004, 0), 0.5, tint.darkened(0.3), "vc_matte", Vector3(0.9, 0.015, 1.15), 14)
+			_surface(b, rows, tint, "vc_matte", Vector3(0, 0.12, 0))
+			b.sphere(Vector3(0, 0.004, 0), 0.5, tint.darkened(0.3), "vc_matte", Vector3(0.98, 0.01, 0.98), 16)
 			# The little cut at the front.
-			b.box(Vector3(0, 0.0, 0.575), Vector3(0.025, 0.1, 0.02), tint.darkened(0.45), "vc_matte")
+			b.box(Vector3(0, 0.04, 0.5), Vector3(0.022, 0.1, 0.016), tint.darkened(0.45), "vc_matte")
 		"marama":
-			# A headscarf (unit head size), the babushka way: over the crown and the ears, framing the
-			# face, tied in a knot under the chin, with a little fringe of pattern along the edge.
-			b.sphere(Vector3(0, 0.08, -0.1), 0.5, tint, "vc_matte", Vector3(1.1, 0.96, 0.94), 16)
+			# A headscarf (unit head box), tied at the back of the neck the village way: over the crown,
+			# down to the brow at the front and over the tops of the ears (the cartoon cheeks stay clear
+			# for the face), the knot, its two ends and the scarf's corner hanging at the nape; polka
+			# dots and a darker hem.
+			var edge: Callable = func(phi: float) -> float:
+				# How far down from the crown it reaches along each meridian (phi 0 = the back).
+				var a: float = absf(rad_to_deg(phi))
+				var tail: float = 22.0 * exp(-pow(a / 18.0, 2.0))
+				var down: float = 128.0 + tail
+				down = lerpf(down, 100.0, smoothstep(50.0, 80.0, a))
+				down = lerpf(down, 60.0, smoothstep(80.0, 135.0, a))
+				return deg_to_rad(lerpf(down, 54.0, smoothstep(135.0, 180.0, a)))
+			var on: Callable = func(phi: float, theta: float, grow: float) -> Vector3:
+				# Just outside the head, whose radius (head box units, round the scarf's centre) was
+				# measured on the cartoon women every 20 degrees from the crown and from the back.
+				var fa: float = clampf(absf(rad_to_deg(phi)) / 20.0, 0.0, 8.999)
+				var ft: float = clampf(rad_to_deg(theta) / 20.0 - 0.5, 0.0, 6.999)
+				var ia: int = int(fa)
+				var it: int = int(ft)
+				var r0: float = lerpf(HEAD_ROUND[it][ia], HEAD_ROUND[it][ia + 1], fa - ia)
+				var r1: float = lerpf(HEAD_ROUND[it + 1][ia], HEAD_ROUND[it + 1][ia + 1], fa - ia)
+				# The edge tucks in against the head, so no gap shows under it at the temples.
+				var tuck: float = 0.045 * smoothstep(edge.call(phi) - 0.22, edge.call(phi), theta)
+				var r: float = lerpf(r0, r1, ft - it) + 0.03 + grow - tuck
+				return Vector3(sin(theta) * sin(phi) * r, cos(theta) * r, -sin(theta) * cos(phi) * r)
+			var hood: Array = []
+			var hem: Array = []
+			for i in range(73):
+				var phi: float = lerpf(-PI, PI, i / 72.0)
+				var bottom: float = edge.call(phi)
+				var row: PackedVector3Array = PackedVector3Array()
+				var band: PackedVector3Array = PackedVector3Array()
+				for j in range(15):
+					row.append(on.call(phi, bottom * j / 14.0, 0.0))
+				for j in range(3):
+					band.append(on.call(phi, bottom - deg_to_rad(8.0) * (1.0 - j / 2.0), 0.007))
+				hood.append(row)
+				hem.append(band)
+			_surface(b, hood, tint, "vc_matte", Vector3(0, -0.05, 0))
+			_surface(b, hem, tint.darkened(0.28), "vc_matte", Vector3(0, -0.05, 0))
+			var dots: RandomNumberGenerator = RandomNumberGenerator.new()
+			dots.seed = 7
+			for k in range(30):
+				var phi: float = dots.randf_range(-PI, PI)
+				var theta: float = dots.randf_range(0.3, edge.call(phi) - 0.22)
+				b.sphere(on.call(phi, theta, -0.009), 0.024, tint.lightened(0.55), "vc_matte", Vector3.ONE, 6)
+			# The knot at the nape and its two ends.
+			var knot: Vector3 = on.call(0.0, deg_to_rad(122.0), 0.02)
+			b.sphere(knot, 0.075, tint.darkened(0.12), "vc_matte", Vector3(1.25, 0.9, 0.9), 8)
 			for side in [-1.0, 1.0]:
-				b.sphere(Vector3(side * 0.4, -0.16, 0.06), 0.5, tint.darkened(0.05), "vc_matte", Vector3(0.22, 0.62, 0.42), 10)
-				b.sphere(Vector3(side * 0.2, -0.46, 0.2), 0.5, tint.darkened(0.08), "vc_matte", Vector3(0.3, 0.14, 0.16), 8)
-			b.sphere(Vector3(0, -0.5, 0.24), 0.07, tint.darkened(0.15), "vc_matte", Vector3(1.2, 0.9, 1.0), 8)
-			for k in range(9):
-				var a: float = lerpf(-1.2, 1.2, k / 8.0)
-				b.sphere(Vector3(sin(a) * 0.5, 0.3 * cos(a) - 0.02, cos(a) * 0.36 - 0.02), 0.035, tint.lightened(0.45), "vc_matte", Vector3.ONE, 6)
+				b.sphere(knot + Vector3(side * 0.07, -0.13, -0.03), 0.5, tint.darkened(0.06), "vc_matte", Vector3(0.1, 0.22, 0.05), 8)
 		"beanie":
 			# A knitted cap (unit head size): a soft dome, a rolled-up rib band and a bobble.
-			b.sphere(Vector3(0, 0.04, -0.02), 0.5, tint, "vc_matte", Vector3(1.0, 0.92, 1.0), 14)
-			for k in range(24):
-				var a: float = k * TAU / 24.0
-				b.sphere(Vector3(sin(a) * 0.49, -0.06, cos(a) * 0.49 - 0.02), 0.08, tint.darkened(0.12), "vc_matte", Vector3(0.8, 1.1, 0.7), 6)
-			b.sphere(Vector3(0, 0.5, -0.04), 0.11, tint.lightened(0.45), "vc_matte", Vector3.ONE, 8)
+			b.sphere(Vector3(0, 0.06, -0.02), 0.5, tint, "vc_matte", Vector3(1.0, 0.94, 1.0), 16)
+			b.cylinder(Vector3(0, -0.12, -0.02), 0.515, 0.17, tint.darkened(0.14), "vc_matte", 20, 0.97)
+			b.sphere(Vector3(0, 0.52, -0.04), 0.11, tint.lightened(0.45), "vc_matte", Vector3.ONE, 8)
 		"veil":
-			# The bride's veil: a white fall from a crown of little flowers at the back of the head.
-			for k in range(9):
-				var a: float = lerpf(-2.2, 2.2, k / 8.0)
-				b.sphere(Vector3(sin(a) * 0.42, 0.24, cos(a) * 0.42 - 0.04), 0.06, Color("fbfaf7") if k % 2 == 0 else Color("f6d6de"), "vc", Vector3.ONE, 6)
-			b.cylinder_xf(Transform3D(Basis(Vector3.RIGHT, -0.22) * Basis.from_scale(Vector3(0.5, 1.0, 0.3)), Vector3(0, -0.9, -0.36)), 0.55, 1.05, Color("f7f5f2"), "vc_matte", 14, 0.6)
+			# The bride's veil (unit head box): a comb of little flowers over the bun and a short veil of
+			# tulle draped over it, falling in soft folds to the shoulders (a long one would go through
+			# the chair backs), its hem scalloped.
+			var reach: Callable = func(y: float, phi: float) -> float:
+				# How far out the hair and bun reach at this height and below the veil's top, so the
+				# veil hangs from their widest point instead of going in under them.
+				var fa: float = clampf(absf(rad_to_deg(phi)) / 20.0, 0.0, 4.999)
+				var ia: int = int(fa)
+				var most: float = 0.0
+				for k in range(VEIL_ROUND.size()):
+					if 0.45 - 0.1 * k + 0.05 >= y:
+						most = maxf(most, lerpf(VEIL_ROUND[k][ia], VEIL_ROUND[k][ia + 1], fa - ia))
+				return most
+			var rows: Array = []
+			for i in range(15):
+				var y: float = lerpf(0.4, -0.78, i / 14.0)
+				var down: float = (0.4 - y) / 1.18
+				var spread: float = deg_to_rad(lerpf(58.0, 100.0, down))
+				var row: PackedVector3Array = PackedVector3Array()
+				for j in range(25):
+					var phi: float = lerpf(-spread, spread, j / 24.0)
+					var out: float = reach.call(y, phi) + 0.045 + 0.13 * pow(clampf(-y / 0.78, 0.0, 1.0), 1.5)
+					out += 0.016 * sin(phi * 9.0) * smoothstep(0.2, -0.5, y)
+					var hem: float = 0.025 * cos(phi * 11.0) if i == 14 else 0.0
+					row.append(Vector3(sin(phi) * out, y + hem, -cos(phi) * out))
+				rows.append(row)
+			_surface(b, rows, tint, "vc_matte", Vector3(0, 0.0, 0.1))
+			# Its inside, seen past the face from the front, is white tulle too.
+			var lining: Array = []
+			for row in rows:
+				var inner: PackedVector3Array = PackedVector3Array()
+				for at in row:
+					var flat: Vector3 = Vector3(at.x, 0.0, at.z)
+					inner.append(at - flat.normalized() * 0.008)
+				lining.append(inner)
+			_surface(b, lining, tint.darkened(0.06), "vc_matte", Vector3(0, 0.0, -6.0))
+			for k in range(7):
+				var phi: float = deg_to_rad(lerpf(-48.0, 48.0, k / 6.0))
+				var out: float = reach.call(0.42, phi) + 0.07
+				b.sphere(Vector3(sin(phi) * out, 0.43, -cos(phi) * out), 0.05, Color("fbfaf7") if k % 2 == 0 else Color("f2b8c6"), "vc", Vector3.ONE, 6)
+				b.sphere(Vector3(sin(phi) * (out + 0.03), 0.45, -cos(phi) * (out + 0.03)), 0.018, Color("f2c84a"), "vc", Vector3.ONE, 4)
 		"wreath":
 			# Venac: a ring of flowers and leaves round the crown.
 			var colours: Array = [Color("d8423a"), Color("fbfaf7"), Color("f2b83a"), Color("e88aa8")]
@@ -586,39 +711,106 @@ static func _accessory(b: Builder, full_kind: String) -> void:
 				b.sphere(Vector3(t * 0.075, -0.075 * (1.0 - t * t), 0.012 * (1.0 - t * t)), 0.011, Color("e8b832"), "vc_metal", Vector3.ONE, 6)
 			b.cylinder_xf(Transform3D(Basis(Vector3.RIGHT, PI / 2.0), Vector3(0, -0.1, 0.018)), 0.022, 0.008, Color("f2c84a"), "vc_metal", 10)
 		"apron":
-			# The waitress's apron: a white bib-less apron with a pocket, tied at the waist.
-			b.box(Vector3(0, 0.0, 0.0), Vector3(0.3, 0.03, 0.03), Color("f4f1ea"), "vc_matte")
-			b.box(Vector3(0, -0.3, 0.012), Vector3(0.28, 0.3, 0.012), Color("fbfaf7"), "vc_matte")
-			b.box(Vector3(0.06, -0.2, 0.022), Vector3(0.09, 0.07, 0.006), Color("e8e2d6"), "vc_matte")
+			# The waitress's short apron (metres, model scale): cloth curved round the front of the hips
+			# and flaring out below so the thighs stay behind it when she walks, a waistband with its
+			# ties at the back, and a pocket.
+			var cloth: Array = []
+			var band: Array = []
+			for i in range(9):
+				var k: float = i / 8.0
+				var row: PackedVector3Array = PackedVector3Array()
+				for j in range(13):
+					var x: float = lerpf(-0.15, 0.15, j / 12.0) * (1.0 + 0.12 * k)
+					row.append(Vector3(x, -0.22 * k + 0.012 * cos(j * 1.6) * k, -2.0 * x * x + 0.12 * pow(k, 1.3)))
+				cloth.append(row)
+			for i in range(2):
+				var row: PackedVector3Array = PackedVector3Array()
+				for j in range(15):
+					var x: float = lerpf(-0.17, 0.17, j / 14.0)
+					row.append(Vector3(x, 0.012 - 0.024 * i, -2.2 * x * x + 0.006))
+				band.append(row)
+			_surface(b, cloth, Color("fbfaf7"), "vc_matte", Vector3(0, -0.1, -0.3))
+			_surface(b, band, Color("e8e2d6"), "vc_matte", Vector3(0, 0.0, -0.3))
+			b.box(Vector3(0.055, -0.11, 0.046), Vector3(0.08, 0.06, 0.006), Color("e4ddd0"), "vc_matte")
+			for side in [-1.0, 1.0]:
+				b.sphere(Vector3(side * 0.03, -0.005, -0.27), 0.5, Color("e8e2d6"), "vc_matte", Vector3(0.05, 0.03, 0.02), 6)
+				b.box(Vector3(side * 0.02, -0.06, -0.275), Vector3(0.016, 0.1, 0.006), Color("e8e2d6"), "vc_matte")
 		"flower":
 			b.sphere(Vector3.ZERO, 0.03, Color("f4f1ea"), "vc", Vector3.ONE, 6)
 			b.sphere(Vector3(0, 0, 0.016), 0.014, Color("f3d27a"), "vc", Vector3.ONE, 5)
 		"bowtie":
 			for x in [-0.03, 0.03]:
 				b.sphere(Vector3(x, 0, 0), 0.028, Color("1d1d22"), "vc", Vector3(1.2, 0.8, 0.5), 6)
-		"accordion":
-			# A black accordion with a pearl keyboard and a brass grille, red bellows open between.
-			b.box(Vector3(-0.16, 0, 0), Vector3(0.09, 0.32, 0.19), Color("1d1d22"), "vc_gloss")
-			b.box(Vector3(0.16, 0, 0), Vector3(0.09, 0.32, 0.19), Color("1d1d22"), "vc_gloss")
-			for k in range(6):
-				b.box(Vector3(-0.1 + k * 0.04, 0.005, 0), Vector3(0.032, 0.3, 0.18), Color("c0322c") if k % 2 == 0 else Color("2b2b30"))
-			b.box(Vector3(-0.21, 0, 0.015), Vector3(0.018, 0.28, 0.14), Color("f4f1ea"), "vc_gloss")
-			b.box(Vector3(0.21, 0.01, 0.0), Vector3(0.012, 0.19, 0.12), Color("d9a531"), "vc_metal")
-		"guitar", "tamburica", "bass":
-			var scale: float = {"guitar": 1.0, "tamburica": 0.75, "bass": 1.25}[kind]
-			var wood: Color = {"guitar": Color("c98a4a"), "tamburica": Color("8a4a22"), "bass": Color("3a2416")}[kind]
-			b.sphere(Vector3.ZERO, 0.16 * scale, wood, "vc_gloss", Vector3(1.0, 1.25, 0.35), 12)
-			b.sphere(Vector3(0, 0, 0.05 * scale), 0.05 * scale, Color("1a1410"), "vc", Vector3(1, 1, 0.2), 8)
-			b.box(Vector3(0, 0.15 * scale, 0), Vector3(0.05, 0.48 * scale, 0.038), Color("2b1d14"), "vc_gloss")
+		# Instruments (model units). Each in its own frame: the hands are put on them in _play().
+		"accordion_right":
+			# The keyboard half: a black case with the piano keys on its outer side (-x).
+			b.box(Vector3(-0.045, -0.17, -0.1), Vector3(0.09, 0.34, 0.2), Color("1d1d22"), "vc_gloss")
+			b.box(Vector3(-0.098, -0.15, -0.065), Vector3(0.016, 0.3, 0.1), Color("f7f4ee"), "vc_gloss")
+			for k in range(7):
+				b.box(Vector3(-0.107, -0.12 + k * 0.04, -0.05), Vector3(0.012, 0.02, 0.06), Color("15151a"), "vc_gloss")
+			b.box(Vector3(-0.045, 0.17, -0.1), Vector3(0.095, 0.02, 0.2), Color("d9a531"), "vc_metal")
+		"accordion_bellows":
+			# The bellows (from x = 0 to 0.23): red folds with dark ribs, stretched as it plays.
+			for k in range(8):
+				b.box(Vector3(0.0144 + k * 0.0287, -0.16, -0.09), Vector3(0.026, 0.32, 0.18), Color("c0322c") if k % 2 == 0 else Color("3a1a1e"), "vc_matte")
+		"accordion_left":
+			# The bass half: a black case with rows of pearl buttons and a strap on its outer side (+x).
+			b.box(Vector3(0.045, -0.17, -0.1), Vector3(0.09, 0.34, 0.2), Color("1d1d22"), "vc_gloss")
+			for k in range(12):
+				b.sphere(Vector3(0.093, -0.1 + (k % 6) * 0.03, -0.03 - (k / 6) * 0.035), 0.009, Color("f4f1ea"), "vc_gloss", Vector3.ONE, 6)
+			b.box(Vector3(0.1, -0.12, -0.08), Vector3(0.012, 0.22, 0.03), Color("6a4228"), "vc_matte")
+		"guitar", "tamburica":
+			# The body at the origin, the neck along +y, the strings facing +z.
+			var big: bool = kind == "guitar"
+			var wood: Color = Color("d8964e") if big else Color("a35a2a")
+			if big:
+				b.sphere(Vector3(0, -0.03, 0), 0.5, wood, "vc_gloss", Vector3(0.27, 0.25, 0.09), 14)
+				b.sphere(Vector3(0, 0.15, 0), 0.5, wood, "vc_gloss", Vector3(0.21, 0.19, 0.09), 14)
+			else:
+				b.sphere(Vector3(0, 0.02, 0), 0.5, wood, "vc_gloss", Vector3(0.21, 0.3, 0.09), 14)
+				b.sphere(Vector3(0, 0.15, 0), 0.5, wood, "vc_gloss", Vector3(0.12, 0.16, 0.085), 12)
+			b.cylinder_xf(Transform3D(Basis(Vector3.RIGHT, PI / 2.0), Vector3(0, 0.08 if big else 0.06, 0.04)), 0.033 if big else 0.022, 0.008, Color("1a1008"), "vc", 12)
+			b.box(Vector3(0, -0.085, 0.04), Vector3(0.07, 0.012, 0.012), Color("2b1810"), "vc")
+			var top: float = 0.6 if big else 0.56
+			b.box(Vector3(0, 0.22, 0.012), Vector3(0.045 if big else 0.032, top - 0.22, 0.026), Color("3a2416"), "vc_gloss")
+			b.box(Vector3(0, top, 0.006), Vector3(0.065 if big else 0.05, 0.09, 0.022), Color("2b1810"), "vc_gloss")
+			for k in range(4):
+				var x: float = (k - 1.5) * (0.009 if big else 0.007)
+				b.box(Vector3(x, -0.085, 0.045), Vector3(0.0025, top + 0.06, 0.0025), Color("efe8d8"), "vc")
+				b.sphere(Vector3(0.04 * (1.0 if k % 2 == 0 else -1.0), top + 0.02 + (k / 2) * 0.04, 0.01), 0.009, Color("d9a531"), "vc_metal", Vector3.ONE, 5)
+		"bass":
+			# Berda, the bass tamburica, standing on its pin: the body low, the neck up along +y.
+			var dark: Color = Color("6a3416")
+			b.cylinder(Vector3.ZERO, 0.01, 0.16, Color("2b2b30"), "vc_metal", 6)
+			b.sphere(Vector3(0, 0.42, 0), 0.5, dark, "vc_matte", Vector3(0.38, 0.5, 0.16), 14)
+			b.sphere(Vector3(0, 0.68, 0), 0.5, dark, "vc_matte", Vector3(0.26, 0.3, 0.15), 12)
+			b.cylinder_xf(Transform3D(Basis(Vector3.RIGHT, PI / 2.0), Vector3(0, 0.6, 0.07)), 0.03, 0.01, Color("1a1008"), "vc", 10)
+			b.box(Vector3(0, 0.27, 0.075), Vector3(0.1, 0.014, 0.014), Color("2b1810"), "vc")
+			b.box(Vector3(0, 0.78, 0.03), Vector3(0.05, 0.52, 0.035), Color("2b1810"), "vc_gloss")
+			b.box(Vector3(0, 1.28, 0.025), Vector3(0.075, 0.12, 0.04), Color("2b1810"), "vc_gloss")
+			for k in range(4):
+				b.box(Vector3((k - 1.5) * 0.011, 0.27, 0.085), Vector3(0.003, 1.05, 0.003), Color("efe8d8"), "vc")
 		"violin":
-			b.sphere(Vector3.ZERO, 0.085, Color("8a3a1a"), "vc_gloss", Vector3(1.0, 1.4, 0.4), 10)
-			b.box(Vector3(0, 0.14, 0), Vector3(0.028, 0.19, 0.028), Color("1a1410"))
+			# The chin end at the origin, the scroll along +y, the strings facing +z.
+			var red: Color = Color("9a3a16")
+			b.sphere(Vector3(0, 0.07, 0), 0.5, red, "vc_gloss", Vector3(0.2, 0.17, 0.07), 12)
+			b.sphere(Vector3(0, 0.18, 0), 0.5, red, "vc_gloss", Vector3(0.16, 0.14, 0.07), 12)
+			b.sphere(Vector3(0, 0.02, 0.025), 0.03, Color("1d1d22"), "vc_gloss", Vector3(1.2, 0.8, 0.4), 8)
+			b.box(Vector3(0, 0.08, 0.03), Vector3(0.025, 0.012, 0.012), Color("e8d8b0"), "vc")
+			b.box(Vector3(0, 0.12, 0.028), Vector3(0.024, 0.22, 0.012), Color("15151a"), "vc_gloss")
+			b.box(Vector3(0, 0.24, 0.01), Vector3(0.02, 0.12, 0.02), red.darkened(0.2), "vc_gloss")
+			b.sphere(Vector3(0, 0.375, 0.012), 0.02, red.darkened(0.25), "vc_gloss", Vector3(1, 1.2, 1), 8)
+			for k in range(4):
+				b.box(Vector3((k - 1.5) * 0.005, 0.07, 0.036), Vector3(0.0018, 0.3, 0.0018), Color("efe8d8"), "vc")
 		"bow":
-			b.box(Vector3.ZERO, Vector3(0.01, 0.48, 0.01), Color("2b1d14"))
+			# The bow along +x from the frog: a dark stick and the pale hair under it.
+			b.box(Vector3(0.24, -0.006, 0), Vector3(0.5, 0.008, 0.008), Color("2b1d14"), "vc")
+			b.box(Vector3(0.24, -0.016, 0), Vector3(0.48, 0.004, 0.012), Color("f4f1ea"), "vc")
+			b.box(Vector3(0.0, -0.02, 0), Vector3(0.03, 0.025, 0.014), Color("15151a"), "vc")
 		"mic":
-			b.cylinder(Vector3(0, 0, 0), 0.015, 1.25, Color("2b2b30"), "vc_metal", 6)
-			b.cylinder(Vector3(0, 0, 0), 0.12, 0.02, Color("2b2b30"), "vc_metal", 10)
-			b.sphere(Vector3(0, 1.29, 0), 0.04, Color("8a8f98"), "vc_metal", Vector3.ONE, 8)
+			# A handheld microphone along +y: handle and the round grille.
+			b.cylinder(Vector3(0, -0.13, 0), 0.016, 0.14, Color("2b2b30"), "vc_metal", 8, 1.2)
+			b.sphere(Vector3(0, 0.02, 0), 0.032, Color("9aa0a8"), "vc_metal", Vector3.ONE, 10)
 
 # ---------------------------------------------------------------------------------------------
 # Assembly
@@ -665,26 +857,60 @@ func setup(new_look: Dictionary) -> void:
 		"flower":
 			_add_mesh(_holder("UpperChest", Vector3(0.09, neck.y - 0.1, front)), _mesh("flower"), Vector3.ZERO)
 	if str(look.instrument) != "":
-		var kind: String = look.instrument
-		match kind:
-			"accordion":
-				instrument = _holder("UpperChest", Vector3(0, neck.y - 0.24, front + 0.14))
-			"violin":
-				instrument = _holder("LeftShoulder", Vector3(0.12, neck.y - 0.02, front), Vector3(0.4, 0.3, 1.1))
-			"mic":
-				instrument = Node3D.new()
-				instrument.position = Vector3(0, 0, 0.36)
-				model.add_child(instrument)
-			_:
-				instrument = _holder("UpperChest", Vector3(0.02, neck.y - 0.3, front + 0.07), Vector3(0, 0, -0.9))
-		_add_mesh(instrument, _mesh(kind), Vector3.ZERO)
-		if kind == "violin":
-			_add_mesh(hand, _mesh("bow"), Vector3.ZERO, Vector3(0, 0, 1.2))
+		_take_instrument(str(look.instrument))
 	phase = randf() * TAU
+	pace = randf_range(0.92, 1.08)
 	blink_in = randf_range(0.5, 4.0)
 	mood = str(look.mood)
 	face_now_values = FACES[mood].duplicate()
 	play("idle")
+
+## The musician's instrument, held where it is played (model units: +x the player's left, +z ahead).
+## The hands are put on it every frame in _play().
+func _take_instrument(kind: String) -> void:
+	var neck: Vector3 = measure.neck
+	var front: float = float(measure.chest_front)
+	match kind:
+		"accordion":
+			# Strapped to the chest: the keyboard half on the right, the bellows and the bass half
+			# opening to the left.
+			instrument = _holder("UpperChest", Vector3(-0.07, neck.y - 0.1, front + 0.2))
+			_add_mesh(instrument, _mesh("accordion_right"), Vector3.ZERO)
+			var bellows: Node3D = Node3D.new()
+			instrument.add_child(bellows)
+			_add_mesh(bellows, _mesh("accordion_bellows"), Vector3.ZERO)
+			var left: Node3D = Node3D.new()
+			instrument.add_child(left)
+			_add_mesh(left, _mesh("accordion_left"), Vector3.ZERO)
+			instrument.set_meta("bellows", bellows)
+			instrument.set_meta("left", left)
+		"guitar", "tamburica":
+			# Across the body, the neck up to the left, the strings facing out.
+			var at: Vector3 = Vector3(-0.05, neck.y - 0.3, front + 0.08)
+			instrument = _holder("UpperChest", at, Vector3(-0.2, 0.15, -1.0))
+			_add_mesh(instrument, _mesh(kind), Vector3.ZERO)
+		"bass":
+			# The berda stands on the floor in front of the player, leaning back against them.
+			instrument = Node3D.new()
+			instrument.position = Vector3(0.2, 0, front + 0.2)
+			instrument.rotation = Vector3(-0.28, 0.6, 0.12)
+			model.add_child(instrument)
+			_add_mesh(instrument, _mesh("bass"), Vector3.ZERO)
+		"violin":
+			# On the left collarbone under the chin, pointing out to the left and a little up.
+			var dir: Vector3 = Vector3(0.6, 0.18, 0.78).normalized()
+			var up: Vector3 = (Vector3(0.25, 1, 0) - dir * Vector3(0.25, 1, 0).dot(dir)).normalized()
+			var basis: Basis = Basis(dir.cross(up), dir, up)
+			var holder: Node3D = _holder("UpperChest", Vector3(0.06, neck.y - 0.03, front - 0.02))
+			instrument = Node3D.new()
+			holder.add_child(instrument)
+			instrument.transform = Transform3D(basis, Vector3.ZERO)
+			_add_mesh(instrument, _mesh("violin"), Vector3.ZERO)
+			var bow: MeshInstance3D = _add_mesh(model, _mesh("bow"), Vector3.ZERO)
+			instrument.set_meta("bow", bow)
+		"mic":
+			# A handheld microphone, put in the right hand in _play().
+			instrument = _add_mesh(model, _mesh("mic"), Vector3.ZERO)
 
 ## Puts on a prop from the look: hats and scarves sized to the head, the rest on the body.
 func _add_prop(kind: String, colour: String) -> void:
@@ -695,17 +921,19 @@ func _add_prop(kind: String, colour: String) -> void:
 	var node: MeshInstance3D
 	match kind:
 		"sajkaca":
-			node = _add_mesh(_holder("Head", Vector3(0, head_box.end.y - size.y * 0.27, centre.z - size.z * 0.06)), mesh, Vector3.ZERO)
-			node.scale = Vector3(1.0, 0.9, 1.0) * size.x
+			# The band goes round the head a third of the way down (the box is widest at the cartoon
+			# cheeks, so the cap is narrower than the box).
+			node = _add_mesh(_holder("Head", Vector3(0, head_box.end.y - size.y * 0.3, centre.z - size.z * 0.01)), mesh, Vector3.ZERO)
+			node.scale = Vector3(size.x * 0.94, size.y, size.z * 0.98)
 		"marama":
-			node = _add_mesh(_holder("Head", centre + Vector3(0, -size.y * 0.02, -size.z * 0.02)), mesh, Vector3.ZERO)
-			node.scale = Vector3(size.x * 1.1, size.y * 1.1, size.z * 1.06)
+			node = _add_mesh(_holder("Head", centre + Vector3(0, size.y * 0.02, -size.z * 0.05)), mesh, Vector3.ZERO)
+			node.scale = Vector3(size.x * 1.0, size.y * 1.0, size.z * 0.94)
 		"beanie":
-			node = _add_mesh(_holder("Head", centre + Vector3(0, size.y * 0.1, -size.z * 0.04)), mesh, Vector3.ZERO)
-			node.scale = Vector3(size.x * 1.1, size.y * 1.02, size.z * 1.06)
+			node = _add_mesh(_holder("Head", centre + Vector3(0, size.y * 0.2, -size.z * 0.04)), mesh, Vector3.ZERO)
+			node.scale = Vector3(size.x * 1.08, size.y * 0.95, size.z * 1.05)
 		"veil":
-			node = _add_mesh(_holder("Head", centre + Vector3(0, size.y * 0.18, -size.z * 0.12)), mesh, Vector3.ZERO)
-			node.scale = Vector3.ONE * size.x
+			node = _add_mesh(_holder("Head", centre), mesh, Vector3.ZERO)
+			node.scale = size
 		"wreath":
 			node = _add_mesh(_holder("Head", Vector3(0, head_box.end.y - size.y * 0.24, centre.z - size.z * 0.04)), mesh, Vector3.ZERO)
 			node.scale = Vector3(size.x * 0.9, size.x, size.z * 0.9)
@@ -802,10 +1030,13 @@ func play(name: String, new_rate: float = 1.0, restart: bool = false) -> void:
 		"wipe":
 			wanted = "Interact"
 		"play":
-			wanted = {"accordion": "Play_Squeeze", "mic": "Play_Sing"}.get(str(look.instrument), "Play_Strum")
+			# Standing to play; the arms are put on the instrument in _play().
+			wanted = "Idle"
 			talking = look.instrument == "mic"
 		_:
-			if kind == "bouncer":
+			if str(look.instrument) != "":
+				wanted = "Idle"
+			elif kind == "bouncer":
 				wanted = "Idle_FoldArms"
 			elif kind == "biznismen" and not look.female:
 				wanted = "Idle_TalkingPhone"
@@ -1029,14 +1260,106 @@ func _drink_pose() -> void:
 		vessel.global_transform = vessel_rest
 	_reach(grip, (right * 0.7 - Vector3.UP - forward * 0.3).normalized(), reach)
 
-## Two-bone IK on the right arm: the wrist goes to `target` with the elbow bent towards `pole`
-## (both global), blended with the animated arm by `weight`.
-func _reach(target: Vector3, pole: Vector3, weight: float) -> void:
+## A transform on a bone as it is posed now (`local` in the bone's frame, as a holder's).
+func _on_bone(bone: String, local: Transform3D) -> Transform3D:
+	return skeleton.global_transform * skeleton.get_bone_global_pose(bones[bone]) * local
+
+## Musicians hold their instrument with both hands and play it while a song is on: frets and
+## strumming, keys and bellows, the bow across the strings, the microphone at the lips.
+func _play() -> void:
+	var t: float = anim_time + phase
+	var p: float = play_amount
+	var sk: Transform3D = skeleton.global_transform
+	var ahead: Vector3 = sk.basis.z.normalized()
+	var right: Vector3 = -sk.basis.x.normalized()
+	match str(look.instrument):
+		"guitar", "tamburica":
+			var g: Transform3D = _on_bone("UpperChest", instrument.transform)
+			# The chord hand moves between three places on the neck, a chord a beat; the other
+			# strums across the strings over the sound hole.
+			var chords: Array = [0.36, 0.44, 0.5]
+			var step: float = t * 1.0
+			var from: float = chords[int(step) % 3]
+			var to: float = chords[(int(step) + 1) % 3]
+			var fret: float = lerpf(from, to, smoothstep(0.75, 1.0, fmod(step, 1.0)) * p)
+			var strum: float = sin(t * TAU * 2.0) * 0.045 * p
+			_reach(g * Vector3(-0.035, fret, -0.025), (-right * 0.5 - Vector3.UP - ahead * 0.3).normalized(), 1.0, "Left")
+			_reach(g * Vector3(0.06 + strum, 0.05 + strum * 0.4, 0.075), (right * 0.7 - Vector3.UP * 0.5 - ahead * 0.5).normalized(), 1.0, "Right")
+		"bass":
+			var berda: Transform3D = model.global_transform * instrument.transform
+			var pluck: float = sin(t * TAU * 1.0) * 0.04 * p
+			_reach(berda * Vector3(-0.035, 0.98 + 0.05 * sin(t * 0.9) * p, -0.02), (-right * 0.4 - Vector3.UP - ahead * 0.2).normalized(), 1.0, "Left")
+			_reach(berda * Vector3(-0.07 + pluck, 0.6, 0.08), (right * 0.8 - Vector3.UP * 0.4 - ahead * 0.4).normalized(), 1.0, "Right")
+		"accordion":
+			# The bellows breathe in and out (two seconds a breath), the bass half going with the
+			# left hand; the right hand runs up and down the keys.
+			var squeeze: float = 0.5 + 0.5 * sin(t * TAU * 0.5)
+			var open: float = lerpf(0.3, lerpf(0.15, 0.6, squeeze), p)
+			var bellows: Node3D = instrument.get_meta("bellows")
+			var left: Node3D = instrument.get_meta("left")
+			bellows.scale = Vector3(1.0 + open, 1, 1)
+			left.position = Vector3(0.23 * (1.0 + open), 0, 0)
+			var a: Transform3D = _on_bone("UpperChest", instrument.transform)
+			var keys: float = (0.04 * sin(t * 3.1) + 0.03 * sin(t * 7.3)) * p
+			_reach(a * Vector3(-0.15, -0.02 + keys, -0.07), (right * 0.8 - Vector3.UP * 0.6 - ahead * 0.2).normalized(), 1.0, "Right")
+			_reach(a * Vector3(0.23 * (1.0 + open) + 0.13, -0.05, -0.1), (-right * 0.8 - Vector3.UP * 0.6 - ahead * 0.2).normalized(), 1.0, "Left")
+		"violin":
+			var holder: Node3D = instrument.get_parent()
+			var v: Transform3D = _on_bone("UpperChest", holder.transform * instrument.transform)
+			_reach(v * Vector3(-0.025, 0.3 + 0.006 * sin(t * 30.0) * p, -0.025), (-right * 0.3 - Vector3.UP - ahead * 0.1).normalized(), 1.0, "Left")
+			# The bow: long strokes across the strings near the bridge, from the right hand.
+			var contact: Vector3 = v * Vector3(0, 0.1, 0.045)
+			var along: Vector3 = (v.basis * Vector3(1, -0.2, 0.35)).normalized()
+			if along.dot(right) > 0.0:
+				along = -along
+			var stroke: float = lerpf(0.25, lerpf(0.1, 0.4, 0.5 + 0.5 * sin(t * TAU * 0.6)), p)
+			var frog: Vector3 = contact - along * stroke
+			var normal: Vector3 = (v.basis.z - along * v.basis.z.dot(along)).normalized()
+			var bow: Node3D = instrument.get_meta("bow")
+			bow.global_transform = Transform3D(Basis(along, normal, along.cross(normal)), frog)
+			_reach(frog - along * 0.02, (right * 0.7 - Vector3.UP * 0.6 - ahead * 0.3).normalized(), 1.0, "Right")
+		"mic":
+			# The microphone at the lips; the other hand sings along.
+			var head: Transform3D = sk * skeleton.get_bone_global_pose(bones["Head"])
+			var mouth: Vector3 = head * (measure.mouth as Vector3)
+			var grip: Vector3 = mouth + ahead * 0.11 - Vector3.UP * 0.07
+			var towards: Vector3 = (mouth - grip).normalized()
+			var side: Vector3 = towards.cross(Vector3.UP).normalized()
+			instrument.global_transform = Transform3D(Basis(side, towards, side.cross(towards)), grip + towards * 0.05)
+			_reach(grip, (right * 0.6 - Vector3.UP * 0.8).normalized(), 1.0, "Right")
+			var chest: Vector3 = _on_bone("UpperChest", Transform3D.IDENTITY).origin
+			var wave: Vector3 = -right * (0.22 + 0.06 * sin(t * 0.7) * p) + ahead * (0.16 + 0.04 * sin(t * 1.1)) + Vector3.UP * (0.02 + 0.08 * p * (0.5 + 0.5 * sin(t * 1.3)))
+			_reach(chest + wave, (-right * 0.7 - Vector3.UP * 0.7).normalized(), 1.0, "Left")
+
+## At the table, hands that the clip lowers into it (resting in the lap, which is under the
+## tablecloth) rest on the top instead, forearms on the table; hands raised to talk, cheer or wave
+## stay free.
+func _hands_on_table() -> void:
+	var venue: Transform3D = get_parent().global_transform
+	var chair: Vector3 = venue * chair_at(pull)
+	var ahead: Vector3 = (venue.basis * (seat.dir as Vector3)).normalized()
+	var right: Vector3 = ahead.cross(Vector3.UP).normalized()
+	var sk: Transform3D = skeleton.global_transform
+	var edge: float = TABLE_REACH - CHAIR_PULL * pull
+	for side in ["Left", "Right"]:
+		var out: Vector3 = right if side == "Right" else -right
+		var hand: Vector3 = sk * skeleton.get_bone_global_pose(bones[side + "Hand"]).origin
+		var height: float = hand.y - chair.y
+		var weight: float = smoothstep(TABLE_TOP + 0.1, TABLE_TOP, height)
+		if weight <= 0.001:
+			continue
+		var drift: float = sin(anim_time * 0.6 + phase + (0.0 if side == "Right" else 2.0))
+		var rest: Vector3 = chair + ahead * (edge + 0.1 + 0.02 * drift) + out * (0.14 + 0.015 * drift) + Vector3.UP * (TABLE_TOP + 0.035)
+		_reach(rest, (out * 0.9 - Vector3.UP * 0.4 - ahead * 0.4).normalized(), weight, side)
+
+## Two-bone IK on an arm ("Right" or "Left"): the wrist goes to `target` with the elbow bent towards
+## `pole` (both global), blended with the animated arm by `weight`.
+func _reach(target: Vector3, pole: Vector3, weight: float, side: String = "Right") -> void:
 	if weight <= 0.001:
 		return
-	var ua: int = bones["RightUpperArm"]
-	var la: int = bones["RightLowerArm"]
-	var hd: int = bones["RightHand"]
+	var ua: int = bones[side + "UpperArm"]
+	var la: int = bones[side + "LowerArm"]
+	var hd: int = bones[side + "Hand"]
 	var inv: Transform3D = skeleton.global_transform.affine_inverse()
 	var a: Vector3 = skeleton.get_bone_global_pose(ua).origin
 	var b: Vector3 = skeleton.get_bone_global_pose(la).origin
@@ -1125,18 +1448,29 @@ func _process(delta: float) -> void:
 		return
 	anim_time += delta * rate
 	var clip_rate: float = rate
-	if not path.is_empty():
+	if path.is_empty():
+		gait = 0.0
+		if current == "angry" and not _seated_clip(clip):
+			play("idle")
+	else:
+		# Turn into the next leg a little before reaching a corner, so the walk curves.
+		while path.size() > 1 and Vector2(path[0].x - position.x, path[0].z - position.z).length() < CORNER:
+			path.remove_at(0)
 		var target: Vector3 = path[0]
 		var offset: Vector3 = target - position
 		offset.y = 0.0
-		var step: float = WALK_SPEED * speed_scale * float(look.get("pace", 1.0)) * delta
+		# Ease into a walk and slow down into the last step.
+		gait = minf(1.0, gait + delta / 0.35)
+		var brake: float = clampf(offset.length() / 0.5, 0.45, 1.0) if path.size() == 1 else 1.0
+		var speed: float = WALK_SPEED * speed_scale * float(look.get("pace", 1.0)) * pace * lerpf(0.35, 1.0, gait) * brake
+		var step: float = speed * delta
 		face(offset)
 		if seat_state in ["pulling", "stepping"]:
 			if clip != "Walk":
 				_clip("Walk", 0.2, true)
 		elif current not in ["walk", "carry", "angry"]:
 			play("carry" if holding == "tray" else "walk")
-		clip_rate = WALK_SPEED * speed_scale * float(look.get("pace", 1.0)) / maxf(0.3, float(measure.stride) * scale.x)
+		clip_rate = speed / maxf(0.3, float(measure.stride) * scale.x)
 		if offset.length() <= step:
 			position = Vector3(target.x, position.y, target.z)
 			path.remove_at(0)
@@ -1144,13 +1478,17 @@ func _process(delta: float) -> void:
 				arrived.emit()
 		else:
 			position += offset.normalized() * step
-	elif current == "angry" and not _seated_clip(clip):
-		play("idle")
 	if not seat.is_empty():
 		_seat_step(delta)
 	_drink_step(delta)
+	play_amount = move_toward(play_amount, 1.0 if current == "play" else 0.0, delta * 2.0)
 	heading = lerp_angle(heading, target_heading, clampf(delta * 10.0, 0.0, 1.0))
 	rotation.y = heading
+	# The bones touched up in code go back to rest first, so a clip that doesn't key them doesn't let
+	# the touches pile up frame after frame.
+	for bone in TOUCHED:
+		if bones.has(bone):
+			skeleton.reset_bone_pose(bones[bone])
 	player.advance(delta * clip_rate)
 	_pose()
 	_face(delta)
@@ -1175,7 +1513,9 @@ func _pose() -> void:
 		model.position = Vector3.ZERO
 	# Faces read from the high camera: heads tip back, more for the seated (their clips look down
 	# at the table), and back again to drink.
-	var lift: float = HEAD_LIFT * (0.6 if current == "angry" else (1.6 if seat_state == "seated" else 1.0))
+	# (Walking, they look where they go.)
+	var walking: bool = not path.is_empty() or current in ["walk", "carry"]
+	var lift: float = HEAD_LIFT * (0.3 if walking else (0.6 if current == "angry" else (1.35 if seat_state == "seated" else 1.0)))
 	lift += _sip_amount() * 0.3
 	# The old stoop a little when standing and walking (the head comes back up to look ahead).
 	var hunch: float = float(look.get("hunch", 0.0))
@@ -1187,16 +1527,14 @@ func _pose() -> void:
 		"dance":
 			model.position.y = absf(sin(t * 6.0 + phase)) * 0.04
 		"play":
-			var beat: float = sin(t * 8.0 + phase)
-			match str(look.instrument):
-				"accordion":
-					instrument.scale = Vector3(1.0 + beat * 0.15, 1, 1)
-					_turn("Spine", Vector3(0, beat * 0.08, 0))
-				"mic":
-					_turn("Spine", Vector3(0, sin(t * 2.0 + phase) * 0.1, 0))
-				_:
-					_turn("RightLowerArm", Vector3(beat * 0.25, 0, 0))
-			model.position.y = absf(sin(t * 4.0 + phase)) * 0.015
+			# In time with the song: a sway, a nod and a little bounce on the beat.
+			var beat: float = t * TAU * 1.0 + phase
+			_turn("Spine", Vector3(0.03 * absf(sin(beat)), 0.06 * sin(beat * 0.5), 0.025 * sin(beat * 0.5)) * play_amount)
+			model.position.y = absf(sin(beat)) * 0.012 * play_amount
+	if instrument != null:
+		_play()
+	if seat_state in ["seated", "tucking"]:
+		_hands_on_table()
 	if seat_state == "seated":
 		_drink_pose()
 	elif vessel != null and is_instance_valid(vessel):

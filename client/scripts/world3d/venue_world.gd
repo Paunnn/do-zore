@@ -245,7 +245,34 @@ func _path(from: Vector3, to_cell: Vector2i) -> PackedVector3Array:
 	var points: PackedVector3Array = PackedVector3Array()
 	for i in range(1, cells.size()):
 		points.append(Vector3(cells[i].x + 0.5, 0, cells[i].y + 0.5))
-	return points
+	return _straighten(from, points)
+
+## Grid paths walk in 45-degree steps; people walk straight to the farthest point of the path they
+## can reach without brushing a table, a chair or a wall (checked with a body's width).
+func _straighten(from: Vector3, points: PackedVector3Array) -> PackedVector3Array:
+	var out: PackedVector3Array = PackedVector3Array()
+	var anchor: Vector3 = from
+	var i: int = 0
+	while i < points.size():
+		var far: int = i
+		for j in range(points.size() - 1, i, -1):
+			if _clear_line(anchor, points[j]):
+				far = j
+				break
+		out.append(points[far])
+		anchor = points[far]
+		i = far + 1
+	return out
+
+func _clear_line(a: Vector3, b: Vector3) -> bool:
+	var steps: int = ceili(a.distance_to(b) / 0.2)
+	for k in range(1, steps):
+		var p: Vector3 = a.lerp(b, float(k) / steps)
+		for corner in [Vector2(-0.2, -0.2), Vector2(0.2, -0.2), Vector2(-0.2, 0.2), Vector2(0.2, 0.2)]:
+			var cell: Vector2i = Vector2i(floori(p.x + corner.x), floori(p.z + corner.y))
+			if not astar.is_in_boundsv(cell) or astar.is_point_solid(cell) or astar.get_point_weight_scale(cell) > 1.0:
+				return false
+	return true
 
 func _street_point() -> Vector3:
 	var spread: float = 0.6 if venue_id == "splav" else 6.0

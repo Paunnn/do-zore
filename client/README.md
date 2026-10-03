@@ -72,8 +72,9 @@ clouds, coins and notes over their 3D anchors.
   CC0; see `tools/art/people`) with a palette, a face style (lashes, brows, lipstick, glasses), an
   age (wrinkles, moustache, beard, bushy brows) and a mood. Props sit on its bones: šajkača,
   headscarf, beanie, bridal veil, flower wreath, backpack, gold chain, apron, bow ties, flowers
-  and instruments. The cast follows the guest types: penzioneri in flat caps, fedoras, šajkače
-  and headscarves; classic students in logo t-shirts, jeans and trainers with backpacks; the
+  and instruments. The šajkača, the headscarf (tied at the nape) and the bride's veil are shaped
+  to the cartoon heads (measured tables in `people3d.gd`) so nothing goes through them. The cast follows
+  the guest types: penzioneri in flat caps, fedoras, šajkače and headscarves; classic students in logo t-shirts, jeans and trainers with backpacks; the
   bride and the wedding guests; businessmen in suits; mourners in black. The animation library
   (`people_anims.glb`, Quaternius' Universal Animation Library, CC0) is retargeted on import
   through Godot's humanoid profile, so it plays on every body; a few clips are put together from
@@ -82,7 +83,8 @@ clouds, coins and notes over their 3D anchors.
   lift it to the lips, tip and sip, put it back. Props and the mouth are placed through the skin's
   bind poses (the import's rest fixer moves the rests, not the mesh). The face is drawn by
   `shaders/person.gdshader` from a few numbers per person, eased towards the person's mood, with
-  blinks, chatter and sips on top; `shaders/ink.gdshader` is the outline (also round the props).
+  blinks, chatter and sips on top; `shaders/ink.gdshader` is the outline (also round the props), set
+  a little behind the surface so the inside of a garment seen through an opening shows its cloth.
 - `scripts/world3d/builder.gd` merges primitives per material and per spatial chunk;
   `kit3d.gd` holds the shared materials: the toon world shader (`shaders/world.gdshader`: vertex
   colours times painted textures mapped in world space or by UV, two-tone light, sheen), one glow

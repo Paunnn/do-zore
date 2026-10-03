@@ -34,7 +34,12 @@ func add(arrays: Array, placed: Transform3D, color: Color, key: String) -> void:
 	var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
 	var normals: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
 	group.verts.append_array(xf * verts)
-	group.normals.append_array(Transform3D(xf.basis.inverse().transposed(), Vector3.ZERO) * normals)
+	# Normals through the inverse transpose, made unit length again (squashed shapes would otherwise
+	# get long normals, which the compressed vertex format can't store).
+	var turned: PackedVector3Array = Transform3D(xf.basis.inverse().transposed(), Vector3.ZERO) * normals
+	for i in range(turned.size()):
+		turned[i] = turned[i].normalized()
+	group.normals.append_array(turned)
 	var uvs: Variant = arrays[Mesh.ARRAY_TEX_UV]
 	if uvs != null:
 		group.uvs.append_array(uvs)

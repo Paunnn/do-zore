@@ -81,12 +81,19 @@ static func layout(venue_id: String, max_tables: int) -> Dictionary:
 		blocked.append(Vector2i(x, 1))
 	for cell in tables:
 		blocked.append(cell)
+	# The band: up to three in a row; from four on, every other one (the bass, the accordion) stands
+	# in a second row behind, moved over to be seen past the front row from the camera, so the
+	# players and their instruments keep clear of each other.
 	var musicians: Array = []
 	for count in range(1, 7):
 		var spots: Array = []
+		var front: int = count if count <= 3 else ceili(count / 2.0)
+		var gap: float = (stage.x - 1.2) / front
 		for k in range(count):
-			var along: float = (k + 1.0) / (count + 1.0)
-			spots.append(Vector3(0.6 + along * (stage.x - 1.4), 0.35, stage.y - 1.1 - 0.6 * (k % 2)))
+			var back: bool = count > 3 and k % 2 == 1
+			var i: int = k if count <= 3 else k / 2
+			var x: float = 0.6 + (i + 0.5) * gap + (gap * 0.5 if back else 0.0)
+			spots.append(Vector3(x, 0.35, stage.y - (1.9 if back else (0.8 if count > 3 else 1.2))))
 		musicians.append(spots)
 	return {
 		"id": venue_id, "w": w, "d": d, "top": top, "cols": cols, "rows": rows, "stage": stage,

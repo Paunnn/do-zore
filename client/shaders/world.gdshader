@@ -54,6 +54,7 @@ void light() {
 	float nh = dot(NORMAL, h);
 	// A broad soft sheen where the light glances back at the camera (moonlit roofs, lamplit
 	// floors), and a small hard highlight on glossy things.
-	float shine = smoothstep(0.8, 0.97, nh) * sheen + smoothstep(0.93, 0.96, nh) * gloss;
-	SPECULAR_LIGHT += LIGHT_COLOR * ATTENUATION * shine * lit;
+	float shine = smoothstep(0.8, 0.97, nh) * sheen + smoothstep(0.93, 0.96, nh) * gloss * 1.4;
+	// LIGHT_COLOR carries a factor of PI (as the diffuse term above assumes).
+	SPECULAR_LIGHT += LIGHT_COLOR * ATTENUATION * shine * lit / PI;
 }

@@ -17,7 +17,15 @@ animations. Everything they are built from is CC0 (credits in `client/assets/peo
      on it (`client/shaders/person.gdshader`);
    - hair and clothes fitted by MPFB, the game_engine rig (Unreal bone names) and its skin weights;
    - clothes standing a few millimetres off the body, the covered body shrunk a little, slimmer legs
-     under dresses, and untucked tops pushed out over the trousers, so nothing pokes through;
+     under dresses, and untucked tops pushed out over the trousers, so nothing pokes through; the body
+     under the clothes is deleted outright (a ray out from the skin meets the inside of a garment, or
+     the skin already pokes through one), and the skin left in a gap between a top and trousers, or bare
+     under a dress on a `modest` look, takes the top's colour;
+   - no hair through hats: under a hat from the packs (`"hat": "worn"`) every strand under the crown,
+     brushing it or lying in the brim goes (checked again after decimation), and the hat and the hair
+     at hat height move with the head alone, so they can't slide against each other; for a hat put on
+     in the game (`"hat"`: how much of the head it covers from the crown) the hair above that line
+     goes, and under a headscarf (1) all of it;
    - one mesh and one material: the parts' cartoonised textures packed in a 1024 px atlas (UV), the face
      plane (UV2: eyes at (0.31, 0.41) and (0.69, 0.41), mouth at (0.5, 0.79)) and vertex colours for the
      shader (palette slot, face mask, keep-the-texture's-colours);
@@ -29,10 +37,10 @@ animations. Everything they are built from is CC0 (credits in `client/assets/peo
    Godot's humanoid profile, so the one animation library plays on every body.
 
 The cast (`LOOKS`) follows the guest types: three dede (flat cap and knitted sweater; old suit and
-fedora; overalls, with a šajkača added in the game), two babe (grey bun; tiered dress under a
-headscarf), two students and two studentkinje (logo t-shirt and jeans; t-shirt or sweater over jeans),
-the groom, a wedding guest, the bride and a guest in a dress, two businessmen and a businesswoman,
-mourners, staff and the band. Hats, scarves, backpacks, veils, wreaths, chains and aprons that the
+fedora; overalls, with a šajkača added in the game), two babe (grey bun and a long-sleeved dress; a
+loose housedress under a headscarf), two students and two studentkinje (logo t-shirt and jeans;
+t-shirt or sweater over jeans), the groom, a wedding guest, the bride and a guest in a dress, two
+businessmen and a businesswoman, mourners, staff and the band. Hats, scarves, backpacks, veils, wreaths, chains and aprons that the
 MakeHuman packs don't have are made in the game (`people3d.gd`), and moustaches, beards and wrinkles
 are drawn by the face shader.
 

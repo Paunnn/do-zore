@@ -67,24 +67,25 @@ SHOES_M, SHOES_W = ("clothes", "shoes03", "shoes", True), ("clothes", "shoes04",
 LOOKS = {
     # Guests. Penzioneri: a deda in a flat cap and a knitted sweater, one in an old suit and a fedora, a
     # village one in overalls (he gets a šajkača in the game); a baba with a bun in a long-sleeved dress
-    # and one in a tiered dress (she gets a headscarf).
-    "deda": {"macro": dict(MAN, age=0.95, weight=0.8, muscle=0.35, height=0.35), "hair": "short02",
+    # and one in a loose housedress (she gets a headscarf).
+    "deda": {"macro": dict(MAN, age=0.95, weight=0.8, muscle=0.35, height=0.35), "hair": "short02", "hat": "worn",
              "parts": [("clothes", "jujube_newsboy_cap", "hat", False), ("clothes", "toigo_fisherman_sweater", "top", False),
                        ("clothes", "toigo_wool_pants", "bottom", False), ("clothes", "shoes01", "shoes", True)]},
-    "deda2": {"macro": dict(MAN, age=0.95, weight=0.7, height=0.4), "hair": "short01",
+    "deda2": {"macro": dict(MAN, age=0.95, weight=0.7, height=0.4), "hair": "short01", "hat": "worn",
               "parts": [("clothes", "fedora01", "hat", False), ("clothes", "toigo_male_suit_3", "top", True),
                         ("clothes", "shoes01", "shoes", True)]},
-    "deda3": {"macro": dict(MAN, age=0.95, weight=0.75, muscle=0.4, height=0.38), "hair": "short02",
+    "deda3": {"macro": dict(MAN, age=0.95, weight=0.75, muscle=0.4, height=0.38), "hair": "short02", "hat": 0.2,
               "parts": [("clothes", "male_worksuit01", "top", True), ("clothes", "shoes02", "shoes", True)]},
     "baba": {"style": {"leg_slim": 0.8}, "macro": dict(WOMAN, age=0.95, weight=0.8, muscle=0.35, height=0.32),
-             "hair": "rehmanpolanski_hair_bun_brown", "parts": [("clothes", "toigo_cut_out_dress", "top", False), SHOES_W]},
+             "hair": "rehmanpolanski_hair_bun_brown", "modest": True, "parts": [("clothes", "toigo_cut_out_dress", "top", False), SHOES_W]},
     "baba2": {"style": {"leg_slim": 0.8}, "macro": dict(WOMAN, age=0.95, weight=0.85, muscle=0.35, height=0.3),
-              "hair": "short02", "parts": [("clothes", "toigo_dress_with_tiered_skirt", "top", False), SHOES_W]},
+              "hair": "short02", "hat": 1.0, "modest": True,
+              "parts": [("clothes", "aethelraed_flapper_dress", "top", False), SHOES_W]},
     # Studenti, the classic kind: logo t-shirt, jeans and white trainers (a backpack in the game), or a
     # t-shirt or a knitted sweater over jeans.
     "student": {"macro": dict(MAN, age=0.4, weight=0.45), "hair": "cortu_short_messy_hair",
                 "parts": [("clothes", "male_casualsuit04", "top", True), ("clothes", "shoes05", "shoes", True)]},
-    "student2": {"macro": dict(MAN, age=0.4, weight=0.5), "hair": "short04",
+    "student2": {"macro": dict(MAN, age=0.4, weight=0.5), "hair": "short04", "hat": 0.5,
                  "parts": [("clothes", "elvs_crude_t-shirt_male", "top", False),
                            ("clothes", "toigo_wool_pants", "bottom", False), ("clothes", "shoes06", "shoes", True)]},
     "studentkinja": {"macro": dict(WOMAN, age=0.4, weight=0.45), "hair": "ponytail01",
@@ -96,7 +97,7 @@ LOOKS = {
     # and a guest in a dress (flower wreath).
     "svat": {"macro": dict(MAN, age=0.5), "hair": "short01",
              "parts": [("clothes", "toigo_male_suit_tie_and_jacket", "top", True), SHOES_M]},
-    "svat2": {"macro": dict(MAN, age=0.7, weight=0.7), "hair": "short02",
+    "svat2": {"macro": dict(MAN, age=0.7, weight=0.7), "hair": "short02", "hat": 0.2,
               "parts": [("clothes", "toigo_male_double-breasted_suit", "top", False), SHOES_M]},
     "mlada": {"style": {"leg_slim": 0.8}, "macro": dict(WOMAN, age=0.45), "hair": "rehmanpolanski_hair_bun_brown",
               "parts": [("clothes", "toigo_dress_with_tiered_skirt", "top", False), SHOES_W]},
@@ -111,7 +112,7 @@ LOOKS = {
                     "parts": [("clothes", "toigo_female_suit", "top", True), SHOES_W]},
     "ozaloscen": {"macro": dict(MAN, age=0.6, weight=0.55), "hair": "short01",
                   "parts": [("clothes", "toigo_male_double-breasted_suit", "top", False), SHOES_M]},
-    "ozaloscena": {"style": {"leg_slim": 0.8}, "macro": dict(WOMAN, age=0.65, weight=0.6), "hair": "toigo_curled_under_bob",
+    "ozaloscena": {"style": {"leg_slim": 0.8}, "macro": dict(WOMAN, age=0.65, weight=0.6), "hair": "toigo_curled_under_bob", "hat": 1.0,
                    "parts": [("clothes", "toigo_shift_dress", "top", False), SHOES_W]},
     # Staff
     "konobar": {"macro": dict(MAN, age=0.55), "hair": "short01",
@@ -428,15 +429,14 @@ def load_pixels(image, size):
     return px[ys.astype(int)][:, xs.astype(int)]
 
 
-def tops_over_bottoms(meshes, parts):
-    """Untucked tops hang over the trousers: wherever the waistband comes out through the top, the top is
-    pushed out past it (after decimation, which moves vertices)."""
-    tops = [o for o in meshes if parts.get(o.name, ("",))[0] == "top" and "tucked" not in o.name.lower()]
-    bottoms = [o for o in meshes if parts.get(o.name, ("",))[0] == "bottom"]
-    if not (tops and bottoms):
+def push_over(outer, inner, gap, limit=None):
+    """Wherever a vertex of the inner parts comes out through an outer part, push the outer part out past
+    it (run after decimation, which moves vertices). With a limit only the vertices just under the
+    surface or poking through it by less than that count (hair well below a brim is not under it)."""
+    if not (outer and inner):
         return
     points = []
-    for obj in bottoms:
+    for obj in inner:
         co = np.empty(len(obj.data.vertices) * 3, np.float32)
         obj.data.vertices.foreach_get("co", co)
         points.append(co.reshape(-1, 3))
@@ -445,7 +445,7 @@ def tops_over_bottoms(meshes, parts):
     for i, point in enumerate(points):
         tree.insert(point, i)
     tree.balance()
-    for obj in tops:
+    for obj in outer:
         obj.data.update()
         n = len(obj.data.vertices)
         co = np.empty(n * 3, np.float32)
@@ -454,15 +454,187 @@ def tops_over_bottoms(meshes, parts):
         obj.data.vertices.foreach_get("normal", nor)
         co, nor = co.reshape(-1, 3), nor.reshape(-1, 3)
         for i in range(n):
-            out = max((float(np.dot(np.array(found) - co[i], nor[i])) for found, _, _ in tree.find_range(co[i], 0.045)),
-                      default=-1.0)
-            if out > -0.008:
-                co[i] += nor[i] * (out + 0.008)
+            outs = []
+            for found, _, _ in tree.find_range(co[i], 0.045):
+                d = np.array(found) - co[i]
+                along = float(np.dot(d, nor[i]))
+                if limit is None or (along < limit and np.linalg.norm(d - nor[i] * along) < 0.012):
+                    outs.append(along)
+            out = max(outs, default=-1.0)
+            if out > -gap:
+                co[i] += nor[i] * (out + gap)
         obj.data.vertices.foreach_set("co", co.reshape(-1))
         obj.data.update()
 
 
-def finish(bm, parts, face, path):
+def tops_over_bottoms(meshes, parts):
+    """Untucked tops hang over the trousers, and no hair is left under a hat or in its brim (after
+    decimation, which reshapes both)."""
+    of = lambda region: [o for o in meshes if parts.get(o.name, ("",))[0] == region]
+    push_over([o for o in of("top") if "tucked" not in o.name.lower()], of("bottom"), 0.008)
+    hats = [BVHTree.FromPolygons([v.co.copy() for v in o.data.vertices], [p.vertices[:] for p in o.data.polygons])
+            for o in of("hat")]
+    if not hats:
+        return
+    up = Vector((0, 0, 1))
+
+    def under(co):
+        for tree in hats:
+            # Under the crown, brushing the hat, or sitting in the cup of an upturned brim.
+            hit, normal, _, _ = tree.ray_cast(co, up, 0.4)
+            if hit is not None and normal.dot(up) > 0.0:
+                return True
+            if tree.find_nearest(co, 0.01)[0] is not None or tree.ray_cast(co, -up, 0.08)[0] is not None:
+                return True
+        return False
+
+    for obj in of("hair"):
+        mesh_tree = BVHTree.FromPolygons([v.co.copy() for v in obj.data.vertices], [p.vertices[:] for p in obj.data.polygons])
+        crossing = {i for tree in hats for i, _ in mesh_tree.overlap(tree)}
+        bmsh = bmesh.new()
+        bmsh.from_mesh(obj.data)
+        bmsh.faces.ensure_lookup_table()
+        gone = [f for f in bmsh.faces if f.index in crossing or any(under(v.co) for v in f.verts)]
+        bmesh.ops.delete(bmsh, geom=gone, context='FACES')
+        bmesh.ops.delete(bmsh, geom=[v for v in bmsh.verts if not v.link_faces], context='VERTS')
+        bmsh.to_mesh(obj.data)
+        bmsh.free()
+        obj.data.update()
+
+
+def rigid_head(meshes, parts, bm):
+    """Hats and the hair at hat height move with the head alone. The hair round the back of the head is
+    partly weighted to the neck; under a hat (from the packs or put on in the game) it would then slide
+    against the hat whenever the head turns or the game's rest pose differs from the bind pose."""
+    head = group_mask(bm, "head") > 0.5
+    z = np.array([v.co.z for v in bm.data.vertices])[head]
+    cut = z.min() + 0.45 * (z.max() - z.min())
+    for obj in meshes:
+        region = parts.get(obj.name, ("",))[0]
+        if region not in ("hair", "hat"):
+            continue
+        group = obj.vertex_groups.get("head") or obj.vertex_groups.new(name="head")
+        rigid = [v.index for v in obj.data.vertices if region == "hat" or v.co.z > cut]
+        for other in obj.vertex_groups:
+            if other != group:
+                other.remove(rigid)
+        group.add(rigid, 1.0, 'REPLACE')
+
+
+def hide_hair(meshes, parts, bm, hat):
+    """No hair through hats. "worn": a hat from the packs is on, and every strand with the hat right
+    above it goes; a number: a hat put on in the game covers that much of the head from the crown down
+    (1 = all of it, a headscarf)."""
+    hair = [o for o in meshes if parts.get(o.name, ("",))[0] == "hair"]
+    if not hair or hat is None:
+        return
+    if hat == "worn":
+        # The hat's band all round the head: the lowest point of the hat close to the skull in each
+        # direction (the brim and the peak stand out further, so they don't count). Hair above it goes;
+        # hair below it (the back of the neck, the temples) stays.
+        head = group_mask(bm, "head") > 0.5
+        hv = np.array([v.co[:] for v in bm.data.vertices])[head]
+        centre = hv.mean(axis=0)
+        reach = np.percentile(np.linalg.norm(hv[:, :2] - centre[:2], axis=1), 95) * 1.12
+        sectors = 24
+        band = np.full(sectors, np.inf)
+        for obj in [o for o in meshes if parts.get(o.name, ("",))[0] == "hat"]:
+            co = np.array([v.co[:] for v in obj.data.vertices])
+            d = co[:, :2] - centre[:2]
+            near = np.linalg.norm(d, axis=1) < reach
+            sector = ((np.arctan2(d[:, 1], d[:, 0]) + np.pi) / (2 * np.pi) * sectors).astype(int) % sectors
+            for k in range(sectors):
+                pick = near & (sector == k)
+                if pick.any():
+                    band[k] = min(band[k], co[pick, 2].min())
+        band[np.isinf(band)] = band[~np.isinf(band)].min() if (~np.isinf(band)).any() else np.inf
+        def hidden(co):
+            k = int((np.arctan2(co.y - centre[1], co.x - centre[0]) + np.pi) / (2 * np.pi) * sectors) % sectors
+            return co.z > band[k] - 0.004
+    else:
+        head = group_mask(bm, "head") > 0.5
+        z = np.array([v.co.z for v in bm.data.vertices])[head]
+        # 1 or more: a headscarf, under which no hair is left at all (not even a bob's ends below the jaw).
+        cut = z.max() - float(hat) * (z.max() - z.min()) if float(hat) < 1.0 else -np.inf
+        hidden = lambda co: co.z > cut
+    for obj in hair:
+        bmsh = bmesh.new()
+        bmsh.from_mesh(obj.data)
+        gone = [f for f in bmsh.faces if any(hidden(v.co) for v in f.verts)]
+        bmesh.ops.delete(bmsh, geom=gone, context='FACES')
+        bmesh.ops.delete(bmsh, geom=[v for v in bmsh.verts if not v.link_faces], context='VERTS')
+        bmsh.to_mesh(obj.data)
+        bmsh.free()
+        obj.data.update()
+
+
+def cover_skin(meshes, parts, bm, modest=False):
+    """Delete the body where clothes cover it (a ray out from the skin meets the inside of a garment close
+    by), so no skin can come through the clothes when the body moves. Head, hands and feet stay. A modest
+    look also gives the bare torso a dress leaves (cut-outs, a low neckline) the top's colour."""
+    clothes = [o for o in meshes if parts.get(o.name, ("",))[0] in ("top", "bottom", "shoes")]
+    if not clothes:
+        return
+    trees = [BVHTree.FromPolygons([v.co.copy() for v in o.data.vertices], [p.vertices[:] for p in o.data.polygons])
+             for o in clothes]
+    keep = np.zeros(len(bm.data.vertices), np.float32)
+    for bone in ["head", "hand_l", "hand_r", "foot_l", "foot_r", "ball_l", "ball_r"] + \
+            [f"{f}_0{i}_{s}" for f in ("index", "middle", "ring", "pinky", "thumb") for i in (1, 2, 3) for s in "lr"]:
+        keep = np.maximum(keep, group_mask(bm, bone))
+    bm.data.update()
+    covered = np.zeros(len(bm.data.vertices), bool)
+    for v in bm.data.vertices:
+        if keep[v.index] > 0.3:
+            continue
+        n = v.normal
+        for tree in trees:
+            # Under a garment (it is just outside), or poking out through one (it is just inside).
+            hit, normal, _, dist = tree.ray_cast(v.co + n * 0.0005, n, 0.08)
+            if hit is not None and normal.dot(n) > 0.0:
+                covered[v.index] = True
+                break
+            hit, normal, _, dist = tree.ray_cast(v.co - n * 0.0005, -n, 0.03)
+            if hit is not None and normal.dot(n) > 0.0:
+                covered[v.index] = True
+                break
+    bmsh = bmesh.new()
+    bmsh.from_mesh(bm.data)
+    bmsh.verts.ensure_lookup_table()
+    gone = [f for f in bmsh.faces if all(covered[v.index] for v in f.verts)]
+    bmesh.ops.delete(bmsh, geom=gone, context='FACES')
+    bmesh.ops.delete(bmsh, geom=[v for v in bmsh.verts if not v.link_faces], context='VERTS')
+    bmsh.to_mesh(bm.data)
+    bmsh.free()
+    bm.data.update()
+    # The skin left between a top's hem and the trousers would show as a bare midriff when the arms
+    # lift: it takes the top's colour (an undershirt).
+    tops = [o for o in clothes if parts[o.name][0] == "top"]
+    bottoms = [o for o in clothes if parts[o.name][0] == "bottom"]
+    if tops and bottoms:
+        def tree_of(objs):
+            pts = [v.co.copy() for o in objs for v in o.data.vertices]
+            tree = KDTree(len(pts))
+            for i, co in enumerate(pts):
+                tree.insert(co, i)
+            tree.balance()
+            return tree
+        top_tree, bottom_tree = tree_of(tops), tree_of(bottoms)
+        group = bm.vertex_groups.new(name="undershirt")
+        gap = [v.index for v in bm.data.vertices
+               if top_tree.find(v.co)[2] < 0.06 and bottom_tree.find(v.co)[2] < 0.06]
+        if gap:
+            group.add(gap, 1.0, 'REPLACE')
+    if modest and tops:
+        torso = np.zeros(len(bm.data.vertices), np.float32)
+        for bone in ["pelvis", "spine_01", "spine_02", "spine_03", "spine_04", "spine_05", "clavicle_l", "clavicle_r"]:
+            torso += group_mask(bm, bone)
+        group = bm.vertex_groups.get("undershirt") or bm.vertex_groups.new(name="undershirt")
+        bare = [int(i) for i in np.nonzero(torso > 0.5)[0]]
+        if bare:
+            group.add(bare, 1.0, 'REPLACE')
+
+
+def finish(bm, parts, face, path, hat=None, modest=False):
     armature = bm.parent
     meshes = [o for o in bpy.data.objects if o.type == 'MESH']
     for obj in meshes:
@@ -478,6 +650,16 @@ def finish(bm, parts, face, path):
             if modifier.type in ('MASK', 'SUBSURF'):
                 bpy.ops.object.modifier_apply(modifier=modifier.name)
     clean_face(bm, face)
+    hide_hair(meshes, parts, bm, hat)
+    # Weld the garments' UV seams (split vertices there would drift apart below and open cracks).
+    for obj in meshes:
+        if parts.get(obj.name, ("",))[0] in ("top", "bottom", "shoes", "hat"):
+            bmsh = bmesh.new()
+            bmsh.from_mesh(obj.data)
+            bmesh.ops.remove_doubles(bmsh, verts=bmsh.verts, dist=0.0003)
+            bmsh.to_mesh(obj.data)
+            bmsh.free()
+            obj.data.update()
     # Keep the body inside its clothes: clothes stand a few millimetres proud, the covered body shrinks a
     # little (head, hands and feet stay as they are).
     for obj in meshes:
@@ -500,6 +682,7 @@ def finish(bm, parts, face, path):
             co += nor * (0.003 if region == "bottom" else (0.002 if tucked else 0.007))
         obj.data.vertices.foreach_set("co", co.reshape(-1))
         obj.data.update()
+    cover_skin(meshes, parts, bm, modest)
     eye_l, eye_r, lips = face["eye_l"], face["eye_r"], face["lips"]
     mid = (eye_l + eye_r) * 0.5
     sx = 0.36 / abs(eye_l[0] - eye_r[0])
@@ -525,6 +708,7 @@ def finish(bm, parts, face, path):
         cu = 0.5 + (co[:, 0] - mid[0]) * sx
         cv = 0.42 + (mid[2] - co[:, 2]) * sz
         if obj == bm:
+            color[group_mask(obj, "undershirt") > 0.5, 0] = REGION["top"]
             oval = np.sqrt(((cu - 0.5) / 0.56) ** 2 + ((cv - 0.6) / 0.52) ** 2)
             mask = np.clip((1.0 - oval) / 0.12, 0, 1) * np.clip((-nor[:, 1] + 0.05) / 0.3, 0, 1)
             color[:, 1] = mask * (group_mask(obj, "head") > 0.5)
@@ -565,6 +749,7 @@ def finish(bm, parts, face, path):
         face_uv.data.foreach_set("uv", np.stack([cu[loops], 1.0 - cv[loops]], axis=1).reshape(-1).astype(np.float32))
         decimate(obj, BUDGET.get(cell, 2000))
     tops_over_bottoms(meshes, parts)
+    rigid_head(meshes, parts, bm)
     # One mesh, one material.
     bones = {b.name for b in armature.data.bones}
     for obj in meshes:
@@ -613,5 +798,6 @@ if __name__ == "__main__":
     for name in args[1:] or list(LOOKS):
         start = time.time()
         human, parts, face = build(LOOKS[name])
-        verts, tris = finish(human, parts, face, os.path.join(out_dir, name + ".glb"))
+        verts, tris = finish(human, parts, face, os.path.join(out_dir, name + ".glb"), LOOKS[name].get("hat"),
+                             LOOKS[name].get("modest", False))
         print(f"{name}: {verts} verts, {tris} tris, {time.time() - start:.1f} s")
