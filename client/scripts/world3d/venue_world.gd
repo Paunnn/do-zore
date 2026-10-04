@@ -21,6 +21,8 @@ const WAITER_THRESHOLDS = [1, 4, 8]
 const BAND_LINEUPS = People.BAND_LINEUPS
 const LOOKS_PER_KIND = 8
 const VESSEL_SCALE = 1.35
+## How far apart two people's middles keep when one walks past the other (per unit of their scale).
+const BODY_GAP = 0.42
 ## Each guest's own glass, per menu item (the bottle or dish stands in the middle of the table).
 const VESSEL_FOR = {"domaca_kafa": "cup", "kisela_voda": "water", "pivo": "mug", "sljivovica": "shot",
 	"lozovaca": "shot", "vinjak": "shot", "crno_vino": "wine", "viski": "tumbler", "sampanjac": "flute",
@@ -696,6 +698,7 @@ func _process(delta: float) -> void:
 		var target: float = light_energy[i] * flicker * (1.0 - 0.8 * darkness)
 		lights[i].light_energy = lerpf(lights[i].light_energy, target, clampf(delta * 4.0, 0.0, 1.0))
 	_run_waiters()
+	_keep_apart(delta)
 	_update_shadows()
 	if not band.is_empty() and band[0].current == "play":
 		note_timer -= delta
@@ -704,6 +707,34 @@ func _process(delta: float) -> void:
 			var musician = band[rng.randi() % band.size()]
 			var song: Dictionary = DataCatalog.get_item("songs", str(GameState.simulation.current_song))
 			note.emit(musician.global_position + Vector3(0, 1.7, 0), str(song.get("genre", "")))
+
+## Walkers step round anyone in their way instead of through them: closer than a body's width they
+## ease apart, each keeping to their own right (so two meeting head-on pass side by side), never onto
+## a table or a wall indoors (outside, the pavement is open). People sitting at the tables stay put;
+## the paths already go round them.
+func _keep_apart(delta: float) -> void:
+	for a in people:
+		if not is_instance_valid(a) or a.path.is_empty() or a.seat_state != "":
+			continue
+		var ahead: Vector3 = a.path[0] - a.position
+		ahead.y = 0.0
+		ahead = ahead.normalized()
+		var right: Vector3 = Vector3(-ahead.z, 0.0, ahead.x)
+		var push: Vector3 = Vector3.ZERO
+		for b in people:
+			if b == a or not is_instance_valid(b) or not b.visible or b.seat_state == "seated":
+				continue
+			var apart: Vector3 = a.position - b.position
+			apart.y = 0.0
+			var gap: float = apart.length()
+			var reach: float = BODY_GAP * (a.scale.x + b.scale.x) / 2.0
+			if gap < reach and gap > 0.001:
+				push += (apart / gap + right * 0.7) * (reach - gap)
+		if push != Vector3.ZERO:
+			var to: Vector3 = a.position + push * minf(1.0, delta * 6.0)
+			var cell: Vector2i = Vector2i(floori(to.x), floori(to.z))
+			if not astar.is_in_boundsv(cell) or not astar.is_point_solid(cell):
+				a.position = to
 
 func _run_waiters() -> void:
 	for waiter in waiters:
