@@ -98,7 +98,6 @@ func _ready() -> void:
 	EventBus.save_conflict.connect(func(server): _enqueue("conflict", server))
 	EventBus.leaderboard_ready.connect(_on_board)
 	EventBus.notice.connect(_notice)
-	EventBus.audio_requested.connect(_silent_audio_hook)
 	get_viewport().size_changed.connect(_safe_area)
 	get_tree().auto_accept_quit = false
 	_open_tab("floor")
@@ -1212,10 +1211,6 @@ func _notice(key: String, args: Dictionary) -> void:
 	toast.text = _t(key, args)
 	toast_panel.visible = true
 	toast_seconds = 4.0
-
-func _silent_audio_hook(_cue: String) -> void:
-	# Replace with pooled AudioStreamPlayers. No recordings ship in this slice.
-	pass
 
 func _rebuild() -> void:
 	var tab: String = active_tab

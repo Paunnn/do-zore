@@ -2,7 +2,8 @@
 
 The balance tools are standard-library Python and read the canonical `/data` directory without
 editing it or the contracts. The art tools in `tools/art` write the client's generated art and
-need Pillow and NumPy. Run everything from the repository root with Python 3.10+.
+need Pillow and NumPy; `tools/audio` writes its music and sounds; `tools/ios` builds the iPhone
+app on a Mac. Run everything from the repository root with Python 3.10+.
 
 ## Build the Godot bundle
 
@@ -93,6 +94,26 @@ python tools/art/build_key_art.py   # key art / boot splash and app icon (SVG; s
 After running a script, run the Godot import step (`run_checks.py` does it) so new files get
 their `.import` settings. Tiling textures use VRAM compression with mipmaps: after the first
 import set `compress/mode=2` and `mipmaps/generate=true` in their `.import` files.
+
+## Music and sounds
+
+```sh
+python tools/audio/kafana_music.py   # every song, the between-songs tunes and the sounds, as OGG
+```
+
+Original tunes synthesised from scratch (no samples or recordings), so there is nothing to
+license. Needs NumPy, SciPy and ffmpeg with libvorbis. It writes `client/assets/audio/songs/<song
+id>.ogg` for every song in `data/songs.json`, `between_<venue>.ogg` and `sfx/*.ogg`. Import them
+afterwards as with the art (`run_checks.py` does it).
+
+## iPhone app
+
+```sh
+tools/ios/make_ios_app.sh   # on a Mac with Xcode: export the Xcode project and open it
+```
+
+See the iPhone section of `client/README.md`. It downloads Godot 4.5.1 and its iOS template
+into `~/.do-zore` once and writes `export/ios` (ignored by Git).
 
 ## Tests
 

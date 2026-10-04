@@ -412,6 +412,8 @@ func _apply_camera() -> void:
 	camera.position = target + camera.transform.basis.z * 200.0
 	camera.v_offset = -shift
 	moon.directional_shadow_max_distance = clampf(view_width * 3.5, 60.0, 260.0)
+	# Out over the whole town the band sounds further away.
+	KafanaAudio.on_map = view_width >= MAP_ZOOM
 	_update_overlay()
 
 func project(point: Vector3) -> Vector2:
@@ -595,6 +597,8 @@ func show_venue() -> void:
 # --------------------------------------------------------------------------------------------
 
 func _on_payout(world_point: Vector3, amount: int, angry: bool) -> void:
+	if amount > 0:
+		EventBus.audio_requested.emit("payout")
 	var start: Vector2 = project(world_point)
 	var label: Label = Label.new()
 	label.text = DataCatalog.text("floor_left_angry") if angry and amount <= 0 else "+" + DataCatalog.text("money_amount", {"amount": UIKit.amount(amount, DataCatalog.locale)})

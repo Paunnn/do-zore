@@ -21,6 +21,7 @@ Economy="*res://scripts/autoload/economy.gd"
 GameState="*res://scripts/autoload/game_state.gd"
 SaveSystem="*res://scripts/autoload/save_system.gd"
 ApiClient="*res://scripts/autoload/api_client.gd"
+KafanaAudio="*res://scripts/autoload/kafana_audio.gd"
 
 [display]
 window/size/viewport_width=1080

@@ -4,7 +4,7 @@ Godot 4.x / GDScript offline vertical slice. The design viewport is 1080 × 1920
 portrait; the UI uses expanding containers, scroll views and safe-area padding.
 Serbian Latin (`sr`) is the default language, with an English (`en`) catalog.
 The main screen is a lit 3D night city that doubles as the map, with the venue being played
-as a roofless cut-away full of guests (see **Art**); audio hooks are still silent.
+as a roofless cut-away full of guests (see **Art**), with kafana music and sounds (see **Audio**).
 
 ## Run
 
@@ -40,7 +40,7 @@ The vertical slice intentionally does not make real network requests.
   next venue shows its price; tap a venue to see it in **Lokali**. Buying it plays a short
   opening and flies the camera across the city to the new place.
 - Random events offer choices with costs and consequences. Settings controls language,
-  sound/music hooks and a confirmed progress reset. The leaderboard, offline-earnings dialog
+  sound, music and a confirmed progress reset. The leaderboard, offline-earnings dialog
   and cloud-conflict dialog use mock data in this slice.
 
 ## Art
@@ -164,11 +164,30 @@ headers (no threads). From the repository root:
 godot --headless --path client --export-release "Web" export/web/index.html
 ```
 
-**Install as an app.** iOS apps can only be built and signed on a Mac with Xcode. The **iOS** preset
-exports an Xcode project (`application/export_project_only`): on a Mac, install Godot 4.5.1 and its
-export templates, open `client/project.godot`, Project → Export → iOS → Export Project, open the
-`.xcodeproj` in Xcode, choose your Apple ID team under Signing & Capabilities, plug in the iPhone and
-press Run (a free Apple ID works for your own phone; the app then needs re-installing every 7 days).
+**Install as an app (Mac).** iOS apps can only be built and signed on a Mac with Xcode. From the
+repository root run `tools/ios/make_ios_app.sh`: it downloads Godot 4.5.1 and the iOS export template
+into `~/.do-zore` once, exports the **iOS** preset (`application/export_project_only`) to
+`export/ios/DoZore.xcodeproj` and opens it in Xcode. There, choose your Apple ID team under the
+DoZore target's Signing & Capabilities, plug in the iPhone, pick it at the top and press Run. The
+first time, enable Developer Mode on the iPhone (Settings → Privacy & Security) and trust the
+developer under Settings → General → VPN & Device Management. With a free Apple ID the app runs for
+7 days, then run it from Xcode again. `TEAM_ID` and `BUNDLE_ID` override the detected team and the
+default `rs.dozore.client` identifier; the committed preset keeps both blank/default.
+
+## Audio
+
+`scripts/autoload/kafana_audio.gd` (autoload `KafanaAudio`) plays the music and sounds. While a song
+is on, the band's track (`assets/audio/songs/<song id>.ogg`) plays; between songs a quieter
+venue tune (`between_<venue>.ogg`) loops, and the music drops further when the camera is out on
+the city map. Two players crossfade between tracks. `EventBus.audio_requested` cues map to the
+short sounds in `assets/audio/sfx` (glasses, pouring, coins, a breaking glass, event stings, the
+opening fanfare). The music and sound settings switch each part off.
+
+All of it is original and synthesised by `tools/audio/kafana_music.py` (Python with numpy and
+scipy, ffmpeg for OGG): accordion, tamburica, guitar, bass, violin, tapan and darbuka in the four
+song styles: starogradske waltzes in 3/4, izvorna kolo in 2/4, tamburica in 2/4 and narodnjaci
+in 7/8. Each track is rendered twice and the second pass kept, so the reverb tail wraps and the
+loop is seamless. Re-run it from the repository root to regenerate the files.
 
 ## Android export
 
@@ -229,8 +248,8 @@ The read-only Python progression simulator and its assumptions are documented in
 ## TODO / explicit stubs
 
 - Add a kitchen/cook for the kuhinja upgrade and characters for the inspection and VIP events.
-- Attach licensed music and sound to the silent hooks; settings already expose
-  the intended controls.
+- Replace or extend the generated music and sound (`tools/audio/kafana_music.py`) with recorded
+  performances if wanted.
 - Add real HTTP/auth/cloud integration after the offline slice. Mock behavior
   does not establish compatibility with a deployed backend.
 - Complete server-owned balance rules for glass breaking, happy-guest extra stay
