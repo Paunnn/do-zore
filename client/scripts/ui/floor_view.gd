@@ -398,12 +398,14 @@ func metre() -> float:
 func _apply_camera() -> void:
 	if camera == null:
 		return
+	view_width = clampf(view_width, CLOSE, FAR)
 	var bounds_low: float = -95.0
 	var bounds_high: float = 235.0
 	var t: float = clampf(City.along(target), bounds_low, bounds_high)
-	var u: float = clampf(City.across(target), -80.0, 80.0)
+	# Sideways the town is ~190 m wide: zoomed out, the view keeps it in the middle.
+	var side: float = clampf(130.0 - view_width * 0.5, 40.0, 80.0)
+	var u: float = clampf(City.across(target), -side, side)
 	target = Vector3(-1, 0, -1).normalized() * t + Vector3(1, 0, -1).normalized() * u
-	view_width = clampf(view_width, CLOSE, FAR)
 	camera.size = view_width
 	var tilt: float = clampf((view_width - CLOSE) / (TILT_FROM - CLOSE), 0.0, 1.0)
 	camera.rotation_degrees = Vector3(lerpf(CLOSE_PITCH, PITCH, tilt * tilt * (3.0 - 2.0 * tilt)), YAW, 0)

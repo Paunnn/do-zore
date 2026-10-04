@@ -34,7 +34,7 @@ trial numbers. JSON additionally contains purchases and per-venue cash flows.
 Unreached venues are explicitly reported. Timing ranges and medians include only
 the seeds that reached the venue.
 
-The seeded discrete model follows the client's guest, ingredient, bill, mood,
+The seeded discrete model follows the client's guest, ingredient, pay-per-round, mood,
 song, tip, random-event, fight, upgrade and offline formulas. The player policy
 automatically serves affordable orders and chooses music with the greatest
 aggregate mood improvement. These are idealized inputs, not measured user play.

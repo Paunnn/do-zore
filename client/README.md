@@ -22,13 +22,21 @@ The vertical slice intentionally does not make real network requests.
 ## Play
 
 - Guests come on foot down the street, walk in and sit down while townspeople stroll the
-  pavements outside; a thought cloud shows what they ordered. Tap the
-  cloud or the table to serve it (a ring fills while it is prepared) and tap the table again for
-  details. A small cloud with a coloured note is the genre they want.
-- Tap the stage or the red **Pesma** button to play a known song: the band plays, notes rise and
-  happy tables get up to dance. Leaving guests pay; the coins fly to the money counter.
-- Matching music improves table mood and eventual bakšiš. Mismatches and long waits reduce
+  pavements outside; a thought cloud shows what they ordered. A waiter takes it by himself after
+  a few seconds (sooner with **Konobar** levels); tap the cloud or the table to serve it at once
+  (a ring fills while it is prepared) and tap the table again for details. Each round is paid
+  when the waiter sets it down ("+ din" over the table) and a party adds its bakšiš when it
+  leaves. A visit lasts about one and a half to three minutes with three to five rounds. A small
+  cloud with a coloured note is the genre they want.
+- Tap the stage or the red **Pesma** button to play a known song (about a minute): the band
+  plays, notes rise and happy tables get up to dance.
+- Matching music improves table mood and the bakšiš. Mismatches and long waits reduce
   mood. Nearby unhappy groups can trigger a fight.
+- The kafana keeps working while the app is closed: after a minute or more away, a dialog shows
+  what it earned (about a third of the active rate, up to the venue's cap of 2 to 8 hours).
+- Pacing, measured by playing the real simulation with a bot that plays requested songs and buys
+  upgrades: the kafana opens after about 12 minutes, the restoran after 35–45 and the splav after
+  about two hours of play.
 - The HUD floats over the city in one row: the venue on its red ribbon, money, the room's mood
   and guests, and settings; under it a slim strip shows the road to the next venue (tap it for
   **Lokali**). **Bend**, **Piće** and **Rang** sit on the right; **Mapa**, **Pesma** and
@@ -67,7 +75,7 @@ clouds, coins and notes over their 3D anchors.
 - `scripts/world3d/venue_world.gd` turns simulation state into people and props: parties walk
   in from the street along an A* grid (a party in single file; everyone steers round everyone
   else, see `People.steer_crowd`), pull out their chairs and sit
-  down, order, drink, get up to dance and leave paying; waiters walk out from the bar with the
+  down, order, drink, get up to dance and leave; waiters walk out from the bar with the
   tray level on the flat of the left hand (the glasses stand up on it), set the order down on the
   table with the right hand and walk back with the empty tray; the band plays; konobar,
   ozvučenje, dekor, izbacivač and sef levels show. The chairs are one MultiMesh per room so
@@ -181,7 +189,11 @@ is on, the band's track (`assets/audio/songs/<song id>.ogg`) plays; between song
 venue tune (`between_<venue>.ogg`) loops, and the music drops further when the camera is out on
 the city map. Two players crossfade between tracks. `EventBus.audio_requested` cues map to the
 short sounds in `assets/audio/sfx` (glasses, pouring, coins, a breaking glass, event stings, the
-opening fanfare). The music and sound settings switch each part off.
+opening fanfare). The music and sound settings switch each part off. On iOS the audio session
+is **Playback** mixed with other apps (`audio/general/ios/session_category`), so the music
+plays with the ring/silent switch on, and a track stopped by a call or the background is picked
+up again. In a browser, Safari starts web audio only from a tap: the web page resumes the
+game's audio context on taps until it runs.
 
 All of it is original and synthesised by `tools/audio/kafana_music.py` (Python with numpy and
 scipy, ffmpeg for OGG): accordion, tamburica, guitar, bass, violin, tapan and darbuka in the four

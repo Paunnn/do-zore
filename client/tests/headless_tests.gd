@@ -98,8 +98,10 @@ func _test_simulation(initial: Dictionary) -> void:
 	check(sim.serve_table(0), "serve pending order")
 	check(int(save.money) == money_before - int(menu_item.cost) * int(table.party_size), "ingredients charged exactly once")
 	check(not sim.serve_table(0), "double tap cannot double charge service")
+	var money_served: int = int(save.money)
 	sim.tick(float(menu_item.prep_seconds) + float(rules.tick_seconds))
-	check(int(table.orders_served) == 1 and int(table.bill) > 0, "prepared order adds bill")
+	check(int(table.orders_served) == 1 and int(table.bill) > 0, "prepared order adds to the table's rounds")
+	check(int(save.money) == money_served + int(table.bill) and int(table.last_paid) == int(table.bill), "a round is paid when it is delivered")
 	var matching: Dictionary = {}
 	var mismatching: Dictionary = {}
 	for song: Dictionary in sim.known_songs():
@@ -126,13 +128,23 @@ func _test_simulation(initial: Dictionary) -> void:
 	check(sim.play_song(str(mismatching.id)), "different known song plays")
 	check(float(table.mood) < mood_before, "mismatching music reduces mood")
 	check(not sim.play_song("missing_song"), "unknown songs cannot be played")
-	var bill: int = int(table.bill)
 	var expected_tip: int = int(floor(sim.tip_for(table)))
 	var before_departure: int = int(save.money)
 	sim.depart(0)
-	check(int(save.money) == before_departure + bill + expected_tip and int(save.total_baksis) == tips + expected_tip, "departure pays bill and mood-based baksis exactly once")
+	check(int(save.money) == before_departure + expected_tip and int(save.total_baksis) == tips + expected_tip, "departure adds the mood-based baksis exactly once")
 	sim.depart(0)
-	check(int(save.money) == before_departure + bill + expected_tip, "empty table cannot pay twice")
+	check(int(save.money) == before_departure + expected_tip, "empty table cannot pay twice")
+	# Waiters serve a waiting order by themselves after a moment.
+	check(sim.spawn_guest(str(guest.id), 1), "second guest sits")
+	var waiting_table: Dictionary = sim.tables[1]
+	check(str(waiting_table.order_status) == "waiting", "second guest waits for service")
+	sim.tick(sim.auto_serve_seconds() + 2.0 * float(rules.tick_seconds))
+	check(str(waiting_table.order_status) in ["preparing", "served"], "a waiter takes a waiting order without a tap")
+	# Thrown out without paying, a table takes back its last round.
+	waiting_table.last_paid = 300
+	var before_walkout: int = int(save.money)
+	sim.depart(1, false, false)
+	check(int(save.money) == maxi(0, before_walkout - 300) and str(sim.tables[1].guest_type).is_empty(), "leaving without paying takes back the last round")
 	sim.spawn_guest(str(guest.id), 0)
 	table = sim.tables[0]
 	sim.spawn_guest(str(guest.id), 1)

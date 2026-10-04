@@ -402,9 +402,10 @@ func _seat(slot: Dictionary, guest, instant: bool = false) -> void:
 
 func _depart(slot: Dictionary, previous: Dictionary, simulation) -> void:
 	var angry: bool = float(previous.get("mood", 50)) <= float(DataCatalog.data.economy.mood.leave_at_or_below) + 2.0
-	var amount: int = int(previous.get("bill", 0))
+	# The rounds were paid as they came; leaving, the party adds its tip.
+	var amount: int = 0
 	if not angry:
-		amount += int(floor(simulation.tip_for(previous)))
+		amount = int(floor(simulation.tip_for(previous)))
 	if simulation.closed_remaining <= 0.0 and (amount > 0 or angry):
 		payout.emit(to_global(slot.floor + Vector3(0, 1.0, 0)), amount, angry)
 	if angry:
@@ -549,7 +550,7 @@ func _update_slot(slot: Dictionary, table: Dictionary, simulation) -> void:
 	if status == "preparing":
 		slot.prep_total = maxf(float(slot.prep_total), float(table.get("prep_remaining", 0.0)))
 	if status == "served" and slot.status == "preparing":
-		jobs.append({"slot": slot, "item": str(table.get("order_item", ""))})
+		jobs.append({"slot": slot, "item": str(table.get("order_item", "")), "paid": int(table.get("last_paid", 0))})
 	elif status == "served" and slot.status == "" and slot.drink == null:
 		_place_drink(slot, str(table.get("order_item", "")))
 	if status != "preparing":
@@ -784,19 +785,22 @@ func _run_waiters() -> void:
 		var points: PackedVector3Array = _path(waiter.position, target)
 		# The last step goes in to the table's corner, between two chairs, within reach of it.
 		points.append(Vector3(slot.center.x + 0.9, 0, slot.center.y + 0.9))
-		waiter.arrived.connect(_delivered.bind(waiter, slot, str(job.item)), CONNECT_ONE_SHOT)
+		waiter.arrived.connect(_delivered.bind(waiter, slot, str(job.item), int(job.get("paid", 0))), CONNECT_ONE_SHOT)
 		waiter.play("carry")
 		waiter.walk(points)
 
-func _delivered(waiter, slot: Dictionary, item: String) -> void:
+func _delivered(waiter, slot: Dictionary, item: String, paid: int = 0) -> void:
 	waiter.face(Vector3(slot.center.x, 0, slot.center.y) - waiter.position)
 	waiter.play("carry_idle")
 	var back: Tween = waiter.create_tween()
-	# The order goes on the table as the hand comes down to it, then back to the bar.
+	# The order goes on the table as the hand comes down to it and the table pays for the round;
+	# then back to the bar.
 	back.tween_interval(0.45)
 	back.tween_callback(func():
 		if not slot.guests.is_empty():
 			_place_drink(slot, item)
+			if paid > 0:
+				payout.emit(to_global(slot.floor + Vector3(0, 1.0, 0)), paid, false)
 		waiter.hold("tray_empty"))
 	back.tween_interval(0.5)
 	back.tween_callback(func():

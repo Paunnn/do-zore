@@ -345,7 +345,7 @@
         "additionalProperties": false
       },
       "tips": {
-        "description": "Bakšiš per table = bill * guest.tip_rate * mood_curve(table mood) * band.tip_multiplier * tip_rate upgrades * (1 + preferred_drink_bonus if served its preferred drink).",
+        "description": "Bakšiš per table, paid when it leaves = the rounds it paid (see service) * guest.tip_rate * mood_curve(table mood) * band.tip_multiplier * tip_rate upgrades * (1 + preferred_drink_bonus if served its preferred drink).",
         "type": "object",
         "properties": {
           "mood_curve": {
@@ -432,6 +432,21 @@
         "required": [
           "min_away_seconds",
           "max_cap_hours"
+        ],
+        "additionalProperties": false
+      },
+      "service": {
+        "description": "How orders are served and paid. A waiting order is taken by a waiter without a tap after auto_serve_seconds / service_speed upgrades, if its ingredients are affordable; a tap on the table serves it at once. Each round is paid when it is delivered: drink.price * party_size * guest.spending_power * venue.price_multiplier * menu_price upgrades * income modifiers. The tip is paid when the party leaves: the rounds paid * guest.tip_rate * tips.mood_curve(mood) * band.tip_multiplier * tip_rate upgrades (* 1 + preferred_drink_bonus). Guests who leave without paying (an event effect with pay=false, a closed venue) take back their last round. Optional: clients use auto_serve_seconds = 3 when it is absent.",
+        "type": "object",
+        "properties": {
+          "auto_serve_seconds": {
+            "description": "Seconds a waiting order waits before a waiter takes it by himself.",
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "auto_serve_seconds"
         ],
         "additionalProperties": false
       }
@@ -623,7 +638,7 @@
             "additionalProperties": false
           },
           {
-            "description": "Venue closed: no arrivals, no orders, seated guests leave without paying.",
+            "description": "Venue closed: no arrivals, no orders, seated guests leave without a tip and take back their last round.",
             "type": "object",
             "properties": {
               "type": {
@@ -641,13 +656,14 @@
             "additionalProperties": false
           },
           {
-            "description": "Unhappy tables leave immediately; paid tables pay what they owe only if pay is true.",
+            "description": "Unhappy tables leave immediately, without a tip; with pay false they also take back their last round.",
             "type": "object",
             "properties": {
               "type": {
                 "const": "remove_unhappy_guests"
               },
               "pay": {
+                "description": "false: the removed guests leave without paying and take back their last round (rounds are paid on delivery; see economy.service).",
                 "type": "boolean"
               }
             },
@@ -964,7 +980,7 @@
             "$ref": "common.schema.json#/$defs/Multiplier"
           },
           "tip_rate": {
-            "description": "Bakšiš as a fraction of the bill at neutral table mood (see economy.tips.mood_curve).",
+            "description": "Bakšiš as a fraction of the rounds paid at neutral table mood (see economy.tips.mood_curve).",
             "type": "number",
             "minimum": 0,
             "maximum": 2
@@ -989,7 +1005,7 @@
             "additionalProperties": false
           },
           "stay_seconds": {
-            "description": "How long a satisfied table stays before paying and leaving.",
+            "description": "How long a satisfied table stays before tipping and leaving.",
             "type": "integer",
             "minimum": 1
           },

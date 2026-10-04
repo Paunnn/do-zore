@@ -275,7 +275,7 @@ class Simulation:
         guest = self.lookup["guest_types"][guest_id]
         table = {"guest": guest_id, "size": self.rng.randint(guest["party_size"]["min"], guest["party_size"]["max"]),
                  "mood": self.mood_rules["table_start"], "stay": float(guest["stay_seconds"]),
-                 "served": 0, "bill": 0, "preferred": False, "prep": 0.0, "next_order": 0.0,
+                 "served": 0, "bill": 0, "last_paid": 0, "preferred": False, "prep": 0.0, "next_order": 0.0,
                  "denied": False}
         self.tables[self.tables.index(None)] = table
         self.request_song(table)
@@ -285,16 +285,18 @@ class Simulation:
         table = self.tables[index]
         if table is None:
             return
-        if pay:
-            self.save["money"] += table["bill"]
-            if with_tip:
-                guest = self.lookup["guest_types"][table["guest"]]
-                tip = table["bill"] * guest["tip_rate"] * self.band["tip_multiplier"] * self.s("tip_rate")
-                tip *= curve(self.data["economy"]["tips"]["mood_curve"], table["mood"])
-                if table["preferred"]:
-                    tip *= 1 + self.data["economy"]["tips"]["preferred_drink_bonus"]
-                self.save["money"] += math.floor(tip)
-                self.save["total_baksis"] += math.floor(tip)
+        # Rounds are paid on delivery; a leaving party adds its tip, and one leaving without paying
+        # walks out on its last round.
+        if not pay:
+            self.save["money"] = max(0, self.save["money"] - table["last_paid"])
+        elif with_tip:
+            guest = self.lookup["guest_types"][table["guest"]]
+            tip = table["bill"] * guest["tip_rate"] * self.band["tip_multiplier"] * self.s("tip_rate")
+            tip *= curve(self.data["economy"]["tips"]["mood_curve"], table["mood"])
+            if table["preferred"]:
+                tip *= 1 + self.data["economy"]["tips"]["preferred_drink_bonus"]
+            self.save["money"] += math.floor(tip)
+            self.save["total_baksis"] += math.floor(tip)
         self.tables[index] = None
 
     def automated_player(self) -> None:
@@ -324,7 +326,10 @@ class Simulation:
         drink = self.lookup["drinks"][table["drink"]]
         revenue = drink["price"] * table["size"] * guest["spending_power"]
         revenue *= self.venue["price_multiplier"] * self.s("menu_price") * self.s("income")
-        table["bill"] += math.floor(revenue + 0.5)
+        paid = math.floor(revenue + 0.5)
+        table["bill"] += paid
+        table["last_paid"] = paid
+        self.save["money"] += paid
         table["served"] += 1
         table.update(status="served", next_order=guest["stay_seconds"] / guest["orders_per_visit"])
         if drink["id"] == guest["preferred_drink"]:
@@ -434,9 +439,9 @@ class Simulation:
                 if kind in ("money_gain", "money_loss"):
                     cash += amount(self.data, self.save, effect["amount"]) * (1 if kind == "money_gain" else -1)
                 elif kind == "close_venue":
-                    cash -= rate * effect["duration_seconds"] / 60 + sum(t["bill"] for t in self.tables if t)
+                    cash -= rate * effect["duration_seconds"] / 60 + sum(t["last_paid"] for t in self.tables if t)
                 elif kind == "remove_unhappy_guests" and not effect["pay"]:
-                    cash -= sum(t["bill"] for t in self.tables if t and t["mood"] < self.mood_rules["unhappy_below"])
+                    cash -= sum(t["last_paid"] for t in self.tables if t and t["mood"] < self.mood_rules["unhappy_below"])
                 elif kind == "stat_multiplier" and effect["stat"] in ("income", "arrival_rate"):
                     cash += rate * (effect["value"] - 1) * effect["duration_seconds"] / 60
             value += cash * outcome["weight"] / total
@@ -581,7 +586,7 @@ class Simulation:
             row["net_per_online_minute"] = row["online_net"] * 60 / row["online_seconds"] if row["online_seconds"] else 0.0
         return {"final_venue": self.save["venue"], "final_money": self.save["money"], "final_band": self.save["band_level"],
                 "upgrades": self.save["upgrades"], "total_baksis": self.save["total_baksis"],
-                "metrics": self.metrics.__dict__, "uncollected_bills": sum(t["bill"] for t in self.tables if t)}
+                "metrics": self.metrics.__dict__, "open_tabs": sum(t["bill"] for t in self.tables if t)}
 
 
 def build_report(data: dict, options: Options, seeds: list[int]) -> dict:
@@ -634,13 +639,13 @@ def build_report(data: dict, options: Options, seeds: list[int]) -> dict:
         gaps.append("No canonical happy_stay_multiplier: high mood does not extend visits until data defines it.")
     return {"model": "seeded_discrete_client_slice", "options": options.__dict__, "seeds": seeds,
             "assumptions": ["No network, ads, purchases, live events, or data writes.",
-                            "Guests, ingredient cash flow, delayed bills, mood, requests, song durations, random events and nearby fights are simulated.",
+                            "Guests, ingredient cash flow, rounds paid on delivery with tips on departure, mood, requests, song durations, random events and nearby fights are simulated.",
                             "A scripted player serves affordable orders every timestep and picks maximum aggregate requested mood gain.",
                             "Python RNG differs from Godot RNG; identical seeds reproduce this simulator, not Godot's exact guest sequence.",
                             "One contiguous active session per day; offline income is credited on the next login, including a final login at the horizon.",
                             "ROI uses a separate perfect-service stationary heuristic, checks once per minute, and does not value genre unlocks or buy paid songs.",
                             "Expected-cash event choices use monetary effects/closures only; mood and future guest spawn value are not valued by that policy.",
-                            "Observed net cash excludes investment spend; in-progress ingredient outlays are included and unpaid bills reported separately.",
+                            "Observed net cash excludes investment spend; in-progress ingredient outlays are included.",
                             "Milestone medians/min/max include only runs reaching that venue; unreached runs are explicitly counted (right-censored).",
                             "Compare smaller --step-seconds and more --seeds before acting on proposed tuning; suggestions are hypotheses, not calibrated prescriptions."],
             "scenarios": scenarios, "stationary_diagnostics": stationary, "data_gaps": gaps, "suggestions": recommendations}

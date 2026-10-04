@@ -31,7 +31,7 @@ public sealed class ConfigTests(ApiFixture api)
         var loader = api.Factory.Services.GetRequiredService<GameDataLoader>();
         var paths = api.Factory.Services.GetRequiredService<AppPaths>();
         Assert.Equal(loader.LoadDirectory(paths.Data).Hash, hash);
-        Assert.Equal(250, body.GetProperty("data").GetProperty("venues")[0].GetProperty("offline_income_per_minute").GetInt32());
+        Assert.Equal(700, body.GetProperty("data").GetProperty("venues")[0].GetProperty("offline_income_per_minute").GetInt32());
     }
 
     [Fact]

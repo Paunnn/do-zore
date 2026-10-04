@@ -33,7 +33,7 @@
           "$ref": "common.schema.json#/$defs/Multiplier"
         },
         "tip_rate": {
-          "description": "Bakšiš as a fraction of the bill at neutral table mood (see economy.tips.mood_curve).",
+          "description": "Bakšiš as a fraction of the rounds paid at neutral table mood (see economy.tips.mood_curve).",
           "type": "number",
           "minimum": 0,
           "maximum": 2
@@ -49,7 +49,7 @@
           "additionalProperties": false
         },
         "stay_seconds": {
-          "description": "How long a satisfied table stays before paying and leaving.",
+          "description": "How long a satisfied table stays before tipping and leaving.",
           "type": "integer",
           "minimum": 1
         },

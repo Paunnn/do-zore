@@ -41,7 +41,10 @@
     "fight_chance_min_multiplier": 0.1
   },
   "offline": {
-    "min_away_seconds": 300,
+    "min_away_seconds": 60,
     "max_cap_hours": 24
+  },
+  "service": {
+    "auto_serve_seconds": 3
   }
 }
