@@ -1,5 +1,5 @@
 {
-  "version_hash": "0c521311a7e12fbc52cdbe1fcc82673cf3add8691ad6b9826755b86481d660f0",
+  "version_hash": "d4fd2cd2330120b610c78cc85a476876b280729c7db7d96ee7b542bfdc72beb7",
   "data": {
     "band_levels": [
       {
@@ -61,7 +61,7 @@
           "en": "Five tamburica players who know every song."
         },
         "members": 5,
-        "unlock_cost": 120000,
+        "unlock_cost": 1200000,
         "required_venue": "kafana",
         "genres": [
           "izvorna",
@@ -86,7 +86,7 @@
           "en": "The orchestra plus the star of the night, with her own hits."
         },
         "members": 6,
-        "unlock_cost": 600000,
+        "unlock_cost": 15000000,
         "required_venue": "restoran",
         "genres": [
           "izvorna",
@@ -111,7 +111,7 @@
         "category": "kafa",
         "price": 150,
         "cost": 40,
-        "prep_seconds": 20,
+        "prep_seconds": 8,
         "unlock_venue": "birtija"
       },
       {
@@ -124,7 +124,7 @@
         "category": "bezalkoholno",
         "price": 120,
         "cost": 30,
-        "prep_seconds": 3,
+        "prep_seconds": 2,
         "unlock_venue": "birtija"
       },
       {
@@ -137,7 +137,7 @@
         "category": "pivo",
         "price": 250,
         "cost": 90,
-        "prep_seconds": 5,
+        "prep_seconds": 3,
         "unlock_venue": "birtija"
       },
       {
@@ -150,7 +150,7 @@
         "category": "rakija",
         "price": 200,
         "cost": 60,
-        "prep_seconds": 5,
+        "prep_seconds": 3,
         "unlock_venue": "birtija"
       },
       {
@@ -163,7 +163,7 @@
         "category": "rakija",
         "price": 220,
         "cost": 70,
-        "prep_seconds": 5,
+        "prep_seconds": 3,
         "unlock_venue": "birtija"
       },
       {
@@ -176,7 +176,7 @@
         "category": "meze",
         "price": 600,
         "cost": 250,
-        "prep_seconds": 60,
+        "prep_seconds": 15,
         "unlock_venue": "kafana"
       },
       {
@@ -189,7 +189,7 @@
         "category": "vino",
         "price": 350,
         "cost": 120,
-        "prep_seconds": 5,
+        "prep_seconds": 3,
         "unlock_venue": "kafana"
       },
       {
@@ -202,7 +202,7 @@
         "category": "zestina",
         "price": 300,
         "cost": 100,
-        "prep_seconds": 5,
+        "prep_seconds": 3,
         "unlock_venue": "kafana"
       },
       {
@@ -215,7 +215,7 @@
         "category": "glavno_jelo",
         "price": 1400,
         "cost": 600,
-        "prep_seconds": 120,
+        "prep_seconds": 25,
         "unlock_venue": "restoran"
       },
       {
@@ -228,7 +228,7 @@
         "category": "zestina",
         "price": 900,
         "cost": 350,
-        "prep_seconds": 5,
+        "prep_seconds": 3,
         "unlock_venue": "kafana"
       },
       {
@@ -241,7 +241,7 @@
         "category": "glavno_jelo",
         "price": 1100,
         "cost": 450,
-        "prep_seconds": 90,
+        "prep_seconds": 20,
         "unlock_venue": "splav"
       },
       {
@@ -254,7 +254,7 @@
         "category": "vino",
         "price": 6000,
         "cost": 2500,
-        "prep_seconds": 10,
+        "prep_seconds": 6,
         "unlock_venue": "splav"
       }
     ],
@@ -318,8 +318,11 @@
         "fight_chance_min_multiplier": 0.1
       },
       "offline": {
-        "min_away_seconds": 300,
+        "min_away_seconds": 60,
         "max_cap_hours": 24
+      },
+      "service": {
+        "auto_serve_seconds": 3
       }
     },
     "events": [
@@ -1024,16 +1027,16 @@
         },
         "preferred_genre": "starogradske",
         "preferred_drink": "domaca_kafa",
-        "patience_seconds": 240,
+        "patience_seconds": 60,
         "spending_power": 0.7,
         "tip_rate": 0.05,
         "party_size": {
           "min": 1,
           "max": 3
         },
-        "stay_seconds": 300,
-        "orders_per_visit": 2,
-        "song_request_interval_seconds": 90,
+        "stay_seconds": 120,
+        "orders_per_visit": 3,
+        "song_request_interval_seconds": 45,
         "mood_sensitivity": 0.8
       },
       {
@@ -1048,16 +1051,16 @@
         },
         "preferred_genre": "narodnjaci",
         "preferred_drink": "pivo",
-        "patience_seconds": 90,
+        "patience_seconds": 30,
         "spending_power": 0.5,
         "tip_rate": 0.03,
         "party_size": {
           "min": 3,
           "max": 6
         },
-        "stay_seconds": 240,
-        "orders_per_visit": 3,
-        "song_request_interval_seconds": 45,
+        "stay_seconds": 90,
+        "orders_per_visit": 4,
+        "song_request_interval_seconds": 25,
         "mood_sensitivity": 1.2
       },
       {
@@ -1072,16 +1075,16 @@
         },
         "preferred_genre": "starogradske",
         "preferred_drink": "lozovaca",
-        "patience_seconds": 180,
+        "patience_seconds": 45,
         "spending_power": 1.0,
         "tip_rate": 0.12,
         "party_size": {
           "min": 3,
           "max": 8
         },
-        "stay_seconds": 360,
+        "stay_seconds": 140,
         "orders_per_visit": 3,
-        "song_request_interval_seconds": 120,
+        "song_request_interval_seconds": 60,
         "mood_sensitivity": 1.5
       },
       {
@@ -1096,16 +1099,16 @@
         },
         "preferred_genre": "izvorna",
         "preferred_drink": "sljivovica",
-        "patience_seconds": 120,
+        "patience_seconds": 40,
         "spending_power": 1.5,
         "tip_rate": 0.15,
         "party_size": {
           "min": 6,
           "max": 12
         },
-        "stay_seconds": 480,
-        "orders_per_visit": 4,
-        "song_request_interval_seconds": 40,
+        "stay_seconds": 180,
+        "orders_per_visit": 5,
+        "song_request_interval_seconds": 20,
         "mood_sensitivity": 1.1
       },
       {
@@ -1120,16 +1123,16 @@
         },
         "preferred_genre": "tamburica",
         "preferred_drink": "viski",
-        "patience_seconds": 60,
+        "patience_seconds": 25,
         "spending_power": 2.5,
         "tip_rate": 0.2,
         "party_size": {
           "min": 1,
           "max": 4
         },
-        "stay_seconds": 200,
-        "orders_per_visit": 2,
-        "song_request_interval_seconds": 60,
+        "stay_seconds": 80,
+        "orders_per_visit": 3,
+        "song_request_interval_seconds": 30,
         "mood_sensitivity": 1.3
       }
     ],
@@ -1142,7 +1145,7 @@
         "genre": "starogradske",
         "min_band_level": "solo_harmonikas",
         "unlock_cost": 0,
-        "duration_seconds": 200,
+        "duration_seconds": 60,
         "mood_power": 1.0,
         "is_hit": false
       },
@@ -1154,7 +1157,7 @@
         "genre": "starogradske",
         "min_band_level": "solo_harmonikas",
         "unlock_cost": 2000,
-        "duration_seconds": 220,
+        "duration_seconds": 65,
         "mood_power": 1.1,
         "is_hit": false
       },
@@ -1166,7 +1169,7 @@
         "genre": "starogradske",
         "min_band_level": "solo_harmonikas",
         "unlock_cost": 6000,
-        "duration_seconds": 190,
+        "duration_seconds": 60,
         "mood_power": 1.15,
         "is_hit": false
       },
@@ -1178,7 +1181,7 @@
         "genre": "starogradske",
         "min_band_level": "trio",
         "unlock_cost": 20000,
-        "duration_seconds": 230,
+        "duration_seconds": 70,
         "mood_power": 1.3,
         "is_hit": false
       },
@@ -1190,7 +1193,7 @@
         "genre": "izvorna",
         "min_band_level": "solo_harmonikas",
         "unlock_cost": 0,
-        "duration_seconds": 180,
+        "duration_seconds": 55,
         "mood_power": 1.0,
         "is_hit": false
       },
@@ -1202,7 +1205,7 @@
         "genre": "izvorna",
         "min_band_level": "solo_harmonikas",
         "unlock_cost": 1500,
-        "duration_seconds": 150,
+        "duration_seconds": 50,
         "mood_power": 1.05,
         "is_hit": false
       },
@@ -1214,7 +1217,7 @@
         "genre": "izvorna",
         "min_band_level": "trio",
         "unlock_cost": 8000,
-        "duration_seconds": 160,
+        "duration_seconds": 50,
         "mood_power": 1.15,
         "is_hit": false
       },
@@ -1226,7 +1229,7 @@
         "genre": "izvorna",
         "min_band_level": "trio",
         "unlock_cost": 25000,
-        "duration_seconds": 170,
+        "duration_seconds": 55,
         "mood_power": 1.3,
         "is_hit": false
       },
@@ -1238,7 +1241,7 @@
         "genre": "narodnjaci",
         "min_band_level": "trio",
         "unlock_cost": 5000,
-        "duration_seconds": 210,
+        "duration_seconds": 65,
         "mood_power": 1.0,
         "is_hit": false
       },
@@ -1250,7 +1253,7 @@
         "genre": "narodnjaci",
         "min_band_level": "trio",
         "unlock_cost": 12000,
-        "duration_seconds": 220,
+        "duration_seconds": 65,
         "mood_power": 1.1,
         "is_hit": false
       },
@@ -1262,7 +1265,7 @@
         "genre": "narodnjaci",
         "min_band_level": "trio",
         "unlock_cost": 30000,
-        "duration_seconds": 240,
+        "duration_seconds": 70,
         "mood_power": 1.25,
         "is_hit": false
       },
@@ -1273,8 +1276,8 @@
         },
         "genre": "narodnjaci",
         "min_band_level": "tamburaski_orkestar",
-        "unlock_cost": 90000,
-        "duration_seconds": 230,
+        "unlock_cost": 350000,
+        "duration_seconds": 70,
         "mood_power": 1.35,
         "is_hit": false
       },
@@ -1286,7 +1289,7 @@
         "genre": "tamburica",
         "min_band_level": "tamburaski_orkestar",
         "unlock_cost": 0,
-        "duration_seconds": 180,
+        "duration_seconds": 55,
         "mood_power": 1.1,
         "is_hit": false
       },
@@ -1297,8 +1300,8 @@
         },
         "genre": "tamburica",
         "min_band_level": "tamburaski_orkestar",
-        "unlock_cost": 40000,
-        "duration_seconds": 160,
+        "unlock_cost": 150000,
+        "duration_seconds": 50,
         "mood_power": 1.2,
         "is_hit": false
       },
@@ -1309,8 +1312,8 @@
         },
         "genre": "tamburica",
         "min_band_level": "tamburaski_orkestar",
-        "unlock_cost": 80000,
-        "duration_seconds": 200,
+        "unlock_cost": 300000,
+        "duration_seconds": 60,
         "mood_power": 1.3,
         "is_hit": false
       },
@@ -1321,8 +1324,8 @@
         },
         "genre": "tamburica",
         "min_band_level": "tamburaski_orkestar",
-        "unlock_cost": 150000,
-        "duration_seconds": 210,
+        "unlock_cost": 600000,
+        "duration_seconds": 65,
         "mood_power": 1.4,
         "is_hit": false
       },
@@ -1333,8 +1336,8 @@
         },
         "genre": "narodnjaci",
         "min_band_level": "pevacica",
-        "unlock_cost": 400000,
-        "duration_seconds": 240,
+        "unlock_cost": 4000000,
+        "duration_seconds": 75,
         "mood_power": 1.6,
         "is_hit": true
       },
@@ -1345,8 +1348,8 @@
         },
         "genre": "narodnjaci",
         "min_band_level": "pevacica",
-        "unlock_cost": 900000,
-        "duration_seconds": 250,
+        "unlock_cost": 9000000,
+        "duration_seconds": 75,
         "mood_power": 1.7,
         "is_hit": true
       },
@@ -1357,8 +1360,8 @@
         },
         "genre": "starogradske",
         "min_band_level": "pevacica",
-        "unlock_cost": 1500000,
-        "duration_seconds": 260,
+        "unlock_cost": 15000000,
+        "duration_seconds": 80,
         "mood_power": 1.8,
         "is_hit": true
       },
@@ -1369,8 +1372,8 @@
         },
         "genre": "tamburica",
         "min_band_level": "pevacica",
-        "unlock_cost": 2500000,
-        "duration_seconds": 250,
+        "unlock_cost": 25000000,
+        "duration_seconds": 75,
         "mood_power": 1.9,
         "is_hit": true
       }
@@ -1555,7 +1558,7 @@
         "category": "kuhinja",
         "unlock_venue": "kafana",
         "max_level": 10,
-        "base_cost": 8000,
+        "base_cost": 60000,
         "cost_growth": 1.5,
         "effects": [
           {
@@ -1583,7 +1586,7 @@
         "category": "osoblje",
         "unlock_venue": "kafana",
         "max_level": 5,
-        "base_cost": 20000,
+        "base_cost": 150000,
         "cost_growth": 1.8,
         "effects": [
           {
@@ -1606,7 +1609,7 @@
         "category": "prostor",
         "unlock_venue": "kafana",
         "max_level": 5,
-        "base_cost": 30000,
+        "base_cost": 250000,
         "cost_growth": 1.7,
         "effects": [
           {
@@ -1634,7 +1637,7 @@
         "category": "osoblje",
         "unlock_venue": "restoran",
         "max_level": 10,
-        "base_cost": 150000,
+        "base_cost": 3000000,
         "cost_growth": 1.6,
         "effects": [
           {
@@ -1660,9 +1663,9 @@
         "unlock_cost": 0,
         "base_tables": 3,
         "max_tables": 6,
-        "arrivals_per_minute": 1.0,
+        "arrivals_per_minute": 2.5,
         "price_multiplier": 1.0,
-        "offline_income_per_minute": 250,
+        "offline_income_per_minute": 700,
         "offline_cap_hours": 2,
         "guest_mix": {
           "penzioner": 50,
@@ -1681,12 +1684,12 @@
           "sr": "Prava kafana, sa stolnjacima i stalnim gostima.",
           "en": "A proper kafana, with tablecloths and regulars."
         },
-        "unlock_cost": 50000,
+        "unlock_cost": 10000,
         "base_tables": 6,
         "max_tables": 14,
-        "arrivals_per_minute": 2.0,
+        "arrivals_per_minute": 3.5,
         "price_multiplier": 1.5,
-        "offline_income_per_minute": 1100,
+        "offline_income_per_minute": 15000,
         "offline_cap_hours": 4,
         "guest_mix": {
           "penzioner": 25,
@@ -1707,12 +1710,12 @@
           "sr": "Bela tehnika, beli stolnjaci, bele košulje konobara.",
           "en": "White tablecloths, white shirts on the waiters."
         },
-        "unlock_cost": 750000,
+        "unlock_cost": 3000000,
         "base_tables": 10,
         "max_tables": 22,
-        "arrivals_per_minute": 3.0,
+        "arrivals_per_minute": 5.5,
         "price_multiplier": 2.5,
-        "offline_income_per_minute": 7000,
+        "offline_income_per_minute": 75000,
         "offline_cap_hours": 6,
         "guest_mix": {
           "penzioner": 15,
@@ -1733,12 +1736,12 @@
           "sr": "Splav na reci. Ovde se ide do zore.",
           "en": "A club on the river. Here the night lasts till dawn."
         },
-        "unlock_cost": 10000000,
+        "unlock_cost": 100000000,
         "base_tables": 14,
         "max_tables": 30,
-        "arrivals_per_minute": 4.0,
+        "arrivals_per_minute": 8.0,
         "price_multiplier": 4.0,
-        "offline_income_per_minute": 40000,
+        "offline_income_per_minute": 190000,
         "offline_cap_hours": 8,
         "guest_mix": {
           "penzioner": 5,

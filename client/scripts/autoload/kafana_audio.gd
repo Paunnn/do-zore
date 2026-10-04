@@ -69,10 +69,14 @@ func _process(delta: float) -> void:
 		var player: AudioStreamPlayer = players[active]
 		var stream: AudioStream = _stream(path) if not path.is_empty() else null
 		player.stop()
+		player.stream = stream
 		if stream != null:
-			player.stream = stream
 			player.volume_db = -40.0
 			player.play()
+	# A phone call or the app going to the background can stop the output; pick the track up again.
+	var current: AudioStreamPlayer = players[active]
+	if not track.is_empty() and current.stream != null and not current.playing:
+		current.play()
 	var step: float = delta / FADE * 40.0
 	for i in range(players.size()):
 		var player: AudioStreamPlayer = players[i]

@@ -85,7 +85,7 @@
           "additionalProperties": false
         },
         {
-          "description": "Venue closed: no arrivals, no orders, seated guests leave without paying.",
+          "description": "Venue closed: no arrivals, no orders, seated guests leave without a tip and take back their last round.",
           "type": "object",
           "properties": {
             "type": { "const": "close_venue" },
@@ -95,11 +95,11 @@
           "additionalProperties": false
         },
         {
-          "description": "Unhappy tables leave immediately; paid tables pay what they owe only if pay is true.",
+          "description": "Unhappy tables leave immediately, without a tip; with pay false they also take back their last round.",
           "type": "object",
           "properties": {
             "type": { "const": "remove_unhappy_guests" },
-            "pay": { "type": "boolean" }
+            "pay": { "description": "false: the removed guests leave without paying and take back their last round (rounds are paid on delivery; see economy.service).", "type": "boolean" }
           },
           "required": ["type", "pay"],
           "additionalProperties": false

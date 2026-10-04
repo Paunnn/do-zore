@@ -44,3 +44,5 @@ pointing/emulate_touch_from_mouse=true
 
 [audio]
 driver/enable_input=false
+general/ios/session_category=3
+general/ios/mix_with_others=true

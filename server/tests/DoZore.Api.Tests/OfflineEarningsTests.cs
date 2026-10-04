@@ -5,8 +5,8 @@ using DoZore.Api.Tests.Infrastructure;
 namespace DoZore.Api.Tests;
 
 /// <summary>
-/// Expected numbers come from /data: birtija pays 250/min offline with a 2 h cap, the solo
-/// harmonikaš has tip multiplier 1.0 and no upkeep, min away time is 300 s.
+/// Expected numbers come from /data: birtija pays 700/min offline with a 2 h cap, the solo
+/// harmonikaš has tip multiplier 1.0 and no upkeep, min away time is 60 s.
 /// </summary>
 [Collection(ApiCollection.Name)]
 public sealed class OfflineEarningsTests(ApiFixture api)
@@ -45,8 +45,8 @@ public sealed class OfflineEarningsTests(ApiFixture api)
 
         var result = await (await ClaimAsync(player, Plenty, leftAt)).ExpectAsync(HttpStatusCode.OK, "OfflineClaimResult");
 
-        Assert.Equal(250 * 120, result.GetProperty("computed_amount").GetInt64());
-        Assert.Equal(250 * 120, result.GetProperty("granted_amount").GetInt64());
+        Assert.Equal(700 * 120, result.GetProperty("computed_amount").GetInt64());
+        Assert.Equal(700 * 120, result.GetProperty("granted_amount").GetInt64());
         Assert.Equal(Plenty, result.GetProperty("claimed_amount").GetInt64());
         Assert.Equal(3 * 3600, result.GetProperty("away_seconds").GetInt64());
         Assert.Equal(2 * 3600, result.GetProperty("counted_seconds").GetInt64());
@@ -63,7 +63,7 @@ public sealed class OfflineEarningsTests(ApiFixture api)
         await AwayAsync(player, TimeSpan.FromHours(1));
 
         var result = await (await ClaimAsync(player, 1000, leftAt)).ExpectAsync(HttpStatusCode.OK, "OfflineClaimResult");
-        Assert.Equal(250 * 60, result.GetProperty("computed_amount").GetInt64());
+        Assert.Equal(700 * 60, result.GetProperty("computed_amount").GetInt64());
         Assert.Equal(1000, result.GetProperty("granted_amount").GetInt64());
         Assert.False(result.GetProperty("capped").GetBoolean());
     }
@@ -89,7 +89,7 @@ public sealed class OfflineEarningsTests(ApiFixture api)
         // Claims to have left a week ago: still only the hour since the server last saw it.
         var result = await (await ClaimAsync(player, Plenty, Now.AddDays(-7))).ExpectAsync(HttpStatusCode.OK, "OfflineClaimResult");
         Assert.Equal(3600, result.GetProperty("away_seconds").GetInt64());
-        Assert.Equal(250 * 60, result.GetProperty("granted_amount").GetInt64());
+        Assert.Equal(700 * 60, result.GetProperty("granted_amount").GetInt64());
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public sealed class OfflineEarningsTests(ApiFixture api)
         // Played offline until 20 minutes ago.
         var result = await (await ClaimAsync(player, Plenty, Now.AddMinutes(-20))).ExpectAsync(HttpStatusCode.OK, "OfflineClaimResult");
         Assert.Equal(20 * 60, result.GetProperty("away_seconds").GetInt64());
-        Assert.Equal(250 * 20, result.GetProperty("granted_amount").GetInt64());
+        Assert.Equal(700 * 20, result.GetProperty("granted_amount").GetInt64());
 
         // A last_seen in the future just means "not away".
         await AwayAsync(player, TimeSpan.FromHours(1));
@@ -114,11 +114,11 @@ public sealed class OfflineEarningsTests(ApiFixture api)
     {
         var player = await PlayerWithSaveAsync();
         var leftAt = Now;
-        api.Time.Advance(TimeSpan.FromSeconds(299));
+        api.Time.Advance(TimeSpan.FromSeconds(59));
 
         var result = await (await ClaimAsync(player, Plenty, leftAt)).ExpectAsync(HttpStatusCode.OK, "OfflineClaimResult");
         Assert.Equal(0, result.GetProperty("computed_amount").GetInt64());
-        Assert.Equal(299, result.GetProperty("away_seconds").GetInt64());
+        Assert.Equal(59, result.GetProperty("away_seconds").GetInt64());
     }
 
     [Fact]
@@ -130,7 +130,7 @@ public sealed class OfflineEarningsTests(ApiFixture api)
         await AwayAsync(player, TimeSpan.FromHours(5));
 
         var result = await (await ClaimAsync(player, Plenty, leftAt)).ExpectAsync(HttpStatusCode.OK, "OfflineClaimResult");
-        var ratePerMinute = 250 * 1.06 * 1.1 - 3000 / 60.0;
+        var ratePerMinute = 700 * 1.06 * 1.1 - 3000 / 60.0;
         Assert.Equal(4.0, result.GetProperty("cap_hours").GetDouble());
         Assert.Equal((long)Math.Floor(ratePerMinute * 240), result.GetProperty("granted_amount").GetInt64());
     }
@@ -146,7 +146,7 @@ public sealed class OfflineEarningsTests(ApiFixture api)
         await (await player.Client.PutJsonAsync("/v1/save", new { base_version = 1, save = TestApi.Save(lastSeen: leftAt) }))
             .ExpectAsync(HttpStatusCode.OK);
         var result = await (await ClaimAsync(player, Plenty, leftAt, saveVersion: 2)).ExpectAsync(HttpStatusCode.OK, "OfflineClaimResult");
-        Assert.Equal(250 * 120, result.GetProperty("granted_amount").GetInt64());
+        Assert.Equal(700 * 120, result.GetProperty("granted_amount").GetInt64());
     }
 
     [Fact]
@@ -172,7 +172,7 @@ public sealed class OfflineEarningsTests(ApiFixture api)
         var result = await (await ClaimAsync(player, Plenty, leftAt)).ExpectAsync(HttpStatusCode.OK, "OfflineClaimResult");
 
         // 30 min at 2x + 30 min at 1x; tip_rate doesn't affect offline income.
-        Assert.Equal(250 * (30 * 2 + 30), result.GetProperty("granted_amount").GetInt64());
+        Assert.Equal(700 * (30 * 2 + 30), result.GetProperty("granted_amount").GetInt64());
         Assert.Equal(new[] { eventId }, result.GetProperty("live_event_ids").EnumerateArray().Select(e => e.GetString()!));
     }
 

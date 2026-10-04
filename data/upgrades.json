@@ -88,7 +88,7 @@
       "category": "kuhinja",
       "unlock_venue": "kafana",
       "max_level": 10,
-      "base_cost": 8000,
+      "base_cost": 60000,
       "cost_growth": 1.5,
       "effects": [
         { "stat": "patience", "op": "multiply", "per_level": 1.06 },
@@ -102,7 +102,7 @@
       "category": "osoblje",
       "unlock_venue": "kafana",
       "max_level": 5,
-      "base_cost": 20000,
+      "base_cost": 150000,
       "cost_growth": 1.8,
       "effects": [ { "stat": "fight_chance", "op": "multiply", "per_level": 0.8 } ]
     },
@@ -113,7 +113,7 @@
       "category": "prostor",
       "unlock_venue": "kafana",
       "max_level": 5,
-      "base_cost": 30000,
+      "base_cost": 250000,
       "cost_growth": 1.7,
       "effects": [
         { "stat": "table_count", "op": "add", "per_level": 2 },
@@ -127,7 +127,7 @@
       "category": "osoblje",
       "unlock_venue": "restoran",
       "max_level": 10,
-      "base_cost": 150000,
+      "base_cost": 3000000,
       "cost_growth": 1.6,
       "effects": [ { "stat": "offline_income", "op": "multiply", "per_level": 1.1 } ]
     }

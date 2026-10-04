@@ -3,6 +3,16 @@
 Every change to `openapi.yaml` or `schemas/` is logged here, newest first.
 Format: date, version, what changed, why, and whether it is breaking for the client.
 
+## 2026-10-04 — v1.1.0 (service and pay-per-round)
+
+**Breaking:** no (an optional `economy.service` object and description changes; no API shape changed)
+
+- `economy.schema.json`: new optional `service` object with `auto_serve_seconds`. Waiters take a waiting order by themselves after `auto_serve_seconds / service_speed`; a tap still serves at once. Each round is now paid when it is delivered, and the tip when the party leaves (computed from the rounds paid). Guests who leave without paying take back their last round.
+- `events.schema.json`, `guest-types.schema.json`, `economy.tips`: descriptions updated for pay-per-round (no field changed).
+- `/data` (balance, not contract): shorter visits (80–180 s), more rounds per visit, shorter prep and songs, more arrivals, offline income at about 35% of active income and a 60 s minimum absence, and re-priced venues, bands, late upgrades and songs. Tuned with the client simulation so the kafana opens after ~12 min of play, the restoran after ~35–45 min and the splav after ~2 h.
+
+**Why:** players had to tap every order and were paid only when a table left, 3–8 minutes later; money rarely moved, offline income was 3–12% of active play and the first venue took ~3 h.
+
 ## 2026-09-30 — v1.0.1 (offline-claim clarification)
 
 **Breaking:** no (description-only; no request/response shape changed)

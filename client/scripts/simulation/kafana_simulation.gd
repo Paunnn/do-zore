@@ -93,7 +93,7 @@ func menu() -> Array:
 	return result
 
 func empty_table(index: int) -> Dictionary:
-	return {"index": index, "guest_type": "", "party_size": 0, "mood": float(data.economy.mood.neutral), "request_genre": "", "request_song": "", "order_item": "", "order_status": "", "prep_remaining": 0.0, "stay_remaining": 0.0, "dancing": false, "orders_served": 0, "bill": 0, "waiting_seconds": 0.0, "request_remaining": 0.0, "next_order_remaining": 0.0, "preferred_served": false, "glass_bonus_remaining": 0.0}
+	return {"index": index, "guest_type": "", "party_size": 0, "mood": float(data.economy.mood.neutral), "request_genre": "", "request_song": "", "order_item": "", "order_status": "", "prep_remaining": 0.0, "stay_remaining": 0.0, "dancing": false, "orders_served": 0, "bill": 0, "waiting_seconds": 0.0, "request_remaining": 0.0, "next_order_remaining": 0.0, "preferred_served": false, "glass_bonus_remaining": 0.0, "last_paid": 0}
 
 func refresh_tables() -> void:
 	var count: int = Math.table_count(data, save)
@@ -189,7 +189,11 @@ func complete_service(table: Dictionary) -> void:
 	revenue *= float(venue().price_multiplier) * stat("menu_price") * stat("income") * live_stat("income", str(table.guest_type))
 	if float(table.glass_bonus_remaining) > 0.0 and data.economy.has("glasses"):
 		revenue *= 1.0 + float(data.economy.glasses.income_bonus_fraction)
-	table.bill = int(table.bill) + int(round(revenue))
+	# Each round is paid as it reaches the table; the tip comes when the party leaves.
+	var paid: int = int(round(revenue))
+	table.bill = int(table.bill) + paid
+	table.last_paid = paid
+	grant(paid)
 	table.order_status = "served"
 	table.orders_served = int(table.orders_served) + 1
 	table.next_order_remaining = float(guest.stay_seconds) / int(guest.orders_per_visit)
@@ -249,14 +253,16 @@ func tip_for(table: Dictionary) -> float:
 		tip *= 1.0 + float(data.economy.tips.preferred_drink_bonus)
 	return tip
 
+## The rounds are paid on delivery, so a leaving party only adds its tip. Guests who leave
+## without paying (thrown out, a closed venue) walk out on their last round as well.
 func depart(index: int, pay: bool = true, with_tip: bool = true) -> void:
 	var table: Dictionary = tables[index]
 	if str(table.guest_type).is_empty():
 		return
-	if pay:
-		grant(int(table.bill))
-		if with_tip:
-			grant(int(floor(tip_for(table))), true)
+	if pay and with_tip:
+		grant(int(floor(tip_for(table))), true)
+	elif not pay:
+		lose(int(table.get("last_paid", 0)))
 	if int(table.orders_served) > 0:
 		increment("guests_served", int(table.party_size))
 	tables[index] = empty_table(index)
@@ -307,7 +313,9 @@ func step_once(delta: float) -> void:
 			table.waiting_seconds = float(table.waiting_seconds) + delta
 			if float(table.waiting_seconds) > float(guest.patience_seconds) * stat("patience"):
 				change_mood(table, -float(data.economy.mood.waiting_penalty_per_minute) * delta / 60.0)
-		if str(table.order_status) == "waiting" and stat("service_speed") > 1.0:
+		# A waiter takes a waiting order by himself after a moment (sooner with better staff);
+		# a tap on the table serves it at once.
+		if str(table.order_status) == "waiting" and float(table.waiting_seconds) >= auto_serve_seconds():
 			# Avoid repeated insufficient-money notices from automatic service.
 			var ingredient_cost: int = int(item("drinks", str(table.order_item)).cost) * int(table.party_size)
 			if int(save.money) >= ingredient_cost:
@@ -345,6 +353,9 @@ func step_once(delta: float) -> void:
 	if event_roll_remaining <= 0.0:
 		roll_event()
 		event_roll_remaining = float(data.economy.events.roll_interval_seconds)
+
+func auto_serve_seconds() -> float:
+	return float(data.economy.get("service", {}).get("auto_serve_seconds", 3.0)) / stat("service_speed")
 
 func change_mood(table: Dictionary, delta: float) -> void:
 	var guest: Dictionary = item("guest_types", str(table.guest_type))
