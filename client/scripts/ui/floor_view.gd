@@ -243,6 +243,7 @@ func _ensure_world() -> void:
 	city.build(venue, _venue_states(), max_tables)
 	world.position = city.lots[venue].origin
 	world.build(venue, int(max_tables.get(venue, 6)))
+	world.outside = city.walkers
 	var path: Dictionary = city.approach(venue)
 	world.approach = {"point": path.point - world.position, "dir": path.dir}
 	_build_pins()

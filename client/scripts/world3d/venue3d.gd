@@ -103,7 +103,7 @@ static func layout(venue_id: String, max_tables: int) -> Dictionary:
 		"street": Vector3(door_x + 0.5, 0, d + (8.4 if venue_id == "splav" else 1.3)),
 		"bartender": Vector3((bar_from + bar_to) / 2.0, 0, 0.55),
 		# Beside the door on the pavement; on the splav, on the deck beside the gangway's gap.
-		"bouncer": Vector3(door_x + 1.9, 0, d - 0.35) if venue_id == "splav" else Vector3(door_x + 2.0, 0, d + 1.0),
+		"bouncer": Vector3(door_x + 1.9, 0, d - 0.35) if venue_id == "splav" else Vector3(door_x + 2.0, 0, d + 0.62),
 		"waiter_home": Vector3(bar_to - 1.5, 0, 2.8),
 		"musicians": musicians,
 		# (In the birtija the stove stands in the corner by the first table row; its barrel goes past it.)

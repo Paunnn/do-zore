@@ -175,6 +175,10 @@ var play_amount: float = 0.0
 ## Walking: how far into a walk (eases in), and this person's own pace.
 var gait: float = 0.0
 var pace: float = 1.0
+## Set each frame by steer_crowd: a sideways nudge to the walking direction (parent space) to go
+## round someone, and how much to slow down behind someone.
+var avoid: Vector3 = Vector3.ZERO
+var brake_for: float = 1.0
 
 # ---------------------------------------------------------------------------------------------
 # Looks
@@ -1320,6 +1324,8 @@ func _carry_pose() -> void:
 				tip = f
 		var h: Vector3 = skeleton.get_bone_global_pose(hd).origin
 		_aim_bone(hd, skeleton.get_bone_global_pose(tip).origin - h, sk.basis.inverse() * (ahead - right * 0.25))
+	# The fingers open flat under the tray.
+	_curl("Left", Vector3.UP, 0.1, 0.15)
 	var palm: Vector3 = sk * skeleton.get_bone_global_pose(hd).origin + (ahead - right * 0.25).normalized() * 0.05 * s
 	tray.global_transform = Transform3D(Basis(Vector3.UP, atan2(ahead.x, ahead.z)).scaled(Vector3.ONE * s), palm + Vector3.UP * 0.03 * s)
 	if current == "carry_idle":
@@ -1343,24 +1349,36 @@ func _play() -> void:
 	match str(look.instrument):
 		"guitar", "tamburica":
 			var g: Transform3D = _on_bone("UpperChest", instrument.transform)
-			# The chord hand moves between three places on the neck, a chord a beat; the other
-			# strums across the strings over the sound hole.
+			var big: bool = look.instrument == "guitar"
+			# The chord hand moves between three places on the neck, a chord a beat, wrapped round
+			# it from below with the fingers over the fretboard; the other strums across the strings
+			# over the sound hole, the forearm on the edge of the body.
 			var chords: Array = [0.36, 0.44, 0.5]
 			var step: float = t * 1.0
 			var from: float = chords[int(step) % 3]
 			var to: float = chords[(int(step) + 1) % 3]
 			var fret: float = lerpf(from, to, smoothstep(0.75, 1.0, fmod(step, 1.0)) * p)
-			var strum: float = sin(t * TAU * 2.0) * 0.045 * p
-			_reach(g * Vector3(-0.035, fret, -0.025), (-right * 0.5 - Vector3.UP - ahead * 0.3).normalized(), 1.0, "Left")
-			_reach(g * Vector3(0.06 + strum, 0.05 + strum * 0.4, 0.075), (right * 0.7 - Vector3.UP * 0.5 - ahead * 0.5).normalized(), 1.0, "Right")
+			var half: float = 0.0225 if big else 0.016
+			var press: float = 0.08 * sin(PI * smoothstep(0.0, 0.3, fmod(step, 1.0)))
+			_grip("Left", g * Vector3(half + 0.012, fret, -0.004), g.basis * Vector3(0, 0.12, 1.0), g.basis * Vector3(-1.0, 0, 0.35),
+				(-right * 0.5 - Vector3.UP - ahead * 0.3).normalized(), 1.0 + press, 0.5)
+			# (The forearm comes over the edge of the body, so the elbow stays out past it.)
+			var swing: float = sin(t * TAU * 2.0) * p
+			_grip("Right", g * Vector3(0.045 * swing, 0.11 - 0.02 * swing, 0.1 + 0.01 * absf(swing)), g.basis * Vector3(0.8, -0.5 - 0.3 * swing, -0.2), g.basis * Vector3(0, 0.25, -1.0),
+				(g.basis * Vector3(-0.8, 0.3, 0.6)).normalized(), 0.55, 0.6)
 		"bass":
+			# The left hand round the neck from the player's side, the fingers over the fingerboard;
+			# the right reaches round the front and plucks.
 			var berda: Transform3D = model.global_transform * instrument.transform
-			var pluck: float = sin(t * TAU * 1.0) * 0.04 * p
-			_reach(berda * Vector3(-0.035, 0.98 + 0.05 * sin(t * 0.9) * p, -0.02), (-right * 0.4 - Vector3.UP - ahead * 0.2).normalized(), 1.0, "Left")
-			_reach(berda * Vector3(-0.07 + pluck, 0.6, 0.08), (right * 0.8 - Vector3.UP * 0.4 - ahead * 0.4).normalized(), 1.0, "Right")
+			var pluck: float = sin(t * TAU * 1.0) * p
+			var slide: float = 0.05 * sin(t * 0.9) * p
+			_grip("Left", berda * Vector3(0.042, 0.98 + slide, 0.03), berda.basis * Vector3(0, 0.1, 1.0), berda.basis * Vector3(-1.0, 0, 0.3),
+				(-right * 0.4 - Vector3.UP - ahead * 0.2).normalized(), 1.0, 0.6)
+			_grip("Right", berda * Vector3(-0.03 + 0.025 * pluck, 0.62, 0.115), berda.basis * Vector3(0.55, -0.8, 0.1), berda.basis * Vector3(0, 0, -1.0),
+				(berda.basis * Vector3(-1.0, -0.2, 0.7)).normalized(), 0.6 + 0.3 * maxf(0.0, pluck), 0.3)
 		"accordion":
 			# The bellows breathe in and out (two seconds a breath), the bass half going with the
-			# left hand; the right hand runs up and down the keys.
+			# left hand under its strap; the right hand's fingers run up and down the keys.
 			var squeeze: float = 0.5 + 0.5 * sin(t * TAU * 0.5)
 			var open: float = lerpf(0.3, lerpf(0.15, 0.6, squeeze), p)
 			var bellows: Node3D = instrument.get_meta("bellows")
@@ -1369,13 +1387,20 @@ func _play() -> void:
 			left.position = Vector3(0.23 * (1.0 + open), 0, 0)
 			var a: Transform3D = _on_bone("UpperChest", instrument.transform)
 			var keys: float = (0.04 * sin(t * 3.1) + 0.03 * sin(t * 7.3)) * p
-			_reach(a * Vector3(-0.15, -0.02 + keys, -0.07), (right * 0.8 - Vector3.UP * 0.6 - ahead * 0.2).normalized(), 1.0, "Right")
-			_reach(a * Vector3(0.23 * (1.0 + open) + 0.13, -0.05, -0.1), (-right * 0.8 - Vector3.UP * 0.6 - ahead * 0.2).normalized(), 1.0, "Left")
+			var tap: float = 0.25 * absf(sin(t * 9.0)) * p
+			_grip("Right", a * Vector3(-0.128, -0.1 + keys, -0.07), a.basis * Vector3(0, -0.35, 1.0), a.basis * Vector3(1.0, 0, 0),
+				(right * 0.8 - Vector3.UP * 0.6 - ahead * 0.2).normalized(), 0.6 + tap, 0.5)
+			var lx: float = 0.23 * (1.0 + open)
+			_grip("Left", a * Vector3(lx + 0.128, -0.06, -0.075), a.basis * Vector3(0, 0.3, 1.0), a.basis * Vector3(-1.0, 0, 0),
+				(-right * 0.8 - Vector3.UP * 0.6 - ahead * 0.2).normalized(), 0.65, 0.3)
 		"violin":
 			var holder: Node3D = instrument.get_parent()
 			var v: Transform3D = _on_bone("UpperChest", holder.transform * instrument.transform)
-			_reach(v * Vector3(-0.025, 0.3 + 0.006 * sin(t * 30.0) * p, -0.025), (-right * 0.3 - Vector3.UP - ahead * 0.1).normalized(), 1.0, "Left")
-			# The bow: long strokes across the strings near the bridge, from the right hand.
+			# The left hand under the neck, the fingers over the fingerboard (a quick vibrato).
+			var vibrato: float = 0.004 * sin(t * 30.0) * p
+			_grip("Left", v * Vector3(0.02, 0.28 + vibrato, 0.006), v.basis * Vector3(0, -0.1, 1.0), v.basis * Vector3(-1.0, 0, 0.4),
+				(-right * 0.3 - Vector3.UP - ahead * 0.1).normalized(), 0.95, 0.5)
+			# The bow: long strokes across the strings near the bridge, held at the frog.
 			var contact: Vector3 = v * Vector3(0, 0.1, 0.045)
 			var along: Vector3 = (v.basis * Vector3(1, -0.2, 0.35)).normalized()
 			if along.dot(right) > 0.0:
@@ -1385,19 +1410,94 @@ func _play() -> void:
 			var normal: Vector3 = (v.basis.z - along * v.basis.z.dot(along)).normalized()
 			var bow: Node3D = instrument.get_meta("bow")
 			bow.global_transform = Transform3D(Basis(along, normal, along.cross(normal)), frog)
-			_reach(frog - along * 0.02, (right * 0.7 - Vector3.UP * 0.6 - ahead * 0.3).normalized(), 1.0, "Right")
+			var over: Vector3 = along.cross(normal)
+			if over.dot(ahead) < 0.0:
+				over = -over
+			_grip("Right", frog - along * 0.01 + normal * 0.012, over, -normal,
+				(right * 0.7 - Vector3.UP * 0.6 - ahead * 0.3).normalized(), 0.85, 0.9)
 		"mic":
-			# The microphone at the lips; the other hand sings along.
+			# The microphone at the lips, the hand round its handle; the other hand sings along.
 			var head: Transform3D = sk * skeleton.get_bone_global_pose(bones["Head"])
 			var mouth: Vector3 = head * (measure.mouth as Vector3)
-			var grip: Vector3 = mouth + ahead * 0.11 - Vector3.UP * 0.07
-			var towards: Vector3 = (mouth - grip).normalized()
+			var at: Vector3 = mouth + ahead * 0.11 - Vector3.UP * 0.07
+			var towards: Vector3 = (mouth - at).normalized()
 			var side: Vector3 = towards.cross(Vector3.UP).normalized()
-			instrument.global_transform = Transform3D(Basis(side, towards, side.cross(towards)), grip + towards * 0.05)
-			_reach(grip, (right * 0.6 - Vector3.UP * 0.8).normalized(), 1.0, "Right")
+			instrument.global_transform = Transform3D(Basis(side, towards, side.cross(towards)), at + towards * 0.05)
+			var wrap: Vector3 = (ahead - towards * ahead.dot(towards)).normalized()
+			var facing: Vector3 = wrap.cross(towards).normalized()
+			if facing.dot(right) > 0.0:
+				facing = -facing
+			_grip("Right", at - towards * 0.015 + facing * 0.018, wrap, -facing, (right * 0.6 - Vector3.UP * 0.8).normalized(), 1.35, 1.0)
 			var chest: Vector3 = _on_bone("UpperChest", Transform3D.IDENTITY).origin
 			var wave: Vector3 = -right * (0.22 + 0.06 * sin(t * 0.7) * p) + ahead * (0.16 + 0.04 * sin(t * 1.1)) + Vector3.UP * (0.02 + 0.08 * p * (0.5 + 0.5 * sin(t * 1.3)))
-			_reach(chest + wave, (-right * 0.7 - Vector3.UP * 0.7).normalized(), 1.0, "Left")
+			_grip("Left", chest + wave, (ahead - right * 0.6 + Vector3.UP * 0.3).normalized(), (Vector3.UP * 0.7 + ahead * 0.5 + right * 0.2).normalized(),
+				(-right * 0.7 - Vector3.UP * 0.7).normalized(), 0.2 + 0.15 * sin(t * 0.8), 0.1)
+
+## A hand put on something it holds: the middle of the palm on `contact` (global), the fingers
+## along `fingers`, the palm turned to `palm` (towards what it holds), the elbow towards `pole`;
+## the fingers curled by `curl` radians a joint (open 0, a fist about 1.5) and the thumb by `thumb`.
+func _grip(side: String, contact: Vector3, fingers: Vector3, palm: Vector3, pole: Vector3, curl: float, thumb: float) -> void:
+	var sk: Transform3D = skeleton.global_transform
+	var s: float = sk.basis.get_scale().y
+	var hand_pose: Vector3 = skeleton.get_bone_global_pose(bones[side + "Hand"]).origin
+	var length: float = hand_pose.distance_to(skeleton.get_bone_global_pose(bones[side + "MiddleProximal"]).origin) * s
+	fingers = fingers.normalized()
+	palm = (palm - fingers * palm.dot(fingers)).normalized()
+	_reach(contact - fingers * length * 0.62 - palm * 0.016 * s, pole, 1.0, side)
+	_orient_hand(side, fingers, palm)
+	_curl(side, palm, curl, thumb)
+
+## Turns a hand (global directions) so its fingers point along `fingers` and its palm faces `palm`.
+func _orient_hand(side: String, fingers: Vector3, palm: Vector3) -> void:
+	var to_skeleton: Basis = skeleton.global_transform.basis.orthonormalized().inverse()
+	var hd: int = bones[side + "Hand"]
+	var at: Vector3 = skeleton.get_bone_global_pose(hd).origin
+	var f0: Vector3 = skeleton.get_bone_global_pose(bones[side + "MiddleProximal"]).origin - at
+	var across: Vector3 = skeleton.get_bone_global_pose(bones[side + "IndexProximal"]).origin - skeleton.get_bone_global_pose(bones[side + "LittleProximal"]).origin
+	var p0: Vector3 = across.cross(f0) if side == "Right" else f0.cross(across)
+	var from: Basis = _frame(f0, p0)
+	var to: Basis = _frame(to_skeleton * fingers, to_skeleton * palm)
+	var parent: int = skeleton.get_bone_parent(hd)
+	var parent_basis: Basis = skeleton.get_bone_global_pose(parent).basis.orthonormalized()
+	var turned: Basis = (to * from.inverse()) * skeleton.get_bone_global_pose(hd).basis.orthonormalized()
+	skeleton.set_bone_pose_rotation(hd, (parent_basis.inverse() * turned).get_rotation_quaternion())
+
+static func _frame(forward: Vector3, up: Vector3) -> Basis:
+	var f: Vector3 = forward.normalized()
+	var u: Vector3 = (up - f * up.dot(f)).normalized()
+	return Basis(f.cross(u), u, f)
+
+## Curls the fingers towards the palm (`palm`, global) from straight: the same bend at each joint,
+## the little finger a little more; the thumb across.
+func _curl(side: String, palm: Vector3, curl: float, thumb: float) -> void:
+	var p: Vector3 = (skeleton.global_transform.basis.orthonormalized().inverse() * palm).normalized()
+	var k: int = 0
+	for finger in ["Index", "Middle", "Ring", "Little"]:
+		var chain: Array = [bones[side + finger + "Proximal"], bones[side + finger + "Intermediate"], bones[side + finger + "Distal"]]
+		for b in chain:
+			skeleton.reset_bone_pose(b)
+		var d: Vector3 = skeleton.get_bone_global_pose(chain[1]).origin - skeleton.get_bone_global_pose(chain[0]).origin
+		var axis: Vector3 = d.cross(p).normalized()
+		var bend: float = curl * (1.0 + 0.08 * k)
+		for j in range(3):
+			_bend_bone(chain[j], axis, bend * [0.9, 1.1, 0.8][j])
+		k += 1
+	var thumb_chain: Array = [bones[side + "ThumbMetacarpal"], bones[side + "ThumbProximal"], bones[side + "ThumbDistal"]]
+	for b in thumb_chain:
+		skeleton.reset_bone_pose(b)
+	var t: Vector3 = skeleton.get_bone_global_pose(thumb_chain[1]).origin - skeleton.get_bone_global_pose(thumb_chain[0]).origin
+	var thumb_axis: Vector3 = t.cross(p).normalized()
+	_bend_bone(thumb_chain[1], thumb_axis, thumb * 0.8)
+	_bend_bone(thumb_chain[2], thumb_axis, thumb * 0.7)
+
+## Turns a bone about a skeleton-space axis.
+func _bend_bone(bone: int, axis: Vector3, angle: float) -> void:
+	if axis.length() < 0.5:
+		return
+	var parent: int = skeleton.get_bone_parent(bone)
+	var parent_basis: Basis = skeleton.get_bone_global_pose(parent).basis.orthonormalized()
+	var turned: Basis = Basis(axis, angle) * skeleton.get_bone_global_pose(bone).basis.orthonormalized()
+	skeleton.set_bone_pose_rotation(bone, (parent_basis.inverse() * turned).get_rotation_quaternion())
 
 ## At the table, hands that the clip lowers into it (resting in the lap, which is under the
 ## tablecloth) rest on the top instead, forearms on the table; hands raised to talk, cheer or wave
@@ -1494,6 +1594,85 @@ func face_now(direction: Vector3) -> void:
 	heading = target_heading
 	rotation.y = heading
 
+## Steering for a crowd (global positions): whoever is walking looks ahead and goes round anyone
+## in the way, keeping to the right when two meet head on; walking the same way behind someone,
+## they slow down and keep a step behind instead of walking into them; and anyone still too close
+## is eased apart. People sitting, the band and the bouncer stand their ground. `blocked`
+## (Callable(global position) -> bool) keeps people off tables and walls.
+const BODY = 0.25
+const LOOK_AHEAD = 1.5
+
+static func steer_crowd(crowd: Array, delta: float, blocked: Callable) -> void:
+	var count: int = crowd.size()
+	var at: Array = []
+	var dirs: Array = []
+	var radius: Array = []
+	var mobile: Array = []
+	for p in crowd:
+		var g: Vector3 = p.global_position
+		at.append(Vector2(g.x, g.z))
+		var parent: Node3D = p.get_parent() as Node3D
+		var unit: float = parent.global_transform.basis.get_scale().x if parent != null else 1.0
+		radius.append(BODY * p.scale.x * unit)
+		var d: Vector2 = Vector2.ZERO
+		if not p.path.is_empty() and parent != null:
+			var to: Vector3 = parent.global_transform.basis * (p.path[0] - p.position)
+			d = Vector2(to.x, to.z).normalized()
+		dirs.append(d)
+		mobile.append(p.seat_state in ["", "pulling", "stepping"] and str(p.look.get("instrument", "")) == "" and str(p.look.kind) != "bouncer")
+	for i in range(count):
+		var a = crowd[i]
+		var walking: bool = dirs[i] != Vector2.ZERO
+		var steer: Vector2 = Vector2.ZERO
+		var slow: float = 1.0
+		var push: Vector2 = Vector2.ZERO
+		var ahead: Vector2 = dirs[i]
+		var right: Vector2 = Vector2(-ahead.y, ahead.x)
+		for j in range(count):
+			if i == j:
+				continue
+			var rel: Vector2 = at[j] - at[i]
+			var dist: float = rel.length()
+			var reach: float = radius[i] + radius[j]
+			if dist > LOOK_AHEAD * reach * 2.0:
+				continue
+			if dist < reach and mobile[i]:
+				# Too close: eased apart (the one walking gives way to someone standing).
+				var away: Vector2 = -rel / dist if dist > 0.001 else Vector2(1, 0)
+				push += away * (reach - dist) * (1.0 if not mobile[j] or dirs[j] == Vector2.ZERO else 0.5)
+			if not walking:
+				continue
+			var forward: float = rel.dot(ahead)
+			var lateral: float = rel.dot(right)
+			if forward <= 0.0 or forward > LOOK_AHEAD * reach * 2.0 or absf(lateral) > reach * 1.15:
+				continue
+			var near: float = 1.0 - forward / (LOOK_AHEAD * reach * 2.0)
+			var same_way: bool = dirs[j].dot(ahead) > 0.6
+			if same_way and forward < reach * 2.2:
+				# Behind someone going the same way: fall in behind them.
+				slow = minf(slow, clampf((forward - reach) / (reach * 1.2), 0.15, 1.0))
+				continue
+			# In the way: veer off to the side they are not on (to the right if dead ahead).
+			var side: float = -signf(lateral) if absf(lateral) > reach * 0.15 else 1.0
+			steer += right * side * near * 1.4
+			if forward < reach * 1.3:
+				slow = minf(slow, 0.55)
+		var parent: Node3D = a.get_parent() as Node3D
+		var to_local: Basis = parent.global_transform.basis.inverse() if parent != null else Basis()
+		var s3: Vector3 = to_local * Vector3(steer.x, 0, steer.y)
+		a.avoid = Vector3(s3.x, 0, s3.z).limit_length(1.2) if walking else Vector3.ZERO
+		# Never steer into a table or a wall.
+		if a.avoid != Vector3.ZERO and blocked.is_valid():
+			var probe: Vector3 = a.global_position + (parent.global_transform.basis * (a.path[0] - a.position).normalized() + Vector3(steer.x, 0, steer.y)).normalized() * radius[i] * 2.0
+			if blocked.call(probe):
+				a.avoid = Vector3.ZERO
+		a.brake_for = slow
+		if push != Vector2.ZERO:
+			var step: Vector2 = push * minf(1.0, delta * 10.0)
+			var moved: Vector3 = a.global_position + Vector3(step.x, 0, step.y)
+			if not blocked.is_valid() or not blocked.call(moved):
+				a.global_position = moved
+
 func walk(points: PackedVector3Array) -> void:
 	path = points
 	if path.is_empty():
@@ -1530,9 +1709,12 @@ func _process(delta: float) -> void:
 		# Ease into a walk and slow down into the last step.
 		gait = minf(1.0, gait + delta / 0.35)
 		var brake: float = clampf(offset.length() / 0.5, 0.45, 1.0) if path.size() == 1 else 1.0
-		var speed: float = WALK_SPEED * speed_scale * float(look.get("pace", 1.0)) * pace * lerpf(0.35, 1.0, gait) * brake
+		var speed: float = WALK_SPEED * speed_scale * float(look.get("pace", 1.0)) * pace * lerpf(0.35, 1.0, gait) * brake * brake_for
 		var step: float = speed * delta
-		face(offset)
+		var heading_to: Vector3 = offset.normalized()
+		if avoid != Vector3.ZERO and offset.length() > 0.25:
+			heading_to = (heading_to + avoid).normalized()
+		face(heading_to)
 		if seat_state in ["pulling", "stepping"]:
 			if clip != "Walk":
 				_clip("Walk", 0.2, true)
@@ -1545,7 +1727,7 @@ func _process(delta: float) -> void:
 			if path.is_empty():
 				arrived.emit()
 		else:
-			position += offset.normalized() * step
+			position += heading_to * step
 	if not seat.is_empty():
 		_seat_step(delta)
 	_drink_step(delta)
@@ -1615,10 +1797,26 @@ func _pose() -> void:
 		"dance":
 			model.position.y = absf(sin(t * 6.0 + phase)) * 0.04
 		"play":
-			# In time with the song: a sway, a nod and a little bounce on the beat.
+			# In time with the song: the weight from foot to foot over two beats, a bounce and a
+			# nod on each beat, and the body going with the instrument (the accordion's breath, the
+			# bow's strokes); string players glance down at the chord hand now and then.
+			var p: float = play_amount
 			var beat: float = t * TAU * 1.0 + phase
-			_turn("Spine", Vector3(0.03 * absf(sin(beat)), 0.06 * sin(beat * 0.5), 0.025 * sin(beat * 0.5)) * play_amount)
-			model.position.y = absf(sin(beat)) * 0.012 * play_amount
+			var on: float = pow(absf(sin(beat)), 3.0)
+			var lean: Vector3 = Vector3(0.03 * on, 0.06 * sin(beat * 0.5), 0.03 * sin(beat * 0.5))
+			match str(look.instrument):
+				"accordion":
+					lean += Vector3(0.04, 0.0, 0.06 * sin(t * TAU * 0.5))
+				"violin":
+					lean += Vector3(0.0, 0.08 * sin(t * TAU * 0.6), 0.04 * sin(t * TAU * 0.6))
+				"mic":
+					lean += Vector3(-0.02, 0.05 * sin(beat * 0.25), 0.04 * sin(beat * 0.25))
+			_turn("Spine", lean * p)
+			_turn("Chest", Vector3(0.0, 0.03 * sin(beat * 0.5 + 0.6), 0.0) * p)
+			var look_down: float = smoothstep(0.55, 0.85, sin(t * 0.45 + phase * 3.0)) if str(look.instrument) in ["guitar", "tamburica", "bass"] else 0.0
+			_turn("Head", Vector3(0.07 * on + 0.22 * look_down, 0.35 * look_down, 0.04 * sin(beat * 0.5)) * p)
+			model.position.y = on * 0.014 * p
+			model.position.x = sin(beat * 0.5) * 0.012 * p
 	if instrument != null:
 		_play()
 	if tray != null:

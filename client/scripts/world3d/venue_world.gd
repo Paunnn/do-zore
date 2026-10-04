@@ -21,8 +21,6 @@ const WAITER_THRESHOLDS = [1, 4, 8]
 const BAND_LINEUPS = People.BAND_LINEUPS
 const LOOKS_PER_KIND = 8
 const VESSEL_SCALE = 1.35
-## How far apart two people's middles keep when one walks past the other (per unit of their scale).
-const BODY_GAP = 0.42
 ## Each guest's own glass, per menu item (the bottle or dish stands in the middle of the table).
 const VESSEL_FOR = {"domaca_kafa": "cup", "kisela_voda": "water", "pivo": "mug", "sljivovica": "shot",
 	"lozovaca": "shot", "vinjak": "shot", "crno_vino": "wine", "viski": "tumbler", "sampanjac": "flute",
@@ -54,6 +52,8 @@ var approach: Dictionary = {}
 var stage_anchor: Vector3 = Vector3.ZERO
 ## Everyone in the venue, for the shared contact shadows (one draw call for all of them).
 var people: Array = []
+## The city's walkers, who share the pavement with guests coming and going.
+var outside: Array = []
 var shadows: MultiMeshInstance3D
 ## Every chair in the room in one draw call; each can slide out when someone sits down or gets up.
 var chairs: MultiMeshInstance3D
@@ -355,6 +355,8 @@ func _arrive(slot: Dictionary, table: Dictionary, instant: bool) -> void:
 	_clear_drink(slot)
 	var shown: int = mini(party, SEATS.size() + STANDING.size())
 	var first: int = rng.randi() % LOOKS_PER_KIND
+	# The party comes down the street together, one behind the other.
+	var route: PackedVector3Array = _street_route(true)
 	for k in range(shown):
 		var guest = _person(kind, (first + k) % LOOKS_PER_KIND)
 		guest.set_meta("seat", k)
@@ -364,7 +366,6 @@ func _arrive(slot: Dictionary, table: Dictionary, instant: bool) -> void:
 			_seat(slot, guest, true)
 			continue
 		# They come on foot down the street before they come in.
-		var route: PackedVector3Array = _street_route(true)
 		guest.position = route[0]
 		guest.visible = false
 		var points: PackedVector3Array = route.slice(1)
@@ -373,7 +374,7 @@ func _arrive(slot: Dictionary, table: Dictionary, instant: bool) -> void:
 		points.append(Venue.seat_geometry(slot.center, k).side if k < SEATS.size() else Venue.seat_point(slot.center, k))
 		guest.arrived.connect(_seat.bind(slot, guest), CONNECT_ONE_SHOT)
 		var delay: Tween = guest.create_tween()
-		delay.tween_interval(0.5 * k)
+		delay.tween_interval(0.8 * k)
 		delay.tween_callback(func():
 			guest.visible = true
 			guest.fade_in()
@@ -710,33 +711,22 @@ func _process(delta: float) -> void:
 			var song: Dictionary = DataCatalog.get_item("songs", str(GameState.simulation.current_song))
 			note.emit(musician.global_position + Vector3(0, 1.7, 0), str(song.get("genre", "")))
 
-## Walkers step round anyone in their way instead of through them: closer than a body's width they
-## ease apart, each keeping to their own right (so two meeting head-on pass side by side), never onto
-## a table or a wall indoors (outside, the pavement is open). People sitting at the tables stay put;
-## the paths already go round them.
+## Everyone in and around the venue steers round everyone else (the city's walkers on the pavement
+## outside too: see People.steer_crowd).
 func _keep_apart(delta: float) -> void:
-	for a in people:
-		if not is_instance_valid(a) or a.path.is_empty() or a.seat_state != "":
-			continue
-		var ahead: Vector3 = a.path[0] - a.position
-		ahead.y = 0.0
-		ahead = ahead.normalized()
-		var right: Vector3 = Vector3(-ahead.z, 0.0, ahead.x)
-		var push: Vector3 = Vector3.ZERO
-		for b in people:
-			if b == a or not is_instance_valid(b) or not b.visible or b.seat_state == "seated":
-				continue
-			var apart: Vector3 = a.position - b.position
-			apart.y = 0.0
-			var gap: float = apart.length()
-			var reach: float = BODY_GAP * (a.scale.x + b.scale.x) / 2.0
-			if gap < reach and gap > 0.001:
-				push += (apart / gap + right * 0.7) * (reach - gap)
-		if push != Vector3.ZERO:
-			var to: Vector3 = a.position + push * minf(1.0, delta * 6.0)
-			var cell: Vector2i = Vector2i(floori(to.x), floori(to.z))
-			if not astar.is_in_boundsv(cell) or not astar.is_point_solid(cell):
-				a.position = to
+	var crowd: Array = []
+	for p in people:
+		if is_instance_valid(p) and p.visible and not p.is_queued_for_deletion():
+			crowd.append(p)
+	for p in outside:
+		if is_instance_valid(p) and p.visible:
+			crowd.append(p)
+	People.steer_crowd(crowd, delta, _blocked_at)
+
+func _blocked_at(point: Vector3) -> bool:
+	var local: Vector3 = to_local(point)
+	var cell: Vector2i = Vector2i(floori(local.x), floori(local.z))
+	return astar.is_in_boundsv(cell) and astar.is_point_solid(cell)
 
 func _run_waiters() -> void:
 	for waiter in waiters:

@@ -65,7 +65,8 @@ clouds, coins and notes over their 3D anchors.
   the widest free stretch between the windows, so nothing hangs over a window or over another
   piece.
 - `scripts/world3d/venue_world.gd` turns simulation state into people and props: parties walk
-  in from the street along an A* grid (stepping round each other), pull out their chairs and sit
+  in from the street along an A* grid (a party in single file; everyone steers round everyone
+  else, see `People.steer_crowd`), pull out their chairs and sit
   down, order, drink, get up to dance and leave paying; waiters walk out from the bar with the
   tray level on the flat of the left hand (the glasses stand up on it), set the order down on the
   table with the right hand and walk back with the empty tray; the band plays; konobar,
@@ -84,7 +85,9 @@ clouds, coins and notes over their 3D anchors.
   (`people_anims.glb`, Quaternius' Universal Animation Library, CC0) is retargeted on import
   through Godot's humanoid profile, so it plays on every body; a few clips are put together from
   two at run time. Sitting down and getting up use the library's sit-down and stand-up clips with
-  the hips lifted onto the seat. Drinking is two-bone IK on the right arm: reach for the glass,
+  the hips lifted onto the seat. Musicians' hands are put on their instruments with a grip (`_grip`): the arm by
+  two-bone IK, the hand turned so the palm lies on the instrument and the fingers curled round the
+  neck, over the keys or round the bow. Drinking is two-bone IK on the right arm: reach for the glass,
   lift it to the lips, tip and sip, put it back. Props and the mouth are placed through the skin's
   bind poses (the import's rest fixer moves the rests, not the mesh). The face is drawn by
   `shaders/person.gdshader` from a few numbers per person, eased towards the person's mood, with
