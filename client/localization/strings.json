@@ -15,6 +15,10 @@
     "sr": "Bend",
     "en": "Band"
   },
+  "nav_board": {
+    "sr": "Rang",
+    "en": "Ranks"
+  },
   "nav_menu": {
     "sr": "Piće",
     "en": "Menu"
@@ -84,8 +88,8 @@
     "en": "Guests are on their way"
   },
   "table_party": {
-    "sr": "{name} · {count} gostiju",
-    "en": "{name} · {count} guests"
+    "sr": "{name} · {count}",
+    "en": "{name} · {count}"
   },
   "request": {
     "sr": "Želja: {song}",
@@ -216,16 +220,16 @@
     "en": "Small steps toward a great kafana."
   },
   "venues_hint": {
-    "sr": "Od tri stola do noći na vodi.",
-    "en": "From three tables to nights on the river."
+    "sr": "od birtije do splava",
+    "en": "from the dive bar to the river"
   },
   "venue_stats": {
-    "sr": "{tables} stolova · do {max} · {rate} din/min dok te nema",
-    "en": "{tables} tables · up to {max} · {rate} din/min away"
+    "sr": "{tables} · do {max} · {rate} din/min dok te nema",
+    "en": "{tables} · up to {max} · {rate} din/min while away"
   },
   "band_stats": {
-    "sr": "{members} muzičara · održavanje {upkeep} din/h",
-    "en": "{members} musicians · upkeep {upkeep} din/h"
+    "sr": "{members} · {upkeep} din na sat",
+    "en": "{members} · {upkeep} din per hour"
   },
   "event_title": {
     "sr": "Veče je nepredvidivo",
@@ -356,24 +360,16 @@
     "en": "Save progress"
   },
   "sound_stub": {
-    "sr": "Zvuk i muzika čekaju snimke. Podešavanja se čuvaju.",
-    "en": "Audio hooks are ready for recordings. Your preferences are saved."
-  },
-  "mock_label": {
-    "sr": "PROTOTIP · LOKALNI MOCK",
-    "en": "PROTOTYPE · LOCAL MOCK"
-  },
-  "offline_label": {
-    "sr": "LOKALNA IGRA",
-    "en": "LOCAL PLAY"
+    "sr": "Bend svira kafanske pesme, a između njih nešto tiše. Zvuk su čaše, novac i događaji.",
+    "en": "The band plays kafana songs, and something quieter in between. Sound is the glasses, the money and the events."
   },
   "demo_conflict": {
     "sr": "Prikaži probni sukob čuvanja",
     "en": "Preview save conflict"
   },
   "sync_starting": {
-    "sr": "Lokalna igra",
-    "en": "Local play"
+    "sr": "Igra se čuva na ovom uređaju",
+    "en": "Saved on this device"
   },
   "sync_syncing": {
     "sr": "Čuvanje…",
@@ -392,8 +388,8 @@
     "en": "Choose a save"
   },
   "sync_mock": {
-    "sr": "Mock · lokalno",
-    "en": "Mock · local"
+    "sr": "Igra se čuva na ovom uređaju",
+    "en": "Saved on this device"
   },
   "notice_saved": {
     "sr": "Napredak je sačuvan.",
@@ -434,10 +430,6 @@
   "notice_serving": {
     "sr": "Porudžbina se priprema.",
     "en": "Preparing the order."
-  },
-  "night_status": {
-    "sr": "KAFANA JE OTVORENA",
-    "en": "OPEN TILL DAWN"
   },
   "venue_closed": {
     "sr": "Privremeno zatvoreno · {seconds} s",
@@ -482,6 +474,122 @@
   "purchase_max_level": {
     "sr": "Najviši nivo je dostignut.",
     "en": "Maximum level reached."
+  },
+  "floor_left_angry": {
+    "sr": "Otišli ljuti!",
+    "en": "Left angry!"
+  },
+  "hint_serve": {
+    "sr": "Dodirni oblačić da uslužiš goste",
+    "en": "Tap the bubble to serve the guests"
+  },
+  "hint_song": {
+    "sr": "Gosti žele pesmu, pusti im je!",
+    "en": "They want a song, play it!"
+  },
+  "goal_next": {
+    "sr": "Sledeće: {name}",
+    "en": "Next: {name}"
+  },
+  "goal_ready": {
+    "sr": "{name} · otvori!",
+    "en": "{name} · open it!"
+  },
+  "goal_share": {
+    "sr": "{have} / {need}",
+    "en": "{have} / {need}"
+  },
+  "open_venue": {
+    "sr": "Otvori novi lokal",
+    "en": "Open the new venue"
+  },
+  "venue_here": {
+    "sr": "Ovde si večeras",
+    "en": "You are here tonight"
+  },
+  "venue_opened": {
+    "sr": "Nova adresa",
+    "en": "A new address"
+  },
+  "venue_opened_body": {
+    "sr": "Ključevi su kod tebe. Gosti već čekaju na vratima.",
+    "en": "The keys are yours. Guests are already at the door."
+  },
+  "enter_venue": {
+    "sr": "Otvori vrata",
+    "en": "Open the doors"
+  },
+  "level_short": {
+    "sr": "{level}/{max}",
+    "en": "{level}/{max}"
+  },
+  "table_limit_short": {
+    "sr": "Nema mesta",
+    "en": "No room"
+  },
+  "menu_detail": {
+    "sr": "Nabavka {cost} din · {seconds} s",
+    "en": "Costs {cost} din · {seconds} s"
+  },
+  "song_wanted": {
+    "sr": "{genre} · želje: {count}",
+    "en": "{genre} · requests: {count}"
+  },
+  "save_section": {
+    "sr": "Čuvanje",
+    "en": "Saving"
+  },
+  "app_footer": {
+    "sr": "Do zore · verzija {version}",
+    "en": "Do zore · version {version}"
+  },
+  "guests_one": {
+    "sr": "{count} gost",
+    "en": "{count} guest"
+  },
+  "guests_few": {
+    "sr": "{count} gosta",
+    "en": "{count} guests"
+  },
+  "guests_many": {
+    "sr": "{count} gostiju",
+    "en": "{count} guests"
+  },
+  "tables_one": {
+    "sr": "{count} sto",
+    "en": "{count} table"
+  },
+  "tables_few": {
+    "sr": "{count} stola",
+    "en": "{count} tables"
+  },
+  "tables_many": {
+    "sr": "{count} stolova",
+    "en": "{count} tables"
+  },
+  "musicians_one": {
+    "sr": "{count} muzičar",
+    "en": "{count} musician"
+  },
+  "musicians_few": {
+    "sr": "{count} muzičara",
+    "en": "{count} musicians"
+  },
+  "musicians_many": {
+    "sr": "{count} muzičara",
+    "en": "{count} musicians"
+  },
+  "nav_map": {
+    "sr": "Mapa",
+    "en": "Map"
+  },
+  "nav_music": {
+    "sr": "Pesma",
+    "en": "Song"
+  },
+  "show_on_map": {
+    "sr": "Na mapi",
+    "en": "On the map"
   },
   "data.band_levels.solo_harmonikas.name": {
     "sr": "Solo harmonikaš",

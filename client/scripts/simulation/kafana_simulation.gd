@@ -39,7 +39,8 @@ func configure(bundle: Dictionary, extra_rules: Dictionary, player_save: Diction
 	else:
 		rng.seed = seed_value
 	room_mood = float(data.economy.mood.neutral)
-	arrival_remaining = arrival_interval()
+	# A new night starts with a guest at the door instead of a minute of empty tables.
+	arrival_remaining = minf(arrival_interval(), float(rules.get("first_arrival_seconds", INF)))
 	event_roll_remaining = float(data.economy.events.roll_interval_seconds)
 	condition_remaining = float(data.economy.events.condition_check_interval_seconds)
 	glass_remaining = float(data.economy.get("glasses", {}).get("roll_interval_seconds", 0.0))

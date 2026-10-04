@@ -1,4 +1,4 @@
-; Do Zore — placeholder-first Android client.
+; Do Zore — Android client.
 config_version=5
 
 [application]
@@ -8,6 +8,11 @@ run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.5", "GL Compatibility")
 config/use_custom_user_dir=true
 config/custom_user_dir_name="DoZore-client"
+config/icon="res://assets/branding/icon.png"
+boot_splash/bg_color=Color(0.055, 0.078, 0.157, 1)
+boot_splash/image="res://assets/branding/splash.png"
+boot_splash/fullsize=true
+boot_splash/use_filter=true
 
 [autoload]
 EventBus="*res://scripts/autoload/event_bus.gd"
@@ -16,6 +21,7 @@ Economy="*res://scripts/autoload/economy.gd"
 GameState="*res://scripts/autoload/game_state.gd"
 SaveSystem="*res://scripts/autoload/save_system.gd"
 ApiClient="*res://scripts/autoload/api_client.gd"
+KafanaAudio="*res://scripts/autoload/kafana_audio.gd"
 
 [display]
 window/size/viewport_width=1080
@@ -29,8 +35,9 @@ window/handheld/orientation=1
 [rendering]
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
-environment/defaults/default_clear_color=Color(0.055, 0.073, 0.084, 1)
+environment/defaults/default_clear_color=Color(0.055, 0.078, 0.157, 1)
 textures/default_filters/use_nearest_mipmap_filter=false
+textures/vram_compression/import_etc2_astc=true
 
 [input_devices]
 pointing/emulate_touch_from_mouse=true

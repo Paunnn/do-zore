@@ -1,7 +1,9 @@
-# Do Zore balance tools
+# Do Zore tools
 
-These standard-library Python tools read the canonical `/data` directory. They
-never edit it or the contracts. Run from the repository root with Python 3.10+.
+The balance tools are standard-library Python and read the canonical `/data` directory without
+editing it or the contracts. The art tools in `tools/art` write the client's generated art and
+need Pillow and NumPy; `tools/audio` writes its music and sounds; `tools/ios` builds the iPhone
+app on a Mac. Run everything from the repository root with Python 3.10+.
 
 ## Build the Godot bundle
 
@@ -55,6 +57,63 @@ tuning. No ads, purchases, network requests or live events are simulated.
 The assumptions are included in every report. Suggested numbers are experimental
 benchmarks, not approved balance changes. Longer multi-seed runs can take several
 minutes, depending on timestep and upgrades.
+
+## Rebuild the art
+
+The game world is built in 3D at run time (see `client/README.md`); these scripts generate the
+textures, interface pieces and branding it uses:
+
+```sh
+python tools/art/fetch_scanned_textures.py  # painted-over scans: streets, grass, plaster, stone, brick, roofs
+python tools/art/build_textures.py  # cartoon floors, cloths, wallpapers, logs, rugs, paintings, signs
+python tools/art/build_ui.py        # HUD pills, buttons, cards, glyphs, upgrade and event pictures
+python tools/art/build_fx.py        # thought clouds, emotes, coins, notes, "+" and fight dust
+python tools/art/build_sprites.py   # drink pictures and the coin and mood faces
+python tools/art/build_key_art.py   # key art / boot splash and app icon (SVG; see client/design/README.md)
+```
+
+- `fetch_scanned_textures.py` downloads CC0 (public domain) texture sets from Poly Haven and
+  paints them into the cartoon style (needs OpenCV): mean-shift and k-means flatten each into a
+  few colours, its relief adds a painted bevel and draws the joints in ink, and one `NAME.jpg`
+  (512 px) is written per surface; plaster becomes a neutral grey that each building's colour
+  tints. It needs network access; the results are committed, with credits in
+  `client/assets/textures/SCANNED.md`.
+- `build_textures.py` uses NumPy for seamless noise; tiling textures (512 px, the wooden floors
+  1024 px) are mapped in world space by the game, so one texture covers floors and walls of any
+  size.
+- The characters are cartoon people built in Blender from MakeHuman bodies with Quaternius'
+  animations (all CC0): `tools/art/people` holds the pipeline and its README (setup, cartoon
+  reshaping, cleaned faces drawn by the game's shader, texture atlas, animation library, install).
+- `build_ui.py` and `build_key_art.py` share `isokit.py`, a small outlined-isometric SVG kit used
+  for the upgrade and event pictures.
+- The venue, band and guest pictures are renders of the 3D models: run
+  `godot --path client --rendering-driver opengl3 --script res://tests/render_venue_cards.gd`
+  (under `xvfb-run -a` without a display). The key art embeds the venue renders, so render them
+  first.
+
+After running a script, run the Godot import step (`run_checks.py` does it) so new files get
+their `.import` settings. Tiling textures use VRAM compression with mipmaps: after the first
+import set `compress/mode=2` and `mipmaps/generate=true` in their `.import` files.
+
+## Music and sounds
+
+```sh
+python tools/audio/kafana_music.py   # every song, the between-songs tunes and the sounds, as OGG
+```
+
+Original tunes synthesised from scratch (no samples or recordings), so there is nothing to
+license. Needs NumPy, SciPy and ffmpeg with libvorbis. It writes `client/assets/audio/songs/<song
+id>.ogg` for every song in `data/songs.json`, `between_<venue>.ogg` and `sfx/*.ogg`. Import them
+afterwards as with the art (`run_checks.py` does it).
+
+## iPhone app
+
+```sh
+tools/ios/make_ios_app.sh   # on a Mac with Xcode: export the Xcode project and open it
+```
+
+See the iPhone section of `client/README.md`. It downloads Godot 4.5.1 and its iOS template
+into `~/.do-zore` once and writes `export/ios` (ignored by Git).
 
 ## Tests
 

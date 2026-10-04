@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 120 120">
+<defs><linearGradient id="wine" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a3283f"/><stop offset="1" stop-color="#4f0b1f"/></linearGradient>
+<clipPath id="bw"><path d="M32 10 L88 10 Q92 58 60 72 Q28 58 32 10 Z"/></clipPath></defs>
+<ellipse cx="60" cy="108" rx="40" ry="6" fill="#000" opacity="0.22"/>
+<ellipse cx="60" cy="104" rx="26" ry="5" fill="#cfe3e0" opacity="0.5" stroke="#cfe3e0" stroke-width="2"/>
+<rect x="57" y="70" width="6" height="34" fill="#cfe3e0" opacity="0.75"/>
+<g clip-path="url(#bw)"><rect x="20" y="0" width="80" height="80" fill="#dfeff0" opacity="0.14"/><rect x="20" y="36" width="80" height="44" fill="url(#wine)"/><ellipse cx="60" cy="36" rx="30" ry="4" fill="#c2405c"/></g>
+<path d="M32 10 L88 10 Q92 58 60 72 Q28 58 32 10 Z" fill="none" stroke="#cfe3e0" stroke-width="3" stroke-linejoin="round"/>
+<path d="M40 18 Q39 40 48 54" stroke="#fff" stroke-opacity="0.55" stroke-width="4" stroke-linecap="round" fill="none"/>
+</svg>
