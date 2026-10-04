@@ -67,7 +67,7 @@ SHOES_M, SHOES_W = ("clothes", "shoes03", "shoes", True), ("clothes", "shoes04",
 LOOKS = {
     # Guests. Penzioneri: a deda in a flat cap and a knitted sweater, one in an old suit and a fedora, a
     # village one in overalls (he gets a šajkača in the game); a baba with a bun in a long-sleeved dress
-    # and one in a loose housedress (she gets a headscarf).
+    # and one in a plain shift dress (she gets a headscarf).
     "deda": {"macro": dict(MAN, age=0.95, weight=0.8, muscle=0.35, height=0.35), "hair": "short02", "hat": "worn",
              "parts": [("clothes", "jujube_newsboy_cap", "hat", False), ("clothes", "toigo_fisherman_sweater", "top", False),
                        ("clothes", "toigo_wool_pants", "bottom", False), ("clothes", "shoes01", "shoes", True)]},
@@ -80,10 +80,10 @@ LOOKS = {
              "hair": "rehmanpolanski_hair_bun_brown", "modest": True, "parts": [("clothes", "toigo_cut_out_dress", "top", False), SHOES_W]},
     "baba2": {"style": {"leg_slim": 0.8}, "macro": dict(WOMAN, age=0.95, weight=0.85, muscle=0.35, height=0.3),
               "hair": "short02", "hat": 1.0, "modest": True,
-              "parts": [("clothes", "aethelraed_flapper_dress", "top", False), SHOES_W]},
+              "parts": [("clothes", "toigo_shift_dress", "top", False), SHOES_W]},
     # Studenti, the classic kind: logo t-shirt, jeans and white trainers (a backpack in the game), or a
     # t-shirt or a knitted sweater over jeans.
-    "student": {"macro": dict(MAN, age=0.4, weight=0.45), "hair": "cortu_short_messy_hair",
+    "student": {"macro": dict(MAN, age=0.4, weight=0.45), "hair": "short04",
                 "parts": [("clothes", "male_casualsuit04", "top", True), ("clothes", "shoes05", "shoes", True)]},
     "student2": {"macro": dict(MAN, age=0.4, weight=0.5), "hair": "short04", "hat": 0.5,
                  "parts": [("clothes", "elvs_crude_t-shirt_male", "top", False),
@@ -408,6 +408,24 @@ def decimate(obj, target, protect=None):
         modifier.invert_vertex_group = True
         modifier.vertex_group_factor = 1.0
     bpy.ops.object.modifier_apply(modifier="decimate")
+
+
+def hem_group(obj):
+    """A vertex group on a garment's open edges (hems, cuffs, the neckline) and the ring next to them,
+    so decimation keeps them smooth instead of chewing them into a ragged line."""
+    bmsh = bmesh.new()
+    bmsh.from_mesh(obj.data)
+    edge = {v.index for e in bmsh.edges if e.is_boundary for v in e.verts}
+    ring = set()
+    bmsh.verts.ensure_lookup_table()
+    for i in list(edge):
+        for e in bmsh.verts[i].link_edges:
+            ring.update(v.index for v in e.verts)
+    bmsh.free()
+    group = obj.vertex_groups.get("hem") or obj.vertex_groups.new(name="hem")
+    if edge | ring:
+        group.add(sorted(edge | ring), 1.0, 'REPLACE')
+    return "hem"
 
 
 def load_pixels(image, size):
@@ -747,7 +765,7 @@ def finish(bm, parts, face, path, hat=None, modest=False):
         uv.data.foreach_set("uv", np.stack([u, v], axis=1).reshape(-1))
         face_uv = mesh.uv_layers.new(name="Face")
         face_uv.data.foreach_set("uv", np.stack([cu[loops], 1.0 - cv[loops]], axis=1).reshape(-1).astype(np.float32))
-        decimate(obj, BUDGET.get(cell, 2000))
+        decimate(obj, BUDGET.get(cell, 2000), hem_group(obj) if region in ("top", "bottom", "shoes", "hat") else None)
     tops_over_bottoms(meshes, parts)
     rigid_head(meshes, parts, bm)
     # One mesh, one material.

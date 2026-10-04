@@ -853,14 +853,16 @@ func setup(new_look: Dictionary) -> void:
 		bones[skeleton.get_bone_name(i)] = i
 	body = skeleton.find_children("*", "MeshInstance3D", true, false)[0]
 	var atlas: Texture2D = load(MODELS + model_name + "_atlas.png")
-	body.material_override = _material(model_name, atlas)
+	# Each person has their own copy of the material (sharing the atlas, the shader and the outline),
+	# holding their palette and face.
+	body.material_override = _material(model_name, atlas).duplicate()
 	body.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	# Coarser levels of detail kick in sooner: people are small on screen most of the time.
 	body.lod_bias = 0.3
 	for key in look.pal:
-		body.set_instance_shader_parameter(key, Color(str(look.pal[key])))
-	body.set_instance_shader_parameter("face_style", look.style)
-	body.set_instance_shader_parameter("face_age", look.get("age", Vector4.ZERO))
+		body.material_override.set_shader_parameter(key, Color(str(look.pal[key])))
+	body.material_override.set_shader_parameter("face_style", look.style)
+	body.material_override.set_shader_parameter("face_age", look.get("age", Vector4.ZERO))
 	measure = _measure(model_name, skeleton, body.mesh, body.skin)
 	player = AnimationPlayer.new()
 	model.add_child(player)
@@ -1846,7 +1848,7 @@ func _face(delta: float) -> void:
 	if talking and emote_left <= 0.0 and sip_time < 0.0:
 		var chatter: float = absf(sin(anim_time * 9.0 + phase)) * (0.5 + 0.5 * sin(anim_time * 2.3 + phase * 2.0))
 		mouth.y = maxf(mouth.y, chatter * 0.45)
-	body.set_instance_shader_parameter("face_eyes", eyes)
-	body.set_instance_shader_parameter("face_brows", face_now_values[1])
-	body.set_instance_shader_parameter("face_mouth", mouth)
-	body.set_instance_shader_parameter("face_extra", face_now_values[3])
+	body.material_override.set_shader_parameter("face_eyes", eyes)
+	body.material_override.set_shader_parameter("face_brows", face_now_values[1])
+	body.material_override.set_shader_parameter("face_mouth", mouth)
+	body.material_override.set_shader_parameter("face_extra", face_now_values[3])

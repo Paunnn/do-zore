@@ -153,6 +153,23 @@ Saves use Godot's `user://` directory (custom application directory
 Use Settings → Reset only when you intend to discard that installation's
 progress. Tests use a separate save directory and do not reset normal progress.
 
+## iPhone
+
+**Play in Safari (no Mac needed).** Export the **Web** preset (single-threaded, ETC2/ASTC and S3TC
+textures, a home-screen manifest) and host the folder over HTTPS; on the iPhone open it in Safari,
+then Share → Add to Home Screen to get a full-screen app icon. The build needs no special server
+headers (no threads). From the repository root:
+
+```sh
+godot --headless --path client --export-release "Web" export/web/index.html
+```
+
+**Install as an app.** iOS apps can only be built and signed on a Mac with Xcode. The **iOS** preset
+exports an Xcode project (`application/export_project_only`): on a Mac, install Godot 4.5.1 and its
+export templates, open `client/project.godot`, Project → Export → iOS → Export Project, open the
+`.xcodeproj` in Xcode, choose your Apple ID team under Signing & Capabilities, plug in the iPhone and
+press Run (a free Apple ID works for your own phone; the app then needs re-installing every 7 days).
+
 ## Android export
 
 Install the Godot export templates matching your editor and configure a compatible

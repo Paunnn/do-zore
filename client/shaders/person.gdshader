@@ -2,34 +2,38 @@
 // The mesh comes from tools/art/people/build_people.py: UV is an atlas of the cartoonised clothes and hair,
 // UV2 the face plane (eyes at (0.31, 0.41) and (0.69, 0.41), mouth at (0.5, 0.79)), COLOR.r the palette
 // slot, COLOR.g the face mask and COLOR.b set where a part keeps its own texture colours.
-// The face is set per person with instance uniforms (see scripts/world3d/people3d.gd).
+// The palette and the face are set per person on the person's own copy of the material (see
+// scripts/world3d/people3d.gd); instance uniforms would run out of room on phones' browsers.
 shader_type spatial;
 render_mode cull_disabled, specular_disabled;
 
 uniform sampler2D atlas : source_color, filter_linear_mipmap;
-uniform float detail_amount = 0.7;
+uniform float detail_amount = 0.32;
+// How much the fabric and hair textures are smoothed (a coarser mip level): flat cartoon colour with
+// the folds and seams, without the scanned noise.
+uniform float smooth_bias = 2.0;
 uniform vec3 shade_color : source_color = vec3(0.47, 0.36, 0.55);
 uniform float band = 0.06;
 
 // Palette: skin, hair, top, bottom, shoes, hat and eyes.
-instance uniform vec4 col_skin : source_color = vec4(0.96, 0.76, 0.62, 1.0);
-instance uniform vec4 col_hair : source_color = vec4(0.36, 0.24, 0.17, 1.0);
-instance uniform vec4 col_top : source_color = vec4(0.25, 0.45, 0.7, 1.0);
-instance uniform vec4 col_bottom : source_color = vec4(0.25, 0.25, 0.3, 1.0);
-instance uniform vec4 col_shoes : source_color = vec4(0.25, 0.16, 0.12, 1.0);
-instance uniform vec4 col_hat : source_color = vec4(0.4, 0.38, 0.36, 1.0);
-instance uniform vec4 col_eye : source_color = vec4(0.36, 0.22, 0.12, 1.0);
+uniform vec4 col_skin : source_color = vec4(0.96, 0.76, 0.62, 1.0);
+uniform vec4 col_hair : source_color = vec4(0.36, 0.24, 0.17, 1.0);
+uniform vec4 col_top : source_color = vec4(0.25, 0.45, 0.7, 1.0);
+uniform vec4 col_bottom : source_color = vec4(0.25, 0.25, 0.3, 1.0);
+uniform vec4 col_shoes : source_color = vec4(0.25, 0.16, 0.12, 1.0);
+uniform vec4 col_hat : source_color = vec4(0.4, 0.38, 0.36, 1.0);
+uniform vec4 col_eye : source_color = vec4(0.36, 0.22, 0.12, 1.0);
 // Face: eyes (open, squint, look x, look y), brows (lift, angry, worry, unused),
 // mouth (smile, open, round, width), extra (blush, tears, happy closed eyes, wink).
-instance uniform vec4 face_eyes = vec4(1.0, 0.0, 0.0, 0.0);
-instance uniform vec4 face_brows = vec4(0.0, 0.0, 0.0, 0.0);
-instance uniform vec4 face_mouth = vec4(0.2, 0.0, 0.0, 1.0);
-instance uniform vec4 face_extra = vec4(0.25, 0.0, 0.0, 0.0);
+uniform vec4 face_eyes = vec4(1.0, 0.0, 0.0, 0.0);
+uniform vec4 face_brows = vec4(0.0, 0.0, 0.0, 0.0);
+uniform vec4 face_mouth = vec4(0.2, 0.0, 0.0, 1.0);
+uniform vec4 face_extra = vec4(0.25, 0.0, 0.0, 0.0);
 // Face style: lashes (0 to 1), brow weight, lip colour, glasses (1 glasses, 2 sunglasses).
-instance uniform vec4 face_style = vec4(0.0, 1.0, 0.0, 0.0);
+uniform vec4 face_style = vec4(0.0, 1.0, 0.0, 0.0);
 // Age and whiskers: wrinkles (0 to 1), moustache (1 trim, 2 big brk), beard (0 to 1, stubble to
 // full), bushy brows (0 to 1).
-instance uniform vec4 face_age = vec4(0.0);
+uniform vec4 face_age = vec4(0.0);
 
 varying vec4 vcol;
 
@@ -313,8 +317,12 @@ void fragment() {
 	else if (region > 0.3) pal = col_top.rgb;
 	else if (region > 0.1) pal = col_hair.rgb;
 	vec4 t = texture(atlas, UV);
+	// The colour from a smoother level; the cut-out edge of the hair from the sharp one.
+	t.rgb = texture(atlas, UV, smooth_bias).rgb;
 	float l = dot(t.rgb, vec3(0.299, 0.587, 0.114));
-	vec3 albedo = pal * mix(1.0, clamp(l * 1.35, 0.55, 1.1), region < 0.1 ? 0.0 : detail_amount);
+	// (Pale cloth, a white shirt or a wedding dress, shows its weave more: less of it there.)
+	float detail = detail_amount * (1.0 - 0.7 * smoothstep(0.7, 0.95, max(pal.r, max(pal.g, pal.b))));
+	vec3 albedo = pal * mix(1.0, clamp(l * 1.35, 0.55, 1.1), region < 0.1 ? 0.0 : detail);
 	albedo = mix(albedo, t.rgb, vcol.b);
 	float px = max(length(fwidth(UV2)) * 0.6, 0.0008);
 	vec3 face = draw_face(UV2, albedo, px);

@@ -586,10 +586,9 @@ func _animate_guests(slot: Dictionary, table: Dictionary, mood: float, mood_rule
 		var state: String = guest.get_meta("state", "")
 		var seat: int = int(guest.get_meta("seat"))
 		if dancing and state == "seated":
-			# Up from the chair, a step out from the table, and dance.
+			# Up from the chair, out into the aisle beside the table, and dance facing a partner.
 			guest.set_meta("state", "dancing")
-			var spot: Vector3 = Venue.seat_point(slot.center, seat)
-			var out: Vector3 = (spot - Vector3(slot.center.x, 0, slot.center.y)) * 0.55
+			var place: Array = _dance_spot(slot, guest)
 			var rate: float = rng.randf_range(0.9, 1.15)
 			guest.stand_up(func():
 				if not is_instance_valid(guest):
@@ -599,9 +598,11 @@ func _animate_guests(slot: Dictionary, table: Dictionary, mood: float, mood_rule
 					return
 				guest.arrived.connect(func():
 					if is_instance_valid(guest) and guest.get_meta("state", "") == "dancing":
-						guest.face(out)
+						guest.face(place[1] - guest.position)
 						guest.play("dance", rate), CONNECT_ONE_SHOT)
-				guest.walk(PackedVector3Array([spot + out])))
+				var points: PackedVector3Array = _path(guest.position, _cell_at(place[0]))
+				points.append(place[0])
+				guest.walk(points))
 		elif not dancing and state == "dancing":
 			# Back to the chair (once up, if they are still getting up).
 			guest.set_meta("state", "returning")
@@ -610,7 +611,9 @@ func _animate_guests(slot: Dictionary, table: Dictionary, mood: float, mood_rule
 				guest.arrived.connect(func():
 					if is_instance_valid(guest) and guest.get_meta("state", "") == "returning":
 						_seat(slot, guest), CONNECT_ONE_SHOT)
-				guest.walk(PackedVector3Array([back]))
+				var points: PackedVector3Array = _path(guest.position, _cell_at(back))
+				points.append(back)
+				guest.walk(points)
 		elif state == "seated" and seat < SEATS.size() and guest.is_seated():
 			var anim: String = "sit"
 			if mood < float(mood_rules.unhappy_below):
@@ -618,6 +621,41 @@ func _animate_guests(slot: Dictionary, table: Dictionary, mood: float, mood_rule
 			elif mood >= float(mood_rules.happy_at_or_above) and (seat + int(time / 3.0)) % 3 == 0:
 				anim = "happy"
 			guest.play(anim)
+
+## Where a guest dances and who they face: the table's guests split into two groups, one in the
+## aisle on the table's right (+x) and one in front of it (+z), so neighbouring tables never share a
+## spot; in each group they stand round a small circle facing its middle (a pair faces each other
+## across it), far enough apart that their arms don't meet. Returns [spot, look at].
+const DANCE_AISLE = 1.95
+
+func _dance_spot(slot: Dictionary, guest) -> Array:
+	var right: Array = []
+	var front: Array = []
+	for other in slot.guests:
+		if not is_instance_valid(other):
+			continue
+		# Right and back go to the right; front and left (and the standing ones) to the front.
+		if int(other.get_meta("seat")) in [1, 2, 5]:
+			right.append(other)
+		else:
+			front.append(other)
+	if right.is_empty() and front.size() > 1:
+		right.append(front.pop_back())
+	if front.is_empty() and right.size() > 1:
+		front.append(right.pop_back())
+	var group: Array = right if guest in right else front
+	var middle: Vector3 = Vector3(slot.center.x + DANCE_AISLE, 0, slot.center.y) if group == right else Vector3(slot.center.x, 0, slot.center.y + DANCE_AISLE)
+	var along: Vector3 = Vector3(0, 0, 1) if group == right else Vector3(1, 0, 0)
+	var n: int = group.size()
+	var k: int = group.find(guest)
+	if n == 1:
+		# Alone: dances facing the other group.
+		var others: Vector3 = Vector3(slot.center.x, 0, slot.center.y + DANCE_AISLE) if group == right else Vector3(slot.center.x + DANCE_AISLE, 0, slot.center.y)
+		return [middle, others]
+	var radius: float = 0.48 if n == 2 else 0.54
+	var angle: float = TAU * k / n
+	var spot: Vector3 = middle + (along * cos(angle) + along.cross(Vector3.UP) * sin(angle)) * radius
+	return [spot, middle]
 
 func _sync_staff(save: Dictionary) -> void:
 	var upgrades: Dictionary = save.get("upgrades", {})
