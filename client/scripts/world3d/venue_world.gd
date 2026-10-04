@@ -66,6 +66,8 @@ func build(venue: String, max_tables: int) -> void:
 	rng.seed = hash(venue)
 	for child in get_children():
 		child.queue_free()
+	# (The old room's chairs go with it: the new ones are made once its tables are.)
+	chairs = null
 	for list in [slots, waiters, jobs, band, lights, light_energy, people]:
 		list.clear()
 	for item in dust:
