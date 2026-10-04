@@ -38,6 +38,9 @@ var walker_shadows: MultiMeshInstance3D
 ## keeps the shapes and the lit windows only.
 var detail_center: Vector3 = Vector3.INF
 const DETAIL_RADIUS = 75.0
+## There is ground, water or town out to this far from the centre in every direction, so
+## zooming right out on a tall phone never shows the void past the edge of the map.
+const REACH = 1400.0
 var time: float = 0.0
 
 ## Up the screen: how far a point lies along the road (metres, birtija ~ -45, splav ~ 190).
@@ -78,6 +81,7 @@ func build(active: String, states: Dictionary, max_tables: Dictionary) -> void:
 	for bx in range(-6, 3):
 		for bz in range(-6, 3):
 			_block(b, bx, bz)
+	_countryside(b)
 	_streets(b)
 	_quay(b)
 	_bridge(b)
@@ -171,10 +175,42 @@ func _walk_on(person) -> void:
 # --------------------------------------------------------------------------------------------
 
 func _ground(b: Builder) -> void:
-	# A wide dark base so the city never shows its edge.
-	b.box(Vector3(-80, -1.2, -80), Vector3(560, 0.3, 560), Color("1c2a22"), "vc")
+	var near_t: float = -RIVER_NEAR / sqrt(2.0)
+	var far_t: float = -RIVER_FAR / sqrt(2.0)
+	# Night fields on this side of the river and the dark streets of the far side, out to REACH
+	# (below the blocks, streets and verges, which sit on top of them).
+	_diag_box(b, (near_t - REACH) / 2.0, 0.0, Vector3(REACH * 2.0, 0.3, near_t + REACH), Color("aab49e"), "tex:grass:0.25", -0.5)
+	_diag_box(b, (far_t + REACH) / 2.0, 0.0, Vector3(REACH * 2.0, 0.3, REACH - far_t), Color("56545f"), "tex:paving:0.3", -0.6)
 	# A lawn strip between the last blocks and the quay.
-	_diag_box(b, -RIVER_NEAR / sqrt(2.0) - 30.0, 0.0, Vector3(320, 0.42, 34.0), Color("eef2e6"), "tex:grass:0.25", -0.5)
+	_diag_box(b, near_t - 30.0, 0.0, Vector3(REACH * 2.0, 0.42, 34.0), Color("eef2e6"), "tex:grass:0.25", -0.5)
+
+## Past the edge of town the grid of streets carries on as farm tracks between fields, with a
+## hedge of poplars here and there and the odd farmhouse.
+func _countryside(b: Builder) -> void:
+	var crops: Array = [["tex:grass:0.25", Color("c8d4b4")], ["tex:grass:0.25", Color("e2dca0")], ["tex:dirt:0.3", Color("c9b49a")], ["tex:grass:0.25", Color("b4c8a8")]]
+	for bx in range(-11, 9):
+		for bz in range(-11, 9):
+			var r: Rect2 = _block_rect(bx, bz)
+			var c: Vector3 = Vector3(r.get_center().x, 0, r.get_center().y)
+			# Only where the town has no block of its own, on this side of the river.
+			if r.position.x + r.position.y < RIVER_NEAR + 22.0 or (absf(across(c)) <= 95.0 and along(c) >= -110.0):
+				continue
+			if absf(across(c)) > 330.0 or along(c) < -330.0:
+				continue
+			var crop: Array = crops[rng.randi() % crops.size()]
+			b.box(Vector3(c.x, -0.3, c.z), Vector3(r.size.x + 2.0, 0.2, r.size.y + 2.0), crop[1], crop[0])
+			# Farm tracks along two sides of the field, continuing the town's streets.
+			b.box(Vector3(c.x, -0.32, r.position.y - STREET / 2.0), Vector3(BLOCK, 0.2, 4.0), Color.WHITE, "tex:dirt:0.3")
+			b.box(Vector3(r.position.x - STREET / 2.0, -0.32, c.z), Vector3(4.0, 0.2, BLOCK), Color.WHITE, "tex:dirt:0.3")
+			if rng.randf() < 0.45:
+				var z: float = r.position.y + 1.5
+				var x: float = r.position.x + 2.0
+				while x < r.end.x - 2.0:
+					_tree(b, Vector3(x, 0, z), rng.randf_range(0.8, 1.1), "poplar")
+					x += rng.randf_range(5.0, 8.0)
+			if rng.randf() < 0.18:
+				var at: Vector3 = Vector3(r.position.x + rng.randf_range(4, r.size.x - 14), 0, r.position.y + rng.randf_range(6, r.size.y - 12))
+				_house(b, at, Vector3(rng.randf_range(7, 9), 3.0, rng.randf_range(6, 7)), Color(["f2e2c4", "e8d8b8", "f4ead2"][rng.randi() % 3]), false)
 
 func _block_rect(bx: int, bz: int) -> Rect2:
 	return Rect2(bx * BLOCK + STREET / 2.0, bz * BLOCK + STREET / 2.0, BLOCK - STREET, BLOCK - STREET)
@@ -696,7 +732,7 @@ func _river(b: Builder) -> void:
 	var dir_up: Vector3 = Vector3(-1, 0, -1).normalized()
 	var dir_right: Vector3 = Vector3(1, 0, -1).normalized()
 	var at: Vector3 = dir_up * mid + Vector3(0, -0.55, 0)
-	var basis: Basis = Basis(dir_right, Vector3.UP, -dir_up) * Basis.from_scale(Vector3(360, 1, width))
+	var basis: Basis = Basis(dir_right, Vector3.UP, -dir_up) * Basis.from_scale(Vector3(REACH * 2.0, 1, width))
 	b.add(Kit.unit("grid", 48), Transform3D(basis, at), Color.WHITE, "water")
 	# Reflections of the far bank and the bridge lamps: long soft streaks on the water.
 	for k in range(40):
@@ -708,9 +744,9 @@ func _quay(b: Builder) -> void:
 	var near_t: float = -RIVER_NEAR / sqrt(2.0)
 	# Stone embankment wall and a paved promenade with lamps and benches.
 	# (Its top is level with the promenade, so the splav's gangway lands on it.)
-	_diag_box(b, near_t - 1.0, 0.0, Vector3(300, 1.4, 2.0), Color("e2dccf"), "tex:stone_wall:0.5", -1.4)
-	_diag_box(b, near_t - 8.0, 0.0, Vector3(300, 0.42, 14.0), Color("ece6de"), "tex:paving:0.3", -0.46)
-	for k in range(-9, 10):
+	_diag_box(b, near_t - 1.0, 0.0, Vector3(REACH * 2.0, 1.4, 2.0), Color("e2dccf"), "tex:stone_wall:0.5", -1.4)
+	_diag_box(b, near_t - 8.0, 0.0, Vector3(REACH * 2.0, 0.42, 14.0), Color("ece6de"), "tex:paving:0.3", -0.46)
+	for k in range(-30, 31):
 		var u: float = k * 14.0
 		var dir_up: Vector3 = Vector3(-1, 0, -1).normalized()
 		var dir_right: Vector3 = Vector3(1, 0, -1).normalized()
@@ -728,8 +764,8 @@ func _quay(b: Builder) -> void:
 		# Where the gangway (along +z from the door) crosses the quay edge.
 		foot.z = -(near_t - 0.2) * sqrt(2.0) - foot.x
 		gap = foot.dot(Vector3(1, 0, -1).normalized())
-	var u: float = -150.0
-	while u < 150.0:
+	var u: float = -420.0
+	while u < 420.0:
 		if absf(u + 1.0 - gap) > 2.2:
 			_diag_box(b, near_t - 0.2, u + 1.0, Vector3(2.0, 0.08, 0.08), Color("2b2b30"), "vc", 0.95)
 			_diag_box(b, near_t - 0.2, u, Vector3(0.08, 1.0, 0.08), Color("2b2b30"), "vc", 0.0)
@@ -765,18 +801,18 @@ func _bridge(b: Builder) -> void:
 func _far_bank(b: Builder) -> void:
 	var far_t: float = -RIVER_FAR / sqrt(2.0)
 	# A paved bank with its own embankment and lamps, and the road the bridge comes down onto.
-	_diag_box(b, far_t + 18.0, 0.0, Vector3(320, 0.5, 40.0), Color("9a948a"), "tex:paving:0.3", -0.3)
-	_diag_box(b, far_t + 1.0, 0.0, Vector3(320, 1.6, 2.0), Color("c8c2b6"), "tex:stone_wall:0.5", -1.4)
+	_diag_box(b, far_t + 18.0, 0.0, Vector3(REACH * 2.0, 0.5, 40.0), Color("9a948a"), "tex:paving:0.3", -0.3)
+	_diag_box(b, far_t + 1.0, 0.0, Vector3(REACH * 2.0, 1.6, 2.0), Color("c8c2b6"), "tex:stone_wall:0.5", -1.4)
 	_diag_box(b, far_t + 22.0, 46.0, Vector3(8.0, 0.04, 36.0), Color("b8b8bc"), "tex:asphalt:0.3", 0.2)
 	var dir_up: Vector3 = Vector3(-1, 0, -1).normalized()
 	var dir_right: Vector3 = Vector3(1, 0, -1).normalized()
-	for k in range(-10, 11):
+	for k in range(-30, 31):
 		var lamp: Vector3 = dir_up * (far_t + 2.5) + dir_right * (k * 14.0 + 7.0)
 		b.cylinder(lamp, 0.07, 3.0, Color("1d1d22"), "vc", 6)
 		b.sphere(lamp + Vector3(0, 3.0, 0), 0.2, Color.WHITE, "glow:ffd38a:3.0")
 		b.quad(lamp + Vector3(0, 0.25, 0), Vector2(5.0, 5.0), Color(1, 1, 1, 0.45), "add:pool")
-	var u: float = -140.0
-	while u < 140.0:
+	var u: float = -420.0
+	while u < 420.0:
 		var w: float = rng.randf_range(8, 16)
 		# The street off the bridge stays open.
 		if absf(u - 46.0) < w / 2.0 + 6.0:
@@ -796,3 +832,19 @@ func _far_bank(b: Builder) -> void:
 					var wp: Vector3 = at + dir_right * (-w / 2.0 + 1.2 + col * 2.2) + Vector3(0, 1.5 + row * 3.0, 0) - dir_up * 5.05
 					b.box_xf(Transform3D(basis, wp), Vector3(0.9, 1.2, 0.05), Color.WHITE, "glow:ffc070:1.6")
 		u += w + rng.randf_range(0.5, 3.0)
+	# Further back, the rest of the city over the river: rows of dim blocks with a few lit windows.
+	var row: float = far_t + 46.0
+	while row < far_t + 300.0:
+		u = -360.0 + rng.randf_range(0, 10)
+		while u < 360.0:
+			var w: float = rng.randf_range(10, 22)
+			var h: float = rng.randf_range(6, 22)
+			var at: Vector3 = dir_up * (row + rng.randf_range(-4, 4)) + dir_right * u
+			var basis: Basis = Basis(dir_right, Vector3.UP, -dir_up)
+			var facade: Color = [Color("3e4458"), Color("4a4a5c"), Color("524c5a"), Color("404a5a")][rng.randi() % 4]
+			b.box_xf(Transform3D(basis, at), Vector3(w, h, 14), facade, "vc")
+			for k in range(rng.randi_range(0, 4)):
+				var wp: Vector3 = at + dir_right * rng.randf_range(-w / 2.0 + 1.0, w / 2.0 - 1.0) + Vector3(0, 1.5 + 3.0 * rng.randi_range(0, int(h / 3.0) - 1), 0) - dir_up * 7.05
+				b.box_xf(Transform3D(basis, wp), Vector3(0.9, 1.2, 0.05), Color.WHITE, "glow:ffc070:1.4")
+			u += w + rng.randf_range(4.0, 12.0)
+		row += 28.0
