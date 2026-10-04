@@ -60,10 +60,15 @@ clouds, coins and notes over their 3D anchors.
   to small parks so it is never hidden.
 - `scripts/world3d/venue3d.gd` lays out and builds each venue: the played one as a cut-away
   (floor, back walls with windows, bar, stage, themed decor, pendant lamps with real lights, a
-  table set per slot); the others as closed buildings with their signs.
+  table set per slot); the others as closed buildings with their signs. Paintings, kilims, the
+  clock, peppers and wall lamps are laid out along the side wall by one plan (`wall_plan`), each in
+  the widest free stretch between the windows, so nothing hangs over a window or over another
+  piece.
 - `scripts/world3d/venue_world.gd` turns simulation state into people and props: parties walk
-  in from the street along an A* grid (stepping round each other), pull out their chairs and sit down, order, drink, get up
-  to dance and leave paying; waiters carry trays from the bar; the band plays; konobar,
+  in from the street along an A* grid (stepping round each other), pull out their chairs and sit
+  down, order, drink, get up to dance and leave paying; waiters walk out from the bar with the
+  tray level on the flat of the left hand (the glasses stand up on it), set the order down on the
+  table with the right hand and walk back with the empty tray; the band plays; konobar,
   ozvučenje, dekor, izbacivač and sef levels show. The chairs are one MultiMesh per room so
   each can slide out and back. A served order puts its bottle or dish in the middle of the
   table and a cup or glass in front of every seated guest.

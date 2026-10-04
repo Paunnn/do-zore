@@ -648,10 +648,12 @@ func _sync_staff(save: Dictionary) -> void:
 			b.cylinder_xf(Transform3D(Basis(Vector3.RIGHT, PI / 2.0), spot + Vector3(0, tall * 0.62, 0.26)), 0.17, 0.02, Color("3a3a44"), "vc", 12)
 			b.cylinder_xf(Transform3D(Basis(Vector3.RIGHT, PI / 2.0), spot + Vector3(0, tall * 0.25, 0.26)), 0.1, 0.02, Color("3a3a44"), "vc", 10)
 	_decor("speakers", sound >= 1, make_speakers, str(sound >= 5))
+	# The safe stands in the corner past the end of the bar (clear of the bar stools).
 	_decor("safe", int(upgrades.get("sef", 0)) > 0, func(b: Builder):
-		var at: Vector3 = Vector3(lay.bar_to - 0.2, 0, 2.3)
-		b.box(at, Vector3(0.7, 0.8, 0.6), Color("4a5560"), "vc_metal")
-		b.cylinder_xf(Transform3D(Basis(Vector3.RIGHT, PI / 2.0), at + Vector3(0, 0.45, 0.31)), 0.1, 0.03, Color("c9a24a"), "vc_metal", 12))
+		var at: Vector3 = Vector3(float(lay.w) - 0.5, 0, 2.7)
+		b.box(at, Vector3(0.6, 0.8, 0.6), Color("4a5560"), "vc_gloss")
+		b.cylinder_xf(Transform3D(Basis(Vector3.RIGHT, PI / 2.0), at + Vector3(0, 0.45, 0.31)), 0.1, 0.03, Color("c9a24a"), "vc_metal", 12)
+		b.box(at + Vector3(0.18, 0.3, 0.31), Vector3(0.04, 0.2, 0.03), Color("c9a24a"), "vc_metal"))
 
 func _decor(key: String, wanted: bool, make: Callable, variant: String = "") -> void:
 	var have: bool = decor.has(key)
@@ -750,19 +752,25 @@ func _run_waiters() -> void:
 		waiter.hold("tray")
 		var target: Vector2i = _cell_at(Vector3(slot.center.x + 1.0, 0, slot.center.y + 1.0))
 		var points: PackedVector3Array = _path(waiter.position, target)
+		# The last step goes in to the table's corner, between two chairs, within reach of it.
+		points.append(Vector3(slot.center.x + 0.78, 0, slot.center.y + 0.78))
 		waiter.arrived.connect(_delivered.bind(waiter, slot, str(job.item)), CONNECT_ONE_SHOT)
 		waiter.play("carry")
 		waiter.walk(points)
 
 func _delivered(waiter, slot: Dictionary, item: String) -> void:
-	if not slot.guests.is_empty():
-		_place_drink(slot, item)
 	waiter.face(Vector3(slot.center.x, 0, slot.center.y) - waiter.position)
 	waiter.play("carry_idle")
 	var back: Tween = waiter.create_tween()
+	# The order goes on the table as the hand comes down to it, then back to the bar.
+	back.tween_interval(0.45)
+	back.tween_callback(func():
+		if not slot.guests.is_empty():
+			_place_drink(slot, item)
+		waiter.hold("tray_empty"))
 	back.tween_interval(0.5)
 	back.tween_callback(func():
-		waiter.play("walk")
+		waiter.play("carry_empty")
 		var home: Vector3 = waiter.get_meta("home")
 		var points: PackedVector3Array = _path(waiter.position, _cell_at(home))
 		points.append(home)

@@ -105,30 +105,135 @@ static func layout(venue_id: String, max_tables: int) -> Dictionary:
 		"bouncer": Vector3(door_x + 1.6, 0, d + 0.9),
 		"waiter_home": Vector3(bar_to - 1.5, 0, 2.8),
 		"musicians": musicians,
-		"plants": [Vector3(w - 0.7, 0, top + 0.7), Vector3(0.7, 0, d - 0.7), Vector3(w - 0.7, 0, d - 2.2), Vector3(0.7, 0, top + 0.7)],
+		# (In the birtija the stove stands in the corner by the first table row; its barrel goes past it.)
+		"plants": [Vector3(w - 0.7, 0, top + 0.7), Vector3(0.8, 0, d - 0.8), Vector3(w - 0.7, 0, d - 2.2),
+			Vector3(0.8, 0, top + (1.35 if venue_id == "birtija" else 0.8))],
 	}
 
-## Where things already hang on the side wall (x = 0), as distances from the first table row.
-const WALL_ITEMS = {"birtija": [0.2, 2.0, 4.0, 6.0, 7.0, 10.0], "kafana": [3.0, 6.0, 9.0], "restoran": [2.5, 7.5, 12.5]}
+const WINDOW_SILL = 1.25
+## Everything hung on the side wall (x = 0), in the order it is placed: each goes in the middle of
+## the widest stretch of wall still free (clear of the windows, the stage, the stove and the
+## plants standing against the wall), so nothing hangs over a window or over another piece; the
+## stretches left empty get a wall lamp. "rug" is the kilim bought with dekor: its place is kept.
+const WALL_DECOR = {
+	"birtija": [
+		{"kind": "painting", "tex": "painting_portrait", "size": Vector2(0.7, 0.55), "frame": "6e4528"},
+		{"kind": "rug", "width": 1.2},
+		{"kind": "clock", "width": 0.44},
+		{"kind": "ristra", "width": 0.16},
+		{"kind": "ristra", "width": 0.16},
+	],
+	"kafana": [
+		{"kind": "painting", "tex": "painting_landscape", "size": Vector2(1.2, 0.9), "frame": "d9a531"},
+		{"kind": "kilim", "width": 1.3, "tex": "rug_blue"},
+		{"kind": "painting", "tex": "painting_still", "size": Vector2(0.9, 0.7), "frame": "d9a531"},
+		{"kind": "rug", "width": 1.2},
+	],
+	"restoran": [
+		{"kind": "painting", "tex": "painting_river", "size": Vector2(1.3, 1.0), "frame": "d9a531"},
+		{"kind": "painting", "tex": "painting_landscape", "size": Vector2(1.3, 1.0), "frame": "d9a531"},
+		{"kind": "painting", "tex": "painting_portrait", "size": Vector2(1.3, 1.0), "frame": "d9a531"},
+		{"kind": "rug", "width": 1.2},
+	],
+}
 
-## The middle of the widest free stretch of the side wall (z), or -1 when there is no room for a
-## hanging 1.2 m wide.
+## The windows in the back wall (z = 0), by x: none behind the bar's bottle shelves or behind the
+## stage curtains.
+static func back_windows(lay: Dictionary) -> Array:
+	var out: Array = []
+	if lay.id == "splav":
+		return out
+	for k in range(int(float(lay.w) / 4.0)):
+		var x: float = 2.6 + k * 4.0
+		if x > float(lay.bar_from) - 0.9 and x < float(lay.bar_to) + 0.9:
+			continue
+		if lay.id in ["kafana", "restoran"] and x < float(lay.stage.x) + 0.9:
+			continue
+		if x < float(lay.w) - 0.9:
+			out.append(x)
+	return out
+
+## The windows in the side wall (x = 0), by z: one beside each row of tables.
+static func side_windows(lay: Dictionary) -> Array:
+	var out: Array = []
+	if lay.id == "splav":
+		return out
+	for k in range(int((float(lay.d) - float(lay.top)) / 4.0)):
+		out.append(float(lay.top) + 2.0 + k * 4.0)
+	return out
+
+## Where each piece of WALL_DECOR hangs on the side wall, and the wall lamps:
+## [{"item": Dictionary, "z": float}] ("item" is {"kind": "sconce"} for a lamp).
+static func wall_plan(lay: Dictionary) -> Array:
+	var plan: Array = []
+	if lay.id == "splav":
+		return plan
+	var blocked: Array = []
+	for z in side_windows(lay):
+		blocked.append(Vector2(z - 0.85, z + 0.85))
+	if lay.id == "birtija":
+		blocked.append(Vector2(float(lay.top) - 0.25, float(lay.top) + 0.65))
+	for spot in lay.plants:
+		if spot.x < 1.2:
+			blocked.append(Vector2(spot.z - 0.55, spot.z + 0.55))
+	blocked.sort_custom(func(a, c): return a.x < c.x)
+	var free: Array = []
+	var at: float = float(lay.stage.y) + 0.25
+	var end: float = float(lay.d) - 0.45
+	for span in blocked:
+		if span.x > at:
+			free.append(Vector2(at, minf(span.x, end)))
+		at = maxf(at, span.y)
+	if end > at:
+		free.append(Vector2(at, end))
+	for item in WALL_DECOR.get(lay.id, []):
+		var width: float = item.size.x + 0.16 if item.has("size") else float(item.width)
+		var best: int = -1
+		for i in range(free.size()):
+			var room: float = free[i].y - free[i].x
+			if room >= width + 0.3 and (best < 0 or room > free[best].y - free[best].x + 0.01):
+				best = i
+		if best < 0:
+			continue
+		var span: Vector2 = free[best]
+		var z: float = (span.x + span.y) / 2.0
+		plan.append({"item": item, "z": z})
+		free.remove_at(best)
+		free.append(Vector2(span.x, z - width / 2.0 - 0.15))
+		free.append(Vector2(z + width / 2.0 + 0.15, span.y))
+	for span in free:
+		if span.y - span.x >= 0.9:
+			plan.append({"item": {"kind": "sconce"}, "z": (span.x + span.y) / 2.0})
+	return plan
+
+## Where the kilim bought with dekor hangs on the side wall (z), or -1 when there is no room.
 static func free_wall_spot(lay: Dictionary) -> float:
-	if not WALL_ITEMS.has(lay.id):
-		return -1.0
-	var top: float = float(lay.top)
-	var marks: Array = [top - 0.2, float(lay.d) - 0.6]
-	for at in WALL_ITEMS[lay.id]:
-		if top + at < float(lay.d) - 0.6:
-			marks.append(top + at)
-	marks.sort()
-	var best: float = -1.0
-	var gap: float = 0.0
-	for i in range(marks.size() - 1):
-		if marks[i + 1] - marks[i] > gap:
-			gap = marks[i + 1] - marks[i]
-			best = (marks[i] + marks[i + 1]) / 2.0
-	return best if gap >= 2.2 else -1.0
+	for entry in wall_plan(lay):
+		if entry.item.kind == "rug":
+			return entry.z
+	return -1.0
+
+## Hangs the venue's pieces on the side wall (lamps are built with the lights).
+static func _hang(b: Builder, lay: Dictionary) -> void:
+	for entry in wall_plan(lay):
+		var item: Dictionary = entry.item
+		var z: float = entry.z
+		match str(item.kind):
+			"painting":
+				var size: Vector2 = item.size
+				_painting(b, Vector3(0.05, 2.05 - size.y / 2.0, z), PI / 2.0, str(item.tex), size, Color(item.frame))
+			"kilim":
+				b.add(Kit.unit("quad"), Transform3D(Basis(Vector3.UP, PI / 2.0) * Basis(Vector3.RIGHT, PI / 2.0) * Basis.from_scale(Vector3(float(item.width), 1, 1.8)), Vector3(0.05, 1.95, z)), Color.WHITE, "uv:" + str(item.tex))
+			"clock":
+				b.cylinder_xf(Transform3D(Basis(Vector3.BACK, -PI / 2.0), Vector3(0.0, 2.25, z)), 0.22, 0.06, Color("3a2a1e"), "vc", 16)
+				b.cylinder_xf(Transform3D(Basis(Vector3.BACK, -PI / 2.0), Vector3(0.0, 2.25, z)), 0.19, 0.075, Color("f4ead2"), "vc", 16)
+				b.box(Vector3(0.08, 2.25, z), Vector3(0.01, 0.13, 0.025), Color("2b1d14"))
+				b.box(Vector3(0.08, 2.24, z + 0.04), Vector3(0.01, 0.025, 0.1), Color("2b1d14"))
+			"ristra":
+				# A string of red peppers.
+				for j in range(9):
+					b.sphere(Vector3(0.1, 2.5 - j * 0.12, z + sin(j) * 0.04), 0.06, Color("c0322c").darkened(0.15 * (j % 2)), "vc_gloss", Vector3(0.8, 1.3, 0.8), 6)
+				b.cylinder(Vector3(0.1, 2.5, z), 0.01, 0.18, Color("6e5a3a"), "vc", 4)
 
 static func seat_point(center: Vector2, seat: int) -> Vector3:
 	var offset: Vector2 = SEATS[seat].offset if seat < SEATS.size() else STANDING[seat - SEATS.size()]
@@ -217,22 +322,20 @@ static func _room(b: Builder, lay: Dictionary, t: Dictionary, rng: RandomNumberG
 	b.panel(Vector3(door_x + 0.6, 3.15, d + 0.27), Vector2(2.5, 0.75), Color.WHITE, "uv:sign_" + str(lay.id))
 	# Windows in the back walls: night outside, deep blue glass in wooden frames.
 	var glass: Color = Color(t.glass)
-	for k in range(int(w / 4.0)):
-		var x: float = 2.6 + k * 4.0
-		if x > lay.bar_from - 0.5 and x < lay.bar_to and lay.id != "restoran":
-			continue
-		_window(b, Vector3(x, 1.35, 0.02), 0.0, glass, trim)
-	for k in range(int((d - lay.top) / 4.0)):
-		var z: float = lay.top + 2.0 + k * 4.0
-		_window(b, Vector3(0.02, 1.35, z), PI / 2.0, glass, trim)
+	for x in back_windows(lay):
+		_window(b, Vector3(x, WINDOW_SILL, 0.02), 0.0, glass, trim)
+	for z in side_windows(lay):
+		_window(b, Vector3(0.02, WINDOW_SILL, z), PI / 2.0, glass, trim)
 
+## A window whose sill is at `at` (boxes stand on their base): the frame, the night-blue glass, a
+## cross of glazing bars and the sill under it.
 static func _window(b: Builder, at: Vector3, turn: float, glass: Color, frame: Color) -> void:
 	var xf: Transform3D = Transform3D(Basis(Vector3.UP, turn), at)
-	b.box_xf(xf * Transform3D(Basis.IDENTITY, Vector3(0, 0.6, 0.0)), Vector3(1.5, 1.45, 0.06), frame, "vc_gloss")
-	b.box_xf(xf * Transform3D(Basis.IDENTITY, Vector3(0, 0.6, 0.03)), Vector3(1.3, 1.25, 0.04), glass, "glow:2d4a7a:0.7")
-	b.box_xf(xf * Transform3D(Basis.IDENTITY, Vector3(0, 0.6, 0.06)), Vector3(0.06, 1.25, 0.04), frame, "vc")
-	b.box_xf(xf * Transform3D(Basis.IDENTITY, Vector3(0, 0.75, 0.06)), Vector3(1.3, 0.06, 0.04), frame, "vc")
-	b.box_xf(xf * Transform3D(Basis.IDENTITY, Vector3(0, -0.1, 0.12)), Vector3(1.6, 0.08, 0.22), frame, "vc_gloss")
+	b.box_xf(xf * Transform3D(Basis.IDENTITY, Vector3(0, 0.0, 0.0)), Vector3(1.5, 1.45, 0.06), frame, "vc_gloss")
+	b.box_xf(xf * Transform3D(Basis.IDENTITY, Vector3(0, 0.1, 0.03)), Vector3(1.3, 1.25, 0.04), glass, "glow:2d4a7a:0.7")
+	b.box_xf(xf * Transform3D(Basis.IDENTITY, Vector3(0, 0.1, 0.06)), Vector3(0.06, 1.25, 0.04), frame, "vc")
+	b.box_xf(xf * Transform3D(Basis.IDENTITY, Vector3(0, 0.85, 0.06)), Vector3(1.3, 0.06, 0.04), frame, "vc")
+	b.box_xf(xf * Transform3D(Basis.IDENTITY, Vector3(0, -0.08, 0.11)), Vector3(1.6, 0.08, 0.22), frame, "vc_gloss")
 
 static func _bar(b: Builder, lay: Dictionary, t: Dictionary, rng: RandomNumberGenerator) -> void:
 	var x0: float = lay.bar_from
@@ -250,7 +353,8 @@ static func _bar(b: Builder, lay: Dictionary, t: Dictionary, rng: RandomNumberGe
 	var shelf: Color = Color(t.trim).darkened(0.15)
 	if lay.id != "restoran":
 		b.box(Vector3(mid, 1.2, 0.05), Vector3(length - 0.4, 1.3, 0.04), Color("1f2a3a"), "vc_gloss")
-	for level in [1.35, 1.95, 2.55]:
+	# (On the splav the striped awning comes down over the bar: two shelves fit under it.)
+	for level in ([1.35, 1.95] if lay.id == "splav" else [1.35, 1.95, 2.55]):
 		b.box(Vector3(mid, level, 0.2), Vector3(length - 0.2, 0.06, 0.35), shelf, "vc_gloss")
 		var x: float = x0 + 0.4
 		while x < x1 - 0.4:
@@ -318,10 +422,9 @@ static func _lamps(root: Node3D, lay: Dictionary, t: Dictionary) -> Array:
 			var x: float = 4.6 + k * 4.0
 			if x < lay.w - 1.0 and (x < lay.bar_from - 0.4 or x > lay.bar_to + 0.4) and x > lay.stage.x + 0.4:
 				_sconce(b, Vector3(x, 2.2, 0.0), 0.0, lamp, lay.id)
-		for k in range(int((lay.d - lay.top) / 4.0)):
-			var z: float = lay.top + 4.0 + k * 4.0
-			if z < lay.d - 1.0:
-				_sconce(b, Vector3(0.0, 2.2, z), PI / 2.0, lamp, lay.id)
+		for entry in wall_plan(lay):
+			if entry.item.kind == "sconce":
+				_sconce(b, Vector3(0.0, 2.2, entry.z), PI / 2.0, lamp, lay.id)
 		var length: float = lay.bar_to - lay.bar_from
 		var count: int = maxi(2, int(length / 2.4))
 		for k in range(count):
@@ -406,9 +509,12 @@ static func _plant(b: Builder, at: Vector3, kind: String) -> void:
 		"palm":
 			b.cylinder(at, 0.28, 0.5, Color("e8e2d6"), "vc_gloss", 12, 0.85)
 			b.cylinder(at + Vector3(0, 0.5, 0), 0.05, 1.1, Color("6e5a3a"), "vc", 6)
+			# Fronds pointing out from the stem (each stretched along its own direction), short
+			# enough to stay clear of a wall 0.8 m away.
 			for k in range(7):
 				var a: float = k * TAU / 7.0
-				b.sphere(at + Vector3(cos(a) * 0.38, 1.65, sin(a) * 0.38), 0.32, Color("2f6a3a").lightened(0.1 * (k % 2)), "vc", Vector3(1.4, 0.35, 0.6), 8)
+				var frond: Transform3D = Transform3D(Basis(Vector3.UP, -a) * Basis.from_scale(Vector3(0.42, 0.1, 0.18)), at + Vector3(cos(a) * 0.3, 1.62, sin(a) * 0.3))
+				b.add(Kit.unit("sphere", 8), frond, Color("2f6a3a").lightened(0.1 * (k % 2)), "vc")
 		"barrel":
 			b.cylinder(at, 0.36, 0.95, Color("7a4a2c"), "vc_gloss", 14)
 			for y in [0.15, 0.8]:
@@ -436,82 +542,63 @@ static func _birtija_decor(b: Builder, lay: Dictionary, rng: RandomNumberGenerat
 	b.box(stove, Vector3(0.8, 0.85, 0.6), Color("eeeae0"), "vc_gloss")
 	b.box(stove + Vector3(0, 0.85, 0), Vector3(0.84, 0.05, 0.64), Color("2b2b30"), "vc_metal")
 	b.box(stove + Vector3(0.41, 0.3, 0), Vector3(0.02, 0.3, 0.3), Color("2b2b30"), "vc_metal")
-	b.cylinder(stove + Vector3(-0.2, 0.9, 0), 0.08, WALL_H, Color("3a3a3a"), "vc_metal", 8)
+	b.cylinder(stove + Vector3(-0.2, 0.9, 0), 0.08, 1.78, Color("3a3a3a"), "vc_metal", 8)
 	b.sphere(stove + Vector3(0.42, 0.4, 0), 0.07, Color.WHITE, "glow:ff8a3a:3.0")
-	# Ristra of red peppers and garlic on the walls, hats on pegs.
-	for k in range(3):
-		var z: float = lay.top + 4.0 + k * 3.0
-		if z > d - 1.0:
-			break
-		for j in range(9):
-			b.sphere(Vector3(0.1, 2.5 - j * 0.12, z + sin(j) * 0.04), 0.06, Color("c0322c").darkened(0.15 * (j % 2)), "vc_gloss", Vector3(0.8, 1.3, 0.8), 6)
-	for k in range(4):
-		var x: float = lay.stage.x + 0.7 + k * 0.5
-		b.cylinder_xf(Transform3D(Basis(Vector3.RIGHT, PI / 2.0), Vector3(x, 2.4, 0.0)), 0.025, 0.2, Color("4a3020"), "vc", 6)
+	b.cylinder_xf(Transform3D(Basis(Vector3.BACK, PI / 2.0), stove + Vector3(-0.2, 2.6, 0)), 0.08, 0.3, Color("3a3a3a"), "vc_metal", 8)
+	_hang(b, lay)
+	# Hats on pegs on the back wall, between the stage and the bar.
+	var pegs: float = (float(lay.stage.x) + float(lay.bar_from)) / 2.0
 	for k in range(2):
-		var at: Vector3 = Vector3(lay.stage.x + 0.7 + k * 1.0, 2.3, 0.14)
-		b.cylinder(at, 0.17, 0.1, Color("4a5a3a"), "vc", 10, 0.85)
-		b.box(at + Vector3(0, 0.1, 0), Vector3(0.26, 0.06, 0.1), Color("3a4a2c"), "vc")
-	_painting(b, Vector3(0.05, 1.6, lay.top + 2.0), PI / 2.0, "painting_portrait", Vector2(0.7, 0.55), Color("6e4528"))
+		var at: Vector3 = Vector3(pegs - 0.22 + k * 0.44, 2.3, 0.14)
+		b.cylinder_xf(Transform3D(Basis(Vector3.RIGHT, PI / 2.0), Vector3(at.x, 2.42, 0.0)), 0.025, 0.2, Color("4a3020"), "vc", 6)
+		b.cylinder(at, 0.17, 0.1, Color("4a5a3a").darkened(0.2 * k), "vc", 10, 0.85)
+		b.cylinder(at + Vector3(0, 0.1, 0), 0.11, 0.1, Color("4a5a3a").darkened(0.2 * k), "vc", 10, 0.9)
 	# A big barrel and crates by the bar, a bench along the wall.
 	_plant(b, Vector3(w - 0.6, 0, 0.6), "barrel")
 	b.box(Vector3(w - 0.6, 0, 1.6), Vector3(0.6, 0.45, 0.6), Color("e8dcc8"), "tex:planks_rough:0.8")
 	b.box(Vector3(0.35, 0, d - 3.0), Vector3(0.5, 0.42, 3.4), Color("7a4a2c"), "vc_gloss")
-	# Calendar and clock.
-	b.box(Vector3(lay.bar_to - 0.8, 2.0, 0.02), Vector3(0.5, 0.6, 0.02), Color("f4ead2"))
-	b.box(Vector3(lay.bar_to - 0.8, 2.48, 0.03), Vector3(0.5, 0.14, 0.02), Color("c0322c"))
-	b.cylinder_xf(Transform3D(Basis(Vector3.RIGHT, PI / 2.0), Vector3(0.0, 2.3, lay.top + 6.0)), 0.22, 0.06, Color("f4ead2"), "vc", 16)
+	# A calendar on the back wall past the end of the bar.
+	var cal: float = (float(lay.bar_to) + w) / 2.0
+	b.box(Vector3(cal, 1.95, 0.02), Vector3(0.5, 0.6, 0.02), Color("f4ead2"))
+	b.box(Vector3(cal, 2.41, 0.035), Vector3(0.5, 0.14, 0.02), Color("c0322c"))
 
 static func _kafana_decor(b: Builder, lay: Dictionary, rng: RandomNumberGenerator) -> void:
 	var d: float = lay.d
 	var w: float = lay.w
-	_painting(b, Vector3(0.05, 1.5, lay.top + 3.0), PI / 2.0, "painting_landscape", Vector2(1.2, 0.9), Color("d9a531"))
-	_painting(b, Vector3(0.05, 1.5, lay.top + 9.0), PI / 2.0, "painting_still", Vector2(0.9, 0.7), Color("d9a531"))
-	# A kilim hung on the wall.
-	b.add(Kit.unit("quad"), Transform3D(Basis(Vector3.UP, PI / 2.0) * Basis(Vector3.RIGHT, PI / 2.0) * Basis.from_scale(Vector3(1.3, 1, 1.9)), Vector3(0.05, 1.95, lay.top + 6.0)), Color.WHITE, "uv:rug_kilim")
-	# Coat rack by the door, an old radio on a sideboard, plants.
+	_hang(b, lay)
+	# Coat rack by the door, an old radio on a sideboard under the last window.
 	var rack: Vector3 = Vector3(w - 0.6, 0, d - 1.2)
 	b.cylinder(rack, 0.04, 1.9, Color("3a2016"), "vc_gloss", 6)
 	b.cylinder(rack, 0.25, 0.04, Color("3a2016"), "vc_gloss", 10)
 	b.sphere(rack + Vector3(0.1, 1.7, 0), 0.16, Color("2b2b33"), "vc", Vector3(1.0, 1.4, 0.7), 8)
-	b.box(Vector3(0.35, 0, lay.top + 11.0), Vector3(0.6, 0.85, 1.6), Color("4a2a18"), "vc_gloss")
-	b.box(Vector3(0.35, 0.85, lay.top + 11.0), Vector3(0.4, 0.32, 0.55), Color("6e4528"), "vc_gloss")
-	b.box(Vector3(0.56, 0.95, lay.top + 11.0), Vector3(0.02, 0.18, 0.4), Color("e0c48a"), "vc")
-	_plant(b, Vector3(w - 0.6, 0, lay.top + 0.6), "ficus")
-	_plant(b, Vector3(0.6, 0, d - 0.6), "ficus")
+	var under: float = side_windows(lay).back()
+	b.box(Vector3(0.35, 0, under), Vector3(0.6, 0.85, 1.6), Color("4a2a18"), "vc_gloss")
+	b.box(Vector3(0.38, 0.85, under), Vector3(0.4, 0.32, 0.55), Color("6e4528"), "vc_gloss")
+	b.box(Vector3(0.59, 0.95, under), Vector3(0.02, 0.18, 0.4), Color("e0c48a"), "vc")
 
 static func _restoran_decor(b: Builder, lay: Dictionary, rng: RandomNumberGenerator) -> void:
 	var d: float = lay.d
 	var w: float = lay.w
-	# Grand piano on the stage.
-	var p: Vector3 = Vector3(1.6, 0.35, 1.5)
+	# Grand piano in the back corner of the stage, behind the band's back row.
+	var p: Vector3 = Vector3(0.5, 0.35, 0.35)
 	b.box(p + Vector3(0, 0.0, 0), Vector3(0.1, 0.65, 0.1), Color("15151a"), "vc_gloss")
 	b.box(p + Vector3(1.2, 0.0, 0.3), Vector3(0.1, 0.65, 0.1), Color("15151a"), "vc_gloss")
 	b.box(p + Vector3(0.2, 0.0, 0.9), Vector3(0.1, 0.65, 0.1), Color("15151a"), "vc_gloss")
 	b.box(p + Vector3(0.6, 0.65, 0.45), Vector3(1.5, 0.32, 1.1), Color("101014"), "vc_gloss", 0.35)
 	b.box(p + Vector3(-0.05, 0.86, 0.55), Vector3(0.95, 0.06, 0.25), Color("f4f1ea"), "vc_gloss", 0.35)
-	# Gilded mirrors and paintings, palms in the corners.
-	for k in range(3):
-		var z: float = lay.top + 2.5 + k * 5.0
-		if z > d - 2.0:
-			break
-		_painting(b, Vector3(0.05, 1.5, z), PI / 2.0, ["painting_river", "painting_landscape", "painting_portrait"][k], Vector2(1.3, 1.0), Color("d9a531"))
-	_plant(b, Vector3(w - 0.6, 0, lay.top + 0.6), "palm")
-	_plant(b, Vector3(0.7, 0, d - 0.7), "palm")
-	_plant(b, Vector3(w - 0.6, 0, d - 2.4), "palm")
-	# Wine rack along the back wall.
-	b.box(Vector3(lay.bar_to - 0.5, 0, 0.3), Vector3(0.9, 2.4, 0.5), Color("3a2016"), "vc_gloss")
+	# Gilded paintings between the windows (the palms come with dekor).
+	_hang(b, lay)
+	# Wine rack against the back wall past the end of the bar (clear of its bottle shelves).
+	var rack: float = (float(lay.bar_to) + w) / 2.0
+	b.box(Vector3(rack, 0, 0.3), Vector3(0.8, 2.4, 0.5), Color("3a2016"), "vc_gloss")
 	for r in range(6):
 		for c in range(3):
-			b.cylinder_xf(Transform3D(Basis(Vector3.RIGHT, PI / 2.0), Vector3(lay.bar_to - 0.8 + c * 0.3, 0.3 + r * 0.36, 0.3)), 0.06, 0.4, Color("4a1a24"), "vc_gloss", 6)
+			b.cylinder_xf(Transform3D(Basis(Vector3.RIGHT, PI / 2.0), Vector3(rack - 0.25 + c * 0.25, 0.3 + r * 0.36, 0.3)), 0.06, 0.4, Color("4a1a24"), "vc_gloss", 6)
 
 static func _splav_decor(b: Builder, lay: Dictionary, rng: RandomNumberGenerator) -> void:
 	var w: float = lay.w
 	var d: float = lay.d
-	# Speakers by the stage, life rings on the rail, flags.
-	for x in [0.5, lay.stage.x - 0.5]:
-		b.box(Vector3(x, 0.35, lay.stage.y - 0.4), Vector3(0.6, 1.4, 0.5), Color("1d1d22"), "vc_gloss")
-		b.cylinder_xf(Transform3D(Basis(Vector3.RIGHT, PI / 2.0), Vector3(x, 0.8, lay.stage.y - 0.14)), 0.2, 0.03, Color("3a3a44"), "vc", 12)
+	# Life rings on the rail (the speakers come with ozvučenje, out of the band's way).
 	for z in [lay.top + 3.0, lay.top + 11.0]:
 		b.cylinder_xf(Transform3D(Basis(Vector3.FORWARD, PI / 2.0), Vector3(w + 0.55, 0.8, z)), 0.3, 0.08, Color("f26a2a"), "vc_gloss", 14)
 		for a in [0.0, PI / 2.0, PI, PI * 1.5]:
@@ -549,9 +636,12 @@ static func _raft(b: Builder, lay: Dictionary, rng: RandomNumberGenerator) -> vo
 		b.box(spec[0], spec[1], rail, "vc_gloss")
 	# Gap in the rail for the gangway.
 	b.box(Vector3(lay.door_x + 0.6, -0.05, d + 4.3), Vector3(1.4, 0.08, 8.0), Color("f0e8dc"), "tex:planks_deck:0.6")
-	for k in range(9):
+	# Its rail posts stop over the water (the quay wall meets the gangway about 6 m out).
+	for k in range(5):
 		for side in [-0.7, 0.7]:
 			b.box(Vector3(lay.door_x + 0.6 + side, 0, d + 0.6 + k), Vector3(0.05, 0.9, 0.05), Color("f4f1ea"), "vc_gloss")
+	for side in [-0.7, 0.7]:
+		b.box(Vector3(lay.door_x + 0.6 + side, 0.9, d + 2.6), Vector3(0.05, 0.05, 4.1), Color("f4f1ea"), "vc_gloss")
 	# Canopy posts and string lights.
 	var posts: Array = []
 	for px in [0.0, w / 2.0, w]:
@@ -695,7 +785,8 @@ static func build_exterior(root: Node3D, lay: Dictionary, state: String) -> void
 				b.cylinder(Vector3(lay.door_x - 1.2 + k * 0.45, 3.6, d + 1.3), 0.07, 0.75, Color("f8f4ea"), "vc", 8)
 			b.box(Vector3(lay.door_x + 0.6, 4.35, d + 1.3), Vector3(4.0, 0.12, 0.2), Color("e8e2d6"))
 			b.cylinder(Vector3(w - 2.0, height, d - 2.0), 1.8, 1.4, Color("e8e2d6"), "vc", 16)
-			b.sphere(Vector3(w - 2.0, height + 1.4, d - 2.0), 1.8, Color("4a7a8a"), "vc_metal", Vector3(1, 0.9, 1), 16)
+			# (Copper gone green: matte, so the night doesn't turn the metal black.)
+			b.sphere(Vector3(w - 2.0, height + 1.4, d - 2.0), 1.8, Color("6fa894"), "vc", Vector3(1, 0.9, 1), 16)
 			b.sphere(Vector3(w - 2.0, height + 3.2, d - 2.0), 0.2, Color("d9a531"), "vc_metal")
 	# Roof.
 	if str(t.roof) != "":

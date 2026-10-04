@@ -133,6 +133,8 @@ var body: MeshInstance3D
 var player: AnimationPlayer
 var bones: Dictionary = {}
 var hand: Node3D
+## A waiter's tray (on the left hand, kept level: see _carry_pose).
+var tray: MeshInstance3D
 var instrument: Node3D
 var current: String = ""
 var clip: String = ""
@@ -471,6 +473,24 @@ static func _ink() -> ShaderMaterial:
 		_prop_ink.set_shader_parameter("width_px", 1.1)
 	return _prop_ink
 
+## A sheet of cloth seen from both sides (an apron, a veil): the surface and, a few millimetres in
+## towards `inside`, the same surface turned the other way, so its back shows cloth and not the
+## outline pass.
+static func _sheet(b: Builder, rows: Array, color: Color, key: String, inside: Vector3) -> void:
+	_surface(b, rows, color, key, inside)
+	var lining: Array = []
+	var middle: Vector3 = Vector3.ZERO
+	var count: int = 0
+	for row in rows:
+		var inner: PackedVector3Array = PackedVector3Array()
+		for at in row:
+			inner.append(at + (inside - at).normalized() * 0.004)
+			middle += at
+			count += 1
+		lining.append(inner)
+	middle /= float(count)
+	_surface(b, lining, color.darkened(0.06), key, middle + (middle - inside) * 50.0)
+
 ## A smooth surface through rows of points (all rows the same length), its faces turned to the
 ## side the normals point to.
 static func _surface(b: Builder, rows: Array, color: Color, key: String, inside: Vector3 = Vector3.INF) -> void:
@@ -563,10 +583,17 @@ static func _accessory(b: Builder, full_kind: String) -> void:
 		"water":
 			b.cylinder(Vector3.ZERO, 0.045, 0.15, glass, "vc_gloss", 10, 1.1)
 			b.cylinder(Vector3(0, 0.008, 0), 0.042, 0.1, Color("bfe4f2"), "vc_gloss", 10, 1.08)
-		"tray":
-			b.cylinder(Vector3.ZERO, 0.2, 0.018, Color("c9ced6"), "vc_metal", 14)
-			b.cylinder(Vector3(0.05, 0.018, 0.03), 0.035, 0.12, Color("dfeff0"), "vc_gloss", 8)
-			b.cylinder(Vector3(-0.07, 0.018, -0.03), 0.032, 0.17, Color("3d8a4f"), "vc_gloss", 8)
+		"tray", "tray_empty":
+			# A round steel tray with a raised rim (model units), with the order on it.
+			b.cylinder(Vector3.ZERO, 0.17, 0.014, Color("c9ced6"), "vc_metal", 16)
+			b.cylinder(Vector3(0, 0.012, 0), 0.172, 0.014, Color("dfe3e8"), "vc_metal", 16, 1.04)
+			if kind == "tray":
+				b.cylinder(Vector3(0.05, 0.014, 0.04), 0.03, 0.1, Color("dfeff0"), "vc_gloss", 8)
+				b.cylinder(Vector3(0.05, 0.016, 0.04), 0.027, 0.06, Color("e8b84a"), "vc_gloss", 8)
+				b.cylinder(Vector3(-0.06, 0.014, 0.03), 0.03, 0.1, Color("dfeff0"), "vc_gloss", 8)
+				b.cylinder(Vector3(-0.06, 0.016, 0.03), 0.027, 0.06, Color("c9402f"), "vc_gloss", 8)
+				b.cylinder(Vector3(0.0, 0.014, -0.07), 0.032, 0.13, Color("3d8a4f"), "vc_gloss", 8)
+				b.cylinder(Vector3(0.0, 0.144, -0.07), 0.012, 0.05, Color("2f6a3a"), "vc_gloss", 6)
 		"cloth":
 			b.box(Vector3(0, -0.02, 0), Vector3(0.14, 0.04, 0.11), Color("f4f1ea"))
 		"sajkaca":
@@ -674,16 +701,8 @@ static func _accessory(b: Builder, full_kind: String) -> void:
 					var hem: float = 0.025 * cos(phi * 11.0) if i == 14 else 0.0
 					row.append(Vector3(sin(phi) * out, y + hem, -cos(phi) * out))
 				rows.append(row)
-			_surface(b, rows, tint, "vc_matte", Vector3(0, 0.0, 0.1))
 			# Its inside, seen past the face from the front, is white tulle too.
-			var lining: Array = []
-			for row in rows:
-				var inner: PackedVector3Array = PackedVector3Array()
-				for at in row:
-					var flat: Vector3 = Vector3(at.x, 0.0, at.z)
-					inner.append(at - flat.normalized() * 0.008)
-				lining.append(inner)
-			_surface(b, lining, tint.darkened(0.06), "vc_matte", Vector3(0, 0.0, -6.0))
+			_sheet(b, rows, tint, "vc_matte", Vector3(0, 0.0, 0.1))
 			for k in range(7):
 				var phi: float = deg_to_rad(lerpf(-48.0, 48.0, k / 6.0))
 				var out: float = reach.call(0.42, phi) + 0.07
@@ -729,8 +748,8 @@ static func _accessory(b: Builder, full_kind: String) -> void:
 					var x: float = lerpf(-0.17, 0.17, j / 14.0)
 					row.append(Vector3(x, 0.012 - 0.024 * i, -2.2 * x * x + 0.006))
 				band.append(row)
-			_surface(b, cloth, Color("fbfaf7"), "vc_matte", Vector3(0, -0.1, -0.3))
-			_surface(b, band, Color("e8e2d6"), "vc_matte", Vector3(0, 0.0, -0.3))
+			_sheet(b, cloth, Color("fbfaf7"), "vc_matte", Vector3(0, -0.1, -0.3))
+			_sheet(b, band, Color("e8e2d6"), "vc_matte", Vector3(0, 0.0, -0.3))
 			b.box(Vector3(0.055, -0.11, 0.046), Vector3(0.08, 0.06, 0.006), Color("e4ddd0"), "vc_matte")
 			for side in [-1.0, 1.0]:
 				b.sphere(Vector3(side * 0.03, -0.005, -0.27), 0.5, Color("e8e2d6"), "vc_matte", Vector3(0.05, 0.03, 0.02), 6)
@@ -977,7 +996,7 @@ func _add_mesh(parent: Node3D, mesh: Mesh, at: Vector3, turn: Vector3 = Vector3.
 static func vessel_mesh(kind: String) -> Mesh:
 	return _mesh(kind if VESSELS.has(kind) else "water")
 
-## Hold something in the right hand: "", "tray" or "cloth".
+## Hold something: "", "tray" (with the order on it), "tray_empty" or "cloth" (in the right hand).
 func hold(kind: String) -> void:
 	if kind == holding:
 		return
@@ -985,8 +1004,14 @@ func hold(kind: String) -> void:
 	for child in hand.get_children():
 		if child.get_meta("held", false):
 			child.queue_free()
-	if kind != "":
-		var held: MeshInstance3D = _add_mesh(hand, _mesh(kind), Vector3(0, 0.03 if kind == "tray" else 0.0, 0.04))
+	if tray != null and is_instance_valid(tray):
+		tray.queue_free()
+	tray = null
+	if kind in ["tray", "tray_empty"]:
+		tray = _add_mesh(model, _mesh(kind), Vector3.ZERO)
+		tray.top_level = true
+	elif kind != "":
+		var held: MeshInstance3D = _add_mesh(hand, _mesh(kind), Vector3(0, 0.0, 0.04))
 		held.set_meta("held", true)
 
 # ---------------------------------------------------------------------------------------------
@@ -1006,7 +1031,7 @@ func play(name: String, new_rate: float = 1.0, restart: bool = false) -> void:
 	current = name
 	rate = new_rate
 	anim_time = 0.0
-	hold("tray" if name in ["carry", "carry_idle"] else ("cloth" if name == "wipe" else ""))
+	hold("tray" if name in ["carry", "carry_idle"] else ("tray_empty" if name == "carry_empty" else ("cloth" if name == "wipe" else "")))
 	var kind: String = str(look.get("kind", ""))
 	var chatty: bool = int(phase * 10.0) % 2 == 0
 	var wanted: String = "Idle"
@@ -1014,10 +1039,11 @@ func play(name: String, new_rate: float = 1.0, restart: bool = false) -> void:
 	match name:
 		"walk":
 			wanted = "Walk_Formal" if kind in ["ozalosceni", "biznismen"] else "Walk"
-		"carry":
-			wanted = "Walk_Carry"
+		"carry", "carry_empty":
+			# An ordinary walk; the tray goes on the left hand in _carry_pose().
+			wanted = "Walk"
 		"carry_idle":
-			wanted = "Hold_Tray"
+			wanted = "Idle"
 		"sit":
 			wanted = "Sitting_Talking" if chatty else "Sitting_Idle"
 			talking = chatty and kind != "ozalosceni"
@@ -1260,6 +1286,41 @@ func _drink_pose() -> void:
 		vessel.global_transform = vessel_rest
 	_reach(grip, (right * 0.7 - Vector3.UP - forward * 0.3).normalized(), reach)
 
+## The waiter's way with a tray: on the flat of the left hand at chest height, the elbow bent close
+## to the side, the tray level whatever the walk does (so the glasses stand up on it). Standing at a
+## table with a full tray, the right hand reaches down to set the order on the table.
+func _carry_pose() -> void:
+	var sk: Transform3D = skeleton.global_transform
+	var s: float = sk.basis.get_scale().y
+	var ahead: Vector3 = sk.basis.z.normalized()
+	var right: Vector3 = -sk.basis.x.normalized()
+	var ua: int = bones["LeftUpperArm"]
+	var la: int = bones["LeftLowerArm"]
+	var hd: int = bones["LeftHand"]
+	var l1: float = skeleton.get_bone_global_pose(ua).origin.distance_to(skeleton.get_bone_global_pose(la).origin) * s
+	var l2: float = skeleton.get_bone_global_pose(la).origin.distance_to(skeleton.get_bone_global_pose(hd).origin) * s
+	var shoulder: Vector3 = sk * skeleton.get_bone_global_pose(ua).origin
+	# A little give in the arm with each step.
+	var give: float = 0.008 * s * sin(anim_time * 9.0 + phase) if current != "carry_idle" else 0.0
+	var wrist: Vector3 = shoulder - Vector3.UP * (0.95 * l1 + 0.32 * l2 + give) + ahead * (0.25 * l1 + 0.92 * l2) - right * 0.25 * l1
+	_reach(wrist, (-right * 0.7 - Vector3.UP - ahead * 0.3).normalized(), 1.0, "Left")
+	# The hand flat, fingers forward, under the middle of the tray.
+	var fingers: PackedInt32Array = skeleton.get_bone_children(hd)
+	if fingers.size() > 0:
+		var tip: int = fingers[0]
+		for f in fingers:
+			if "Middle" in str(skeleton.get_bone_name(f)):
+				tip = f
+		var h: Vector3 = skeleton.get_bone_global_pose(hd).origin
+		_aim_bone(hd, skeleton.get_bone_global_pose(tip).origin - h, sk.basis.inverse() * (ahead - right * 0.25))
+	var palm: Vector3 = sk * skeleton.get_bone_global_pose(hd).origin + (ahead - right * 0.25).normalized() * 0.05 * s
+	tray.global_transform = Transform3D(Basis(Vector3.UP, atan2(ahead.x, ahead.z)).scaled(Vector3.ONE * s), palm + Vector3.UP * 0.03 * s)
+	if current == "carry_idle":
+		var serve: float = sin(PI * clampf(anim_time / 0.9, 0.0, 1.0))
+		var venue_scale: float = get_parent().global_transform.basis.get_scale().y if get_parent() is Node3D else 1.0
+		var spot: Vector3 = global_position + ahead * 0.6 * venue_scale + right * 0.12 * venue_scale + Vector3.UP * (TABLE_TOP + 0.1) * venue_scale
+		_reach(spot, (right * 0.7 - Vector3.UP - ahead * 0.3).normalized(), serve, "Right")
+
 ## A transform on a bone as it is posed now (`local` in the bone's frame, as a holder's).
 func _on_bone(bone: String, local: Transform3D) -> Transform3D:
 	return skeleton.global_transform * skeleton.get_bone_global_pose(bones[bone]) * local
@@ -1402,7 +1463,7 @@ func _mood_for(name: String) -> String:
 			return "angry"
 		"dance":
 			return "laugh" if base != "sad" else "glum"
-		"carry", "carry_idle":
+		"carry", "carry_idle", "carry_empty":
 			return "smile"
 		"wipe":
 			return "whistle"
@@ -1468,8 +1529,8 @@ func _process(delta: float) -> void:
 		if seat_state in ["pulling", "stepping"]:
 			if clip != "Walk":
 				_clip("Walk", 0.2, true)
-		elif current not in ["walk", "carry", "angry"]:
-			play("carry" if holding == "tray" else "walk")
+		elif current not in ["walk", "carry", "carry_empty", "angry"]:
+			play("carry" if holding == "tray" else ("carry_empty" if holding == "tray_empty" else "walk"))
 		clip_rate = speed / maxf(0.3, float(measure.stride) * scale.x)
 		if offset.length() <= step:
 			position = Vector3(target.x, position.y, target.z)
@@ -1514,8 +1575,11 @@ func _pose() -> void:
 	# Faces read from the high camera: heads tip back, more for the seated (their clips look down
 	# at the table), and back again to drink.
 	# (Walking, they look where they go.)
-	var walking: bool = not path.is_empty() or current in ["walk", "carry"]
-	var lift: float = HEAD_LIFT * (0.3 if walking else (0.6 if current == "angry" else (1.35 if seat_state == "seated" else 1.0)))
+	var walking: bool = not path.is_empty() or current in ["walk", "carry", "carry_empty"]
+	# (A waiter with a tray looks where they go, over it, not down at the floor.)
+	var lift: float = HEAD_LIFT * (0.6 if current == "angry" else (1.35 if seat_state == "seated" else 1.0))
+	if walking:
+		lift = HEAD_LIFT * (0.9 if tray != null else 0.3)
 	lift += _sip_amount() * 0.3
 	# The old stoop a little when standing and walking (the head comes back up to look ahead).
 	var hunch: float = float(look.get("hunch", 0.0))
@@ -1533,6 +1597,8 @@ func _pose() -> void:
 			model.position.y = absf(sin(beat)) * 0.012 * play_amount
 	if instrument != null:
 		_play()
+	if tray != null:
+		_carry_pose()
 	if seat_state in ["seated", "tucking"]:
 		_hands_on_table()
 	if seat_state == "seated":

@@ -587,13 +587,22 @@ func _street_segment(b: Builder, c: Vector3, along_x: bool) -> void:
 	var size: Vector3 = Vector3(BLOCK, 0.3, ROAD) if along_x else Vector3(ROAD, 0.3, BLOCK)
 	var road: String = {"village": "tex:dirt:0.3", "oldtown": "tex:cobble:0.35", "center": "tex:asphalt:0.3", "quay": "tex:asphalt:0.3"}[kind]
 	b.box(c - Vector3(0, 0.4, 0), size, Color.WHITE, road)
-	if kind == "village":
-		return
-	# Sidewalks and kerbs.
+	# Sidewalks (grass verges on the village roads) between the road and the blocks, and the
+	# squares at the street corners where two of them meet.
+	var village: bool = kind == "village"
+	var verge_y: float = 0.46 if village else 0.3
+	var verge_h: float = 0.42 if village else 0.36
+	var verge_tint: Color = Color("eef2e6") if village else Color("f2eee8")
+	var verge_tex: String = "tex:grass:0.25" if village else "tex:sidewalk:0.4"
 	for s in [-1.0, 1.0]:
-		var off: Vector3 = Vector3(0, 0, s * (ROAD / 2.0 + 0.75)) if along_x else Vector3(s * (ROAD / 2.0 + 0.75), 0, 0)
-		var walk: Vector3 = Vector3(BLOCK - STREET, 0.36, 1.5) if along_x else Vector3(1.5, 0.36, BLOCK - STREET)
-		b.box(c + off - Vector3(0, 0.3, 0), walk, Color("f2eee8"), "tex:sidewalk:0.4")
+		var off: Vector3 = Vector3(0, 0, s * PAVEMENT) if along_x else Vector3(s * PAVEMENT, 0, 0)
+		var walk: Vector3 = Vector3(BLOCK - STREET, verge_h, 1.5) if along_x else Vector3(1.5, verge_h, BLOCK - STREET)
+		b.box(c + off - Vector3(0, verge_y, 0), walk, verge_tint, verge_tex)
+		if along_x:
+			for e in [-1.0, 1.0]:
+				b.box(c + Vector3(e * (BLOCK / 2.0 - STREET / 2.0 + 0.75), -verge_y, s * PAVEMENT), Vector3(1.5, verge_h, 1.5), verge_tint, verge_tex)
+	if village:
+		return
 	if kind == "center":
 		var dash: Vector3 = Vector3(2.0, 0.02, 0.15) if along_x else Vector3(0.15, 0.02, 2.0)
 		for k in range(-5, 6):
@@ -698,7 +707,8 @@ func _river(b: Builder) -> void:
 func _quay(b: Builder) -> void:
 	var near_t: float = -RIVER_NEAR / sqrt(2.0)
 	# Stone embankment wall and a paved promenade with lamps and benches.
-	_diag_box(b, near_t - 1.0, 0.0, Vector3(300, 1.4, 2.0), Color("e2dccf"), "tex:stone_wall:0.5", -1.0)
+	# (Its top is level with the promenade, so the splav's gangway lands on it.)
+	_diag_box(b, near_t - 1.0, 0.0, Vector3(300, 1.4, 2.0), Color("e2dccf"), "tex:stone_wall:0.5", -1.4)
 	_diag_box(b, near_t - 8.0, 0.0, Vector3(300, 0.42, 14.0), Color("ece6de"), "tex:paving:0.3", -0.46)
 	for k in range(-9, 10):
 		var u: float = k * 14.0
@@ -710,8 +720,20 @@ func _quay(b: Builder) -> void:
 			_diag_box(b, near_t - 5.0, u + 4.0, Vector3(1.8, 0.45, 0.5), Color("6e4528"), "vc")
 		if k % 3 == 0:
 			_tree(b, dir_up * (near_t - 11.0) + dir_right * (u + 7.0), 1.1, "round")
-	# Railing along the water.
-	_diag_box(b, near_t - 0.2, 0.0, Vector3(300, 0.08, 0.08), Color("2b2b30"), "vc", 1.0)
+	# Railing along the water, on posts, open where the splav's gangway comes ashore.
+	var gap: float = INF
+	if lots.has("splav"):
+		var lay: Dictionary = lots.splav.lay
+		var foot: Vector3 = lots.splav.origin + Vector3(float(lay.door_x) + 0.6, 0, 0)
+		# Where the gangway (along +z from the door) crosses the quay edge.
+		foot.z = -(near_t - 0.2) * sqrt(2.0) - foot.x
+		gap = foot.dot(Vector3(1, 0, -1).normalized())
+	var u: float = -150.0
+	while u < 150.0:
+		if absf(u + 1.0 - gap) > 2.2:
+			_diag_box(b, near_t - 0.2, u + 1.0, Vector3(2.0, 0.08, 0.08), Color("2b2b30"), "vc", 0.95)
+			_diag_box(b, near_t - 0.2, u, Vector3(0.08, 1.0, 0.08), Color("2b2b30"), "vc", 0.0)
+		u += 2.0
 
 func _bridge(b: Builder) -> void:
 	var near_t: float = -RIVER_NEAR / sqrt(2.0)
@@ -742,12 +764,24 @@ func _bridge(b: Builder) -> void:
 
 func _far_bank(b: Builder) -> void:
 	var far_t: float = -RIVER_FAR / sqrt(2.0)
-	_diag_box(b, far_t + 18.0, 0.0, Vector3(320, 0.5, 40.0), Color("44493f"), "vc", -0.3)
+	# A paved bank with its own embankment and lamps, and the road the bridge comes down onto.
+	_diag_box(b, far_t + 18.0, 0.0, Vector3(320, 0.5, 40.0), Color("9a948a"), "tex:paving:0.3", -0.3)
+	_diag_box(b, far_t + 1.0, 0.0, Vector3(320, 1.6, 2.0), Color("c8c2b6"), "tex:stone_wall:0.5", -1.4)
+	_diag_box(b, far_t + 22.0, 46.0, Vector3(8.0, 0.04, 36.0), Color("b8b8bc"), "tex:asphalt:0.3", 0.2)
 	var dir_up: Vector3 = Vector3(-1, 0, -1).normalized()
 	var dir_right: Vector3 = Vector3(1, 0, -1).normalized()
+	for k in range(-10, 11):
+		var lamp: Vector3 = dir_up * (far_t + 2.5) + dir_right * (k * 14.0 + 7.0)
+		b.cylinder(lamp, 0.07, 3.0, Color("1d1d22"), "vc", 6)
+		b.sphere(lamp + Vector3(0, 3.0, 0), 0.2, Color.WHITE, "glow:ffd38a:3.0")
+		b.quad(lamp + Vector3(0, 0.25, 0), Vector2(5.0, 5.0), Color(1, 1, 1, 0.45), "add:pool")
 	var u: float = -140.0
 	while u < 140.0:
 		var w: float = rng.randf_range(8, 16)
+		# The street off the bridge stays open.
+		if absf(u - 46.0) < w / 2.0 + 6.0:
+			u += w + 1.0
+			continue
 		var h: float = rng.randf_range(8, 30)
 		var t: float = far_t + rng.randf_range(10, 22)
 		var at: Vector3 = dir_up * t + dir_right * u
