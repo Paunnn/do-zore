@@ -753,7 +753,7 @@ func _run_waiters() -> void:
 		var target: Vector2i = _cell_at(Vector3(slot.center.x + 1.0, 0, slot.center.y + 1.0))
 		var points: PackedVector3Array = _path(waiter.position, target)
 		# The last step goes in to the table's corner, between two chairs, within reach of it.
-		points.append(Vector3(slot.center.x + 0.78, 0, slot.center.y + 0.78))
+		points.append(Vector3(slot.center.x + 0.9, 0, slot.center.y + 0.9))
 		waiter.arrived.connect(_delivered.bind(waiter, slot, str(job.item)), CONNECT_ONE_SHOT)
 		waiter.play("carry")
 		waiter.walk(points)
