@@ -8,7 +8,7 @@ extends Node
 const SONGS = "res://assets/audio/songs/"
 const SFX = "res://assets/audio/sfx/"
 const SONG_DB = -4.0
-const BETWEEN_DB = -13.0
+const BETWEEN_DB = -9.0
 const MAP_DB = -6.0
 const FADE = 1.4
 ## The sounds are normalised near full scale: this keeps two of them over a song clear of clipping.
