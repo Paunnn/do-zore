@@ -135,6 +135,9 @@ var bones: Dictionary = {}
 var hand: Node3D
 ## A waiter's tray (on the left hand, kept level: see _carry_pose).
 var tray: MeshInstance3D
+## A student's backpack: worn on the back, and put down on the floor by the chair while seated.
+var pack: MeshInstance3D
+var pack_down: MeshInstance3D
 var instrument: Node3D
 var current: String = ""
 var clip: String = ""
@@ -959,6 +962,10 @@ func _add_prop(kind: String, colour: String) -> void:
 		"backpack":
 			node = _add_mesh(_holder("UpperChest", Vector3(0, float(measure.neck.y) - 0.13, float(measure.chest_back) + 0.01)), mesh, Vector3.ZERO)
 			node.scale = Vector3.ONE * 1.3
+			pack = node
+			pack_down = _add_mesh(model, mesh, Vector3.ZERO)
+			pack_down.top_level = true
+			pack_down.visible = false
 		"chain":
 			_add_mesh(_holder("UpperChest", Vector3(0, float(measure.neck.y) - 0.045, float(measure.chest_front) + 0.004)), mesh, Vector3.ZERO)
 		"apron":
@@ -1559,7 +1566,24 @@ func _turn(bone: String, rotation_euler: Vector3) -> void:
 		var index: int = bones[bone]
 		skeleton.set_bone_pose_rotation(index, skeleton.get_bone_pose_rotation(index) * Quaternion.from_euler(rotation_euler))
 
+## Seated, the backpack comes off and stands on the floor beside the chair, leaning on it (worn,
+## it would go through the chair back).
+func _place_pack() -> void:
+	var down: bool = not seat.is_empty() and seat_state in ["entering", "tucking", "seated", "untucking", "rising"]
+	pack.visible = not down
+	pack_down.visible = down
+	if down and get_parent() is Node3D:
+		var venue: Transform3D = (get_parent() as Node3D).global_transform
+		var dir: Vector3 = seat.dir
+		var side: Vector3 = Vector3(-dir.z, 0, dir.x)
+		var at: Vector3 = venue * (chair_at(pull) - dir * 0.05 + side * 0.34)
+		var s: float = global_transform.basis.get_scale().y * 1.3
+		var facing: Basis = Basis(Vector3.UP, atan2(side.x, side.z)) * Basis(Vector3.FORWARD, 0.12)
+		pack_down.global_transform = Transform3D(facing.scaled(Vector3.ONE * s), at + Vector3.UP * 0.32 * s)
+
 func _pose() -> void:
+	if pack != null:
+		_place_pack()
 	var t: float = anim_time
 	# On a chair the body moves forward and up so the hips land on the seat; while sitting down or
 	# getting up the lift follows the hips (as they go down, the seat comes up to meet them).
